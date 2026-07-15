@@ -1,0 +1,12 @@
+# This repository contains only the web and mobile frontends.
+/back_api/
+/documentacion/
+/.github/
+
+# Operating system and editor artifacts.
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.temp

@@ -1,0 +1,232 @@
+import { useState, type FormEventHandler, type RefObject } from "react";
+import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
+import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
+import type { CountryCode, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import { CountrySelect } from "@/features/auth/ui/country-select";
+import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
+import { Spinner } from "@/shared/ui/spinner";
+
+const FIELD_CONTAINER_CLASSES = "flex min-h-12 items-center overflow-hidden rounded-[0.65rem] border border-line bg-white transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
+const INVALID_FIELD_CLASSES = "border-danger focus-within:border-danger focus-within:shadow-[0_0_0_3px_rgb(186_59_70/14%)]";
+const FOCUS_RING_CLASSES = "focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-[#98c1fb]";
+const PRIMARY_BUTTON_CLASSES = `flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.65rem] border-0 bg-accent text-xs font-extrabold text-white shadow-[0_0.6rem_1.15rem_rgb(8_98_221/22%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-[#064fb8] not-disabled:hover:shadow-[0_0.75rem_1.4rem_rgb(8_98_221/28%)] disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING_CLASSES}`;
+
+function InlineError({ id, message }: { id?: string; message?: string }) {
+  return (
+    <div
+      className={`grid transition-[grid-template-rows,opacity,transform] duration-200 ease-out motion-reduce:transition-none ${message ? "grid-rows-[1fr] translate-y-0 opacity-100" : "grid-rows-[0fr] -translate-y-1 opacity-0"}`}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div className="overflow-hidden">
+        <p id={id} className="flex min-h-5 items-start gap-2 text-[0.7rem] leading-5 text-danger" role={message ? "alert" : undefined}>
+          {message ? <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /> : null}
+          {message}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function GlobalError({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="motion-safe:animate-[field-error-enter_200ms_cubic-bezier(0.22,1,0.36,1)]" aria-live="polite">
+      <p className="border-l-2 border-danger bg-[#fff2f3] px-3 py-2.5 text-[0.72rem] leading-5 text-danger" role="alert">{message}</p>
+    </div>
+  );
+}
+
+type CredentialsStepProps = {
+  identifierType: LoginIdentifierType;
+  country: CountryCode;
+  email: string;
+  phone: string;
+  password: string;
+  identifierError?: string;
+  passwordError?: string;
+  globalError: string | null;
+  isPending: boolean;
+  emailInput: RefObject<HTMLInputElement | null>;
+  phoneInput: RefObject<HTMLInputElement | null>;
+  passwordInput: RefObject<HTMLInputElement | null>;
+  onIdentifierTypeChange: (type: LoginIdentifierType) => void;
+  onCountryChange: (country: CountryCode) => void;
+  onEmailChange: (value: string) => void;
+  onPhoneChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onIdentifierBlur: () => void;
+  onPasswordBlur: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
+};
+
+export function CredentialsStep({
+  identifierType,
+  country,
+  email,
+  phone,
+  password,
+  identifierError,
+  passwordError,
+  globalError,
+  isPending,
+  emailInput,
+  phoneInput,
+  passwordInput,
+  onIdentifierTypeChange,
+  onCountryChange,
+  onEmailChange,
+  onPhoneChange,
+  onPasswordChange,
+  onIdentifierBlur,
+  onPasswordBlur,
+  onSubmit,
+}: CredentialsStepProps) {
+  const countryOption = COUNTRY_OPTIONS[country];
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  return (
+    <div className="w-full max-w-96">
+      <span className="mb-5 grid size-11 place-items-center rounded-xl bg-accent font-display text-lg font-bold text-white italic" aria-hidden="true">H</span>
+      <p className="mb-1 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Acceso seguro</p>
+      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Bienvenido a Hipocratiq</h1>
+      <p className="mt-2 text-[0.8rem] leading-5 text-muted">Accede de forma segura a tu cuenta de Hipocratiq.</p>
+
+      <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-[#f5f8fc] p-1" role="group" aria-label="Método de acceso">
+        <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
+          <Smartphone className="size-3.5" strokeWidth={1.8} aria-hidden="true" /> Celular
+        </button>
+        <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "email" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("email")} aria-pressed={identifierType === "email"}>
+          <Mail className="size-3.5" strokeWidth={1.8} aria-hidden="true" /> Correo
+        </button>
+      </div>
+
+      <form className="mt-4 grid gap-4" onSubmit={onSubmit} aria-busy={isPending} noValidate>
+        {identifierType === "email" ? (
+          <div className="grid gap-2">
+            <label className="text-[0.7rem] font-bold text-ink" htmlFor="email">Correo electrónico</label>
+            <div className={`${FIELD_CONTAINER_CLASSES} ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
+              <Mail className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${identifierError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
+              <input ref={emailInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent pr-4 text-xs text-ink outline-0 placeholder:text-[#a5b2c7]" id="email" name="email" type="email" inputMode="email" autoComplete="username" spellCheck={false} maxLength={255} placeholder="nombre@correo.com" value={email} onChange={(event) => onEmailChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
+            </div>
+            <InlineError id="identifier-error" message={identifierError} />
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <label className="text-[0.7rem] font-bold text-ink" htmlFor="phone">Número de celular</label>
+            <div className="flex items-center gap-0">
+              <CountrySelect value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
+              <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
+                <input ref={phoneInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent px-3 text-xs text-ink outline-0 placeholder:text-[#a5b2c7]" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
+              </div>
+            </div>
+            <InlineError id="identifier-error" message={identifierError} />
+          </div>
+        )}
+
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-4">
+            <label className="text-[0.7rem] font-bold text-ink" htmlFor="password">Contraseña</label>
+            <button type="button" className={`text-[0.6rem] font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</button>
+          </div>
+          <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
+            <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
+            <input ref={passwordInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent pr-1 text-xs text-ink outline-0" id="password" name="password" type={isPasswordVisible ? "text" : "password"} autoComplete="current-password" maxLength={72} value={password} onChange={(event) => onPasswordChange(event.target.value)} onBlur={onPasswordBlur} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
+            <button
+              type="button"
+              className={`mr-1 grid size-10 shrink-0 place-items-center rounded-md border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING_CLASSES}`}
+              onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+              aria-label={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={isPasswordVisible}
+            >
+              {isPasswordVisible
+                ? <EyeOff className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                : <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />}
+            </button>
+          </div>
+          <InlineError id="password-error" message={passwordError} />
+        </div>
+
+        <GlobalError message={globalError} />
+
+        <button className={PRIMARY_BUTTON_CLASSES} type="submit" disabled={isPending}>
+          {isPending ? <><Spinner /> Enviando código…</> : "Enviar código de acceso"}
+        </button>
+      </form>
+
+
+    </div>
+  );
+}
+
+type OtpStepProps = {
+  destination: string;
+  otpDigits: string[];
+  expiresIn: number;
+  resendAfter: number;
+  codeError?: string;
+  globalError: string | null;
+  isPending: boolean;
+  onOtpChange: (value: string[]) => void;
+  onBack: () => void;
+  onResend: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
+};
+
+function formatCountdown(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
+}
+
+export function OtpStep({ destination, otpDigits, expiresIn, resendAfter, codeError, globalError, isPending, onOtpChange, onBack, onResend, onSubmit }: OtpStepProps) {
+  return (
+    <div className="relative w-full max-w-96">
+      <button className={`absolute top-0 right-0 grid size-10 place-items-center rounded-full border border-line bg-white text-muted ${FOCUS_RING_CLASSES}`} type="button" onClick={onBack} aria-label="Volver al inicio de sesión">
+        <ArrowLeft className="size-4" strokeWidth={2} aria-hidden="true" />
+      </button>
+      <span className="mb-7 grid size-11 place-items-center rounded-xl bg-accent font-display text-lg font-bold text-white italic" aria-hidden="true">H</span>
+      <p className="mb-2 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Segundo factor</p>
+      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Verifica tu identidad</h1>
+      <p className="mt-3 text-[0.82rem] leading-6 text-muted">Enviamos un código de 6 dígitos a {destination}.</p>
+
+      <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-[0.7rem] font-bold text-ink">Código de seguridad</span>
+          <span className="font-mono text-[0.64rem] text-muted tabular-nums" aria-live="polite">{expiresIn > 0 ? formatCountdown(expiresIn) : "Expirado"}</span>
+        </div>
+        <OtpCodeInput value={otpDigits} onChange={onOtpChange} disabled={isPending} hasError={Boolean(codeError)} />
+
+        <InlineError message={codeError} />
+        <GlobalError message={globalError} />
+
+        <button className={PRIMARY_BUTTON_CLASSES} type="submit" disabled={isPending || expiresIn === 0}>
+          {isPending ? <><Spinner /> Verificando…</> : "Verificar código"}
+        </button>
+
+        <p className="m-0 text-center text-[0.67rem] text-muted">
+          ¿No recibiste el código?{" "}
+          <button className={`border-0 bg-transparent p-0 text-[0.67rem] font-bold text-accent ${FOCUS_RING_CLASSES}`} type="button" onClick={onResend} disabled={resendAfter > 0 || isPending}>
+            {resendAfter > 0 ? `Reenviar en ${resendAfter}s` : "Reenviar"}
+          </button>
+        </p>
+      </form>
+    </div>
+  );
+}
+
+export function SuccessStep({ onContinue, isNavigating }: { onContinue: () => void; isNavigating: boolean }) {
+  return (
+    <div className="w-full max-w-96 text-center" role="status" aria-busy={isNavigating}>
+      <span className="mx-auto mb-6 grid size-16 place-items-center rounded-full border-[0.65rem] border-success-soft bg-success text-white motion-safe:animate-[field-error-enter_300ms_cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true"><Check className="size-5" strokeWidth={3} /></span>
+      <p className="mb-2 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Identidad confirmada</p>
+      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">¡Verificación exitosa!</h1>
+      <p className="mt-3 text-[0.82rem] leading-6 text-muted">Tu acceso fue validado. Ya puedes ingresar al panel de control.</p>
+      <button className={`${PRIMARY_BUTTON_CLASSES} mt-7`} type="button" onClick={onContinue} disabled={isNavigating}>
+        {isNavigating ? <><Spinner /> Ingresando…</> : "Ir al dashboard"}
+      </button>
+    </div>
+  );
+}
