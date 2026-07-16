@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Newsreader, Roboto_Mono } from "next/font/google";
+import { Manrope, Newsreader } from "next/font/google";
+import "@fontsource-variable/roboto-mono";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -9,11 +10,6 @@ const manrope = Manrope({
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
-  subsets: ["latin"],
-});
-
-const robotoMono = Roboto_Mono({
-  variable: "--font-roboto-mono",
   subsets: ["latin"],
 });
 
@@ -37,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full antialiased">
       <body
-        className={`${manrope.variable} ${newsreader.variable} ${robotoMono.variable} min-h-full`}
+        className={`${manrope.variable} ${newsreader.variable} min-h-full`}
       >
         {children}
       </body>
