@@ -1,7 +1,9 @@
+import Image from "next/image";
 import { useState, type FormEventHandler, type RefObject } from "react";
 import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
 import { Spinner } from "@/shared/ui/spinner";
@@ -90,10 +92,14 @@ export function CredentialsStep({
 
   return (
     <div className="w-full max-w-96">
-      <span className="mb-5 grid size-11 place-items-center rounded-xl bg-accent font-display text-lg font-bold text-white italic" aria-hidden="true">H</span>
-      <p className="mb-1 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Acceso seguro</p>
-      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Bienvenido a Hipocratiq</h1>
-      <p className="mt-2 text-[0.8rem] leading-5 text-muted">Accede de forma segura a tu cuenta de Hipocratiq.</p>
+      <div className="mb-5">
+        <span className="grid size-12 place-items-center rounded-xl bg-accent">
+          <BrandLogo className="h-8 w-auto brightness-0 invert" priority />
+        </span>
+        <p className="mt-2.5 text-[0.82rem] text-muted">Bienvenido a</p>
+        <Image className="mt-1.5 h-8 w-auto" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
+      </div>
+      <p className="text-[0.8rem] leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
       <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-[#f5f8fc] p-1" role="group" aria-label="Método de acceso">
         <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
@@ -157,7 +163,10 @@ export function CredentialsStep({
         </button>
       </form>
 
-
+      <p className="mt-6 text-center text-[0.72rem] text-muted">
+        ¿No tienes una cuenta?{" "}
+        <button type="button" className={`border-0 bg-transparent p-0 text-[0.72rem] font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Solicita acceso</button>
+      </p>
     </div>
   );
 }
@@ -187,7 +196,7 @@ export function OtpStep({ destination, otpDigits, expiresIn, resendAfter, codeEr
       <button className={`absolute top-0 right-0 grid size-10 place-items-center rounded-full border border-line bg-white text-muted ${FOCUS_RING_CLASSES}`} type="button" onClick={onBack} aria-label="Volver al inicio de sesión">
         <ArrowLeft className="size-4" strokeWidth={2} aria-hidden="true" />
       </button>
-      <span className="mb-7 grid size-11 place-items-center rounded-xl bg-accent font-display text-lg font-bold text-white italic" aria-hidden="true">H</span>
+      <BrandLogo className="mb-7 h-11 w-auto" />
       <p className="mb-2 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Segundo factor</p>
       <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Verifica tu identidad</h1>
       <p className="mt-3 text-[0.82rem] leading-6 text-muted">Enviamos un código de 6 dígitos a {destination}.</p>

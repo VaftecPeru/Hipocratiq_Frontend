@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { AuthenticatedSession, SessionResponse } from "@/features/auth/model/auth.types";
 import { serverEnv } from "@/shared/config/server-env";
 
-export async function getAuthenticatedSession(): Promise<AuthenticatedSession | null> {
+export const getAuthenticatedSession = cache(async (): Promise<AuthenticatedSession | null> => {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
 
@@ -30,4 +31,4 @@ export async function getAuthenticatedSession(): Promise<AuthenticatedSession | 
   } catch {
     return null;
   }
-}
+});

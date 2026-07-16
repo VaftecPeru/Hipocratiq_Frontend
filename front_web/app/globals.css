@@ -3,28 +3,44 @@
 :root {
   --paper: #f7f9fc;
   --surface: #ffffff;
+  --surface-subtle: #f1f5fa;
   --ink: #101b33;
   --muted: #6e7f9d;
   --line: #dce4f0;
   --accent: #0862dd;
+  --accent-soft: #e9f2ff;
+  --focus: #79aef4;
   --success: #087965;
   --success-soft: #dff7ef;
   --danger: #ba3b46;
+  --danger-soft: #ffedef;
+  --warning: #c65318;
+  --warning-soft: #fff1e7;
+  --violet: #7455d9;
+  --violet-soft: #f3efff;
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-focus: var(--focus);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
   --font-sans: var(--font-manrope);
   --font-display: var(--font-newsreader);
-  --font-mono: var(--font-roboto-mono);
+  --font-mono: "Roboto Mono Variable", monospace;
 }
 
 * {
