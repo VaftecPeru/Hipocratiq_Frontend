@@ -5,10 +5,49 @@ export const COUNTRY_OPTIONS: Record<CountryCode, {
   name: string;
   nationalLength: number;
   placeholder: string;
+  taxIdLabel: string;
+  taxIdPlaceholder: string;
+  contactPhoneLabel: string;
+  accessPhoneLabel: string;
+  addressLabel: string;
+  addressPlaceholder: string;
 }> = {
-  PE: { dialCode: "51", name: "Perú", nationalLength: 9, placeholder: "912345678" },
-  MX: { dialCode: "52", name: "México", nationalLength: 10, placeholder: "5534567890" },
-  US: { dialCode: "1", name: "Estados Unidos", nationalLength: 10, placeholder: "2025551234" },
+  PE: {
+    dialCode: "51",
+    name: "Perú",
+    nationalLength: 9,
+    placeholder: "912 345 678",
+    taxIdLabel: "RUC",
+    taxIdPlaceholder: "Ej. 20123456789",
+    contactPhoneLabel: "Celular de contacto",
+    accessPhoneLabel: "Celular para acceso y OTP",
+    addressLabel: "Dirección completa",
+    addressPlaceholder: "Avenida, número, distrito y provincia",
+  },
+  MX: {
+    dialCode: "52",
+    name: "México",
+    nationalLength: 10,
+    placeholder: "55 3456 7890",
+    taxIdLabel: "RFC",
+    taxIdPlaceholder: "Ej. ABC010203AB9",
+    contactPhoneLabel: "Teléfono de contacto",
+    accessPhoneLabel: "Celular para acceso y OTP",
+    addressLabel: "Dirección completa",
+    addressPlaceholder: "Calle, número, colonia y código postal",
+  },
+  US: {
+    dialCode: "1",
+    name: "Estados Unidos",
+    nationalLength: 10,
+    placeholder: "202 555 1234",
+    taxIdLabel: "EIN",
+    taxIdPlaceholder: "Ej. 12-3456789",
+    contactPhoneLabel: "Número de contacto",
+    accessPhoneLabel: "Móvil para acceso y OTP",
+    addressLabel: "Dirección postal",
+    addressPlaceholder: "Calle, ciudad, estado y código ZIP",
+  },
 };
 
 export function toE164PhoneNumber(value: string, country: CountryCode): string {
@@ -31,7 +70,7 @@ export function toE164PhoneNumber(value: string, country: CountryCode): string {
   }
 
   if (digits.length !== option.nationalLength) {
-    throw new Error(`El número de ${country} debe tener ${option.nationalLength} dígitos.`);
+    throw new Error(`El número de ${option.name} debe tener ${option.nationalLength} dígitos.`);
   }
 
   return `+${option.dialCode}${digits}`;

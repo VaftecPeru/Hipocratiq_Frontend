@@ -12,12 +12,13 @@ export type AuthenticatedUser = {
   onboarding_status: string;
   roles: string[];
   is_global: boolean;
+  clinic?: { id: number; name: string; plan: string; status: string } | null;
 };
 
 export type AuthenticatedSession = {
   user: AuthenticatedUser;
   client_type: "web" | "mobile";
-  actor_context: "staff" | "patient";
+  actor_context: "staff" | "patient" | "clinic_admin";
 };
 
 export type SessionResponse = {

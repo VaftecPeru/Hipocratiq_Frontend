@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { clinicsDashboardData } from "@/features/clinics/model/clinic.data";
+import { getClinicsDashboardData } from "@/features/clinics/api/server-clinics";
 import { ClinicsDashboard } from "@/features/clinics/ui/clinics-dashboard";
 
 export const metadata: Metadata = {
@@ -8,7 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ClinicsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q = "" } = await searchParams;
+  const [{ q = "" }, clinicsDashboardData] = await Promise.all([
+    searchParams,
+    getClinicsDashboardData(),
+  ]);
 
   return <ClinicsDashboard initialData={clinicsDashboardData} initialSearch={q} />;
 }

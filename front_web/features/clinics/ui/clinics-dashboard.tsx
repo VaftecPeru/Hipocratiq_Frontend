@@ -18,9 +18,10 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useState, useTransition } from "react";
+import { useDeferredValue, useReducer, useTransition } from "react";
 import MexicoFlag from "country-flag-icons/react/3x2/MX";
 import PeruFlag from "country-flag-icons/react/3x2/PE";
+import UnitedStatesFlag from "country-flag-icons/react/3x2/US";
 import type {
   Clinic,
   ClinicActivity,
@@ -34,6 +35,45 @@ type ClinicsDashboardProps = {
   initialData: ClinicsDashboardData;
   initialSearch?: string;
 };
+
+type FiltersState = {
+  search: string;
+  country: ClinicCountryCode | "all";
+  plan: ClinicPlan | "all";
+  status: ClinicStatus | "all";
+  city: string;
+  page: number;
+};
+
+type FiltersAction =
+  | { type: "search"; value: string }
+  | { type: "country"; value: ClinicCountryCode | "all" }
+  | { type: "plan"; value: ClinicPlan | "all" }
+  | { type: "status"; value: ClinicStatus | "all" }
+  | { type: "city"; value: string }
+  | { type: "page"; value: number }
+  | { type: "previousPage" }
+  | { type: "nextPage"; totalPages: number }
+  | { type: "clear" };
+
+function filtersReducer(state: FiltersState, action: FiltersAction): FiltersState {
+  switch (action.type) {
+    case "search":
+    case "country":
+    case "plan":
+    case "status":
+    case "city":
+      return { ...state, [action.type]: action.value, page: 1 };
+    case "page":
+      return { ...state, page: action.value };
+    case "previousPage":
+      return { ...state, page: Math.max(1, state.page - 1) };
+    case "nextPage":
+      return { ...state, page: Math.min(action.totalPages, state.page + 1) };
+    case "clear":
+      return { search: "", country: "all", plan: "all", status: "all", city: "all", page: 1 };
+  }
+}
 
 const PLAN_LABELS: Record<ClinicPlan, string> = {
   enterprise: "Enterprise",
@@ -73,7 +113,7 @@ function normalizeSearch(value: string) {
 }
 
 function CountryFlag({ countryCode }: { countryCode: ClinicCountryCode }) {
-  const Flag = countryCode === "MX" ? MexicoFlag : PeruFlag;
+  const Flag = countryCode === "MX" ? MexicoFlag : countryCode === "PE" ? PeruFlag : UnitedStatesFlag;
 
   return <Flag className="h-3.5 w-5 shrink-0 rounded-[2px]" aria-hidden="true" />;
 }
@@ -103,7 +143,7 @@ function MetricCard({
       </span>
       <div className="min-w-0">
         <p className="text-[0.62rem] font-semibold text-muted">{label}</p>
-        <p className="font-mono text-lg font-bold leading-tight tracking-[-0.04em] text-ink">{numberFormatter.format(value)}</p>
+        <p className="font-mono text-base font-bold leading-tight tracking-[-0.04em] text-ink">{numberFormatter.format(value)}</p>
         <p className={`mt-0.5 text-[0.58rem] font-bold ${tone === "warning" ? "text-warning" : tone === "violet" ? "text-violet" : "text-accent"}`}>{helper}</p>
       </div>
     </article>
@@ -139,13 +179,13 @@ function PlanDistributionCard({ data }: { data: ClinicsDashboardData["planDistri
 function ClinicActions({ clinicName }: { clinicName: string }) {
   return (
     <div className="flex justify-end gap-1">
-      <button className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Ver ${clinicName}`} disabled title="Disponible al conectar el detalle de clínicas">
+      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Ver ${clinicName}`} disabled title="Disponible al conectar el detalle de clínicas">
         <Eye className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
       </button>
-      <button className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Editar ${clinicName}`} disabled title="Disponible al conectar la edición de clínicas">
+      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Editar ${clinicName}`} disabled title="Disponible al conectar la edición de clínicas">
         <Pencil className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
       </button>
-      <button className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Más acciones para ${clinicName}`} disabled title="Disponible al conectar acciones de clínicas">
+      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Más acciones para ${clinicName}`} disabled title="Disponible al conectar acciones de clínicas">
         <MoreHorizontal className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
       </button>
     </div>
@@ -171,7 +211,7 @@ function ClinicsTable({ clinics, rowOffset }: { clinics: Clinic[]; rowOffset: nu
       <div className="grid min-h-72 place-items-center px-6 py-12 text-center" role="status">
         <div>
           <span className="mx-auto grid size-12 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true"><Search className="size-5" /></span>
-          <h3 className="mt-4 text-sm font-extrabold">No encontramos clínicas</h3>
+          <h3 className="mt-4 text-xs font-extrabold">No encontramos clínicas</h3>
           <p className="mt-1 max-w-sm text-xs leading-5 text-muted">Prueba otro nombre o limpia filtros para ampliar resultados.</p>
         </div>
       </div>
@@ -282,19 +322,21 @@ function SummaryPanel({ data }: { data: ClinicsDashboardData }) {
             );
           })}
         </ol>
-        <button className="mt-3 flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg text-[0.61rem] font-bold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled title="Disponible al conectar la actividad global">Ver toda la actividad<ArrowUpRight className="size-3.5" aria-hidden="true" /></button>
+        <button className="mt-3 flex min-h-8 w-full items-center justify-center gap-1 rounded-lg text-[0.58rem] font-bold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled title="Disponible al conectar la actividad global">Ver toda la actividad<ArrowUpRight className="size-3" aria-hidden="true" /></button>
       </section>
     </aside>
   );
 }
 
 export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDashboardProps) {
-  const [search, setSearch] = useState(initialSearch);
-  const [country, setCountry] = useState<ClinicCountryCode | "all">("all");
-  const [plan, setPlan] = useState<ClinicPlan | "all">("all");
-  const [status, setStatus] = useState<ClinicStatus | "all">("all");
-  const [city, setCity] = useState("all");
-  const [page, setPage] = useState(1);
+  const [{ search, country, plan, status, city, page }, dispatch] = useReducer(filtersReducer, {
+    search: initialSearch,
+    country: "all",
+    plan: "all",
+    status: "all",
+    city: "all",
+    page: 1,
+  });
   const [isPending, startTransition] = useTransition();
   const deferredSearch = useDeferredValue(search);
   const pageSize = 10;
@@ -316,29 +358,19 @@ export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDas
   const paginatedClinics = filteredClinics.slice(rowOffset, rowOffset + pageSize);
   const hasActiveFilters = Boolean(search) || country !== "all" || plan !== "all" || status !== "all" || city !== "all";
 
-  function updateFilter(update: () => void) {
-    startTransition(() => {
-      update();
-      setPage(1);
-    });
+  function updateFilter(action: FiltersAction) {
+    startTransition(() => dispatch(action));
   }
 
   function clearFilters() {
-    startTransition(() => {
-      setSearch("");
-      setCountry("all");
-      setPlan("all");
-      setStatus("all");
-      setCity("all");
-      setPage(1);
-    });
+    startTransition(() => dispatch({ type: "clear" }));
   }
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div><p className="text-[0.56rem] font-bold tracking-[0.13em] text-accent uppercase">Administración global</p><h1 className="mt-0.5 text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.035em]">Clínicas <span className="font-medium text-muted">/ Tenants</span></h1><p className="mt-0.5 text-[0.68rem] text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p></div>
-        <button className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-3.5 text-[0.68rem] font-bold text-white shadow-[0_0.3rem_0.8rem_rgb(8_98_221/16%)] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" disabled title="Disponible al habilitar el endpoint de creación"><Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
+        <button className="flex min-h-8 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-[0.55rem] font-bold text-white shadow-[0_0.3rem_0.8rem_rgb(8_98_221/16%)] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" disabled title="Disponible al habilitar el endpoint de creación"><Plus className="size-3" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(11rem,0.8fr))_minmax(19rem,1.45fr)]" aria-label="Indicadores de clínicas">
@@ -350,25 +382,25 @@ export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDas
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-3.5 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-label="Filtros de clínicas">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(8rem,1fr))_minmax(15rem,1.35fr)_auto]">
-          <label className="grid gap-1 text-[0.58rem] font-bold text-muted">País<select className="h-11 rounded-lg border border-line bg-surface px-3 text-[0.68rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-9" value={country} onChange={(event) => updateFilter(() => setCountry(event.target.value as ClinicCountryCode | "all"))}><option value="all">Todos</option><option value="MX">México</option><option value="PE">Perú</option></select></label>
-          <label className="grid gap-1 text-[0.58rem] font-bold text-muted">Plan<select className="h-11 rounded-lg border border-line bg-surface px-3 text-[0.68rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-9" value={plan} onChange={(event) => updateFilter(() => setPlan(event.target.value as ClinicPlan | "all"))}><option value="all">Todos</option>{Object.entries(PLAN_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          <label className="grid gap-1 text-[0.58rem] font-bold text-muted">Estado<select className="h-11 rounded-lg border border-line bg-surface px-3 text-[0.68rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-9" value={status} onChange={(event) => updateFilter(() => setStatus(event.target.value as ClinicStatus | "all"))}><option value="all">Todos</option><option value="active">Activas</option><option value="suspended">Suspendidas</option></select></label>
-          <label className="grid gap-1 text-[0.58rem] font-bold text-muted">Ciudad<select className="h-11 rounded-lg border border-line bg-surface px-3 text-[0.68rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-9" value={city} onChange={(event) => updateFilter(() => setCity(event.target.value))}><option value="all">Todas</option>{cities.map((cityName) => <option value={cityName} key={cityName}>{cityName}</option>)}</select></label>
-          <label className="grid gap-1 text-[0.58rem] font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted" strokeWidth={1.8} aria-hidden="true" /><input className="h-11 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-[0.68rem] font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-9" type="search" value={search} placeholder="Nombre, país o ciudad..." onChange={(event) => { setSearch(event.target.value); setPage(1); }} /></span></label>
-          <button className={`mt-auto flex min-h-11 items-center justify-center gap-1.5 rounded-lg border px-3 text-[0.68rem] font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-9 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-[#dbeaff]" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3.5" strokeWidth={1.8} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
+          <label className="grid gap-1 text-[0.5rem] font-bold text-muted">País<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[0.55rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={country} onChange={(event) => updateFilter({ type: "country", value: event.target.value as ClinicCountryCode | "all" })}><option value="all">Todos</option><option value="MX">México</option><option value="PE">Perú</option><option value="US">Estados Unidos</option></select></label>
+          <label className="grid gap-1 text-[0.5rem] font-bold text-muted">Plan<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[0.55rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={plan} onChange={(event) => updateFilter({ type: "plan", value: event.target.value as ClinicPlan | "all" })}><option value="all">Todos</option>{Object.entries(PLAN_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+          <label className="grid gap-1 text-[0.5rem] font-bold text-muted">Estado<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[0.55rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={status} onChange={(event) => updateFilter({ type: "status", value: event.target.value as ClinicStatus | "all" })}><option value="all">Todos</option><option value="active">Activas</option><option value="suspended">Suspendidas</option></select></label>
+          <label className="grid gap-1 text-[0.5rem] font-bold text-muted">Ciudad<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-[0.55rem] font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={city} onChange={(event) => updateFilter({ type: "city", value: event.target.value })}><option value="all">Todas</option>{cities.map((cityName) => <option value={cityName} key={cityName}>{cityName}</option>)}</select></label>
+          <label className="grid gap-1 text-[0.5rem] font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.8} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-[0.55rem] font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre, país o ciudad..." onChange={(event) => dispatch({ type: "search", value: event.target.value })} /></span></label>
+          <button className={`mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2.5 text-[0.55rem] font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-8 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-[#dbeaff]" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3" strokeWidth={1.8} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
         </div>
       </section>
 
       <div className="mt-4 grid items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_17.5rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="clinics-results-title" aria-busy={isPending}>
-          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-line px-4"><h2 className="text-[0.68rem] font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${filteredClinics.length} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-[0.56rem] font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-[0.56rem] text-muted sm:block">Datos operativos consolidados</span>}</div>
+          <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-[0.56rem] font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${filteredClinics.length} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-[0.48rem] font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-[0.48rem] text-muted sm:block">Datos operativos consolidados</span>}</div>
           <ClinicsTable clinics={paginatedClinics} rowOffset={rowOffset} />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-[0.58rem] text-muted">Mostrando {filteredClinics.length === 0 ? 0 : rowOffset + 1} a {Math.min(rowOffset + pageSize, filteredClinics.length)} de {filteredClinics.length} clínicas cargadas</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
-              <button className="grid size-8 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página anterior" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft className="size-3.5" aria-hidden="true" /></button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => <button className={`grid size-8 place-items-center rounded-md text-[0.65rem] font-bold focus-visible:outline-3 focus-visible:outline-focus ${pageNumber === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={pageNumber} aria-label={`Página ${pageNumber}`} aria-current={pageNumber === currentPage ? "page" : undefined} onClick={() => setPage(pageNumber)}>{pageNumber}</button>)}
-              <button className="grid size-8 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><ChevronRight className="size-3.5" aria-hidden="true" /></button>
+              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página anterior" disabled={currentPage === 1} onClick={() => dispatch({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => <button className={`grid size-7 place-items-center rounded-md text-[0.6rem] font-bold focus-visible:outline-3 focus-visible:outline-focus ${pageNumber === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={pageNumber} aria-label={`Página ${pageNumber}`} aria-current={pageNumber === currentPage ? "page" : undefined} onClick={() => dispatch({ type: "page", value: pageNumber })}>{pageNumber}</button>)}
+              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages} onClick={() => dispatch({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
             </div>
           </div>
         </section>

@@ -33,6 +33,7 @@
 credentials*.json
 service-account*.json
 serviceAccountKey.json
+dist
 
 # debug
 npm-debug.log*

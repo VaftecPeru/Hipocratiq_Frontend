@@ -7,6 +7,7 @@ import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
 import { Spinner } from "@/shared/ui/spinner";
+import Link from "next/link";
 
 const FIELD_CONTAINER_CLASSES = "flex min-h-12 items-center overflow-hidden rounded-[0.65rem] border border-line bg-white transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
 const INVALID_FIELD_CLASSES = "border-danger focus-within:border-danger focus-within:shadow-[0_0_0_3px_rgb(186_59_70/14%)]";
@@ -165,7 +166,7 @@ export function CredentialsStep({
 
       <p className="mt-6 text-center text-[0.72rem] text-muted">
         ¿No tienes una cuenta?{" "}
-        <button type="button" className={`border-0 bg-transparent p-0 text-[0.72rem] font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Solicita acceso</button>
+         <Link href="/register" className={`border-0 bg-transparent p-0 text-[0.72rem] font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Regístrate aquí</Link>
       </p>
     </div>
   );

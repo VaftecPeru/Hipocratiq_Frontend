@@ -109,6 +109,7 @@ export function LoginFlow() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isNavigating, setIsNavigating] = useState(false);
+  const dashboardPath = useRef("/dashboard");
 
   useEffect(() => {
     if (flow.step !== "otp") {
@@ -226,10 +227,12 @@ export function LoginFlow() {
 
     startTransition(async () => {
       try {
-        await verifyLoginOtp(challengeId.current, code);
+        const response = await verifyLoginOtp(challengeId.current, code);
+        const destination = response.data.actor_context === "clinic_admin" ? "/clinic/dashboard" : "/dashboard";
         setPassword("");
+        dashboardPath.current = destination;
         dispatch({ type: "verified" });
-        router.prefetch("/dashboard");
+        router.prefetch(destination);
       } catch (caughtError) {
         handleError(caughtError);
       } finally {
@@ -265,7 +268,7 @@ export function LoginFlow() {
     }
 
     setIsNavigating(true);
-    startTransition(() => router.replace("/dashboard"));
+    startTransition(() => router.replace(dashboardPath.current));
   }
 
   if (flow.step === "success") {

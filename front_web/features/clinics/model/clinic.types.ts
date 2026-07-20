@@ -1,4 +1,4 @@
-export type ClinicCountryCode = "MX" | "PE";
+export type ClinicCountryCode = "MX" | "PE" | "US";
 export type ClinicPlan = "enterprise" | "professional" | "basic";
 export type ClinicStatus = "active" | "suspended";
 
