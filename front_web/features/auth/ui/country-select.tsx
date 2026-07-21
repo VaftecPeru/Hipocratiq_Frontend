@@ -9,9 +9,13 @@ import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 
 type CountrySelectProps = {
+  id?: string;
+  name?: string;
   value: CountryCode;
   onChange: (country: CountryCode) => void;
   hasError?: boolean;
+  ariaDescribedBy?: string;
+  mode?: "dial-code" | "country";
 };
 
 const FLAGS = {
@@ -22,7 +26,7 @@ const FLAGS = {
 
 const COUNTRY_CODES = Object.keys(COUNTRY_OPTIONS) as CountryCode[];
 
-export function CountrySelect({ value, onChange, hasError }: CountrySelectProps) {
+export function CountrySelect({ id, name, value, onChange, hasError, ariaDescribedBy, mode = "dial-code" }: CountrySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +34,8 @@ export function CountrySelect({ value, onChange, hasError }: CountrySelectProps)
 
   const Flag = FLAGS[value];
   const selectedCountry = COUNTRY_OPTIONS[value];
+  const listboxId = `${id ?? "phone-country"}-options`;
+  const isCountryField = mode === "country";
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -109,26 +115,32 @@ export function CountrySelect({ value, onChange, hasError }: CountrySelectProps)
   return (
     <div ref={containerRef} className="relative shrink-0">
       <button
+        id={id}
+        name={name}
         type="button"
-        className={`flex h-12 items-center gap-2 rounded-l-[0.65rem] border bg-[#f7f9fd] px-3 transition-colors duration-150 hover:bg-[#edf3ff] focus-visible:outline-[3px] focus-visible:outline-offset-[-2px] focus-visible:outline-[#98c1fb] ${hasError ? "border-danger" : "border-line"}`}
+        className={`flex items-center gap-2.5 border bg-[#f8fafc] px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-[#f2f6fb] focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-12 w-full justify-between rounded-[0.65rem]" : "h-12 rounded-l-[0.65rem]"} ${hasError ? "border-danger" : "border-line"}`}
         onClick={toggle}
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-controls={listboxId}
         aria-label={`País: ${selectedCountry.name} (+${selectedCountry.dialCode})`}
+        aria-describedby={ariaDescribedBy}
       >
-        <Flag className="h-[1.15rem] w-[1.7rem] shrink-0 overflow-hidden rounded-[0.2rem] shadow-[0_0_0_1px_rgb(16_27_51/10%),0_1px_2px_rgb(16_27_51/6%)]" />
-        <span className="text-[0.75rem] font-bold text-ink">+{selectedCountry.dialCode}</span>
-        <ChevronDown className={`size-3 text-muted/60 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} strokeWidth={2.2} aria-hidden="true" />
+        <span className="flex min-w-0 items-center gap-2.5">
+          <Flag className="h-[1.15rem] w-[1.7rem] shrink-0 overflow-hidden rounded-[0.2rem] shadow-[0_0_0_1px_rgb(16_27_51/10%),0_1px_2px_rgb(16_27_51/6%)]" />
+          <span className="truncate text-xs font-semibold text-ink">{isCountryField ? selectedCountry.name : `+${selectedCountry.dialCode}`}</span>
+          {isCountryField ? <span className="text-2xs text-muted">+{selectedCountry.dialCode}</span> : null}
+        </span>
+        <ChevronDown className={`size-3.5 shrink-0 text-muted/70 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} strokeWidth={2.2} aria-hidden="true" />
       </button>
 
       {isOpen && (
         <ul
+          id={listboxId}
           ref={listRef}
           role="listbox"
-          tabIndex={0}
-          aria-activedescendant={focusedIndex >= 0 ? `country-option-${COUNTRY_CODES[focusedIndex]}` : undefined}
-          className="absolute top-[calc(100%+0.4rem)] left-0 z-50 w-56 overflow-hidden rounded-xl border border-line bg-white py-1.5 shadow-[0_10px_32px_rgb(16_27_51/14%),0_2px_8px_rgb(16_27_51/8%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)]"
+          className={`absolute top-[calc(100%+0.4rem)] left-0 z-50 max-h-64 overflow-y-auto rounded-xl border border-line bg-white py-1.5 shadow-[0_10px_32px_rgb(16_27_51/14%),0_2px_8px_rgb(16_27_51/8%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)] ${isCountryField ? "w-full min-w-60" : "w-60"}`}
         >
           {COUNTRY_CODES.map((code, index) => {
             const ItemFlag = FLAGS[code];
@@ -142,13 +154,13 @@ export function CountrySelect({ value, onChange, hasError }: CountrySelectProps)
                 id={`country-option-${code}`}
                 role="option"
                 aria-selected={isSelected}
-                className={`flex cursor-pointer items-center gap-3 px-3.5 py-2.5 text-[0.78rem] transition-colors duration-75 ${isFocused ? "bg-[#edf3ff]" : "hover:bg-[#f5f8fc]"} ${isSelected ? "font-bold text-accent" : "text-ink"}`}
+                className={`flex min-h-11 cursor-pointer items-center gap-3 px-3.5 py-2.5 text-xs transition-colors duration-75 ${isFocused ? "bg-[#edf3ff]" : "hover:bg-[#f5f8fc]"} ${isSelected ? "font-bold text-accent" : "text-ink"}`}
                 onClick={() => select(code)}
                 onMouseEnter={() => setFocusedIndex(index)}
               >
                 <ItemFlag className="h-[1.15rem] w-[1.7rem] shrink-0 overflow-hidden rounded-[0.2rem] shadow-[0_0_0_1px_rgb(16_27_51/10%),0_1px_2px_rgb(16_27_51/6%)]" />
                 <span className="flex-1">{option.name}</span>
-                <span className={`font-mono text-[0.68rem] ${isSelected ? "text-accent" : "text-muted"}`}>+{option.dialCode}</span>
+                <span className={`font-mono text-2xs ${isSelected ? "text-accent" : "text-muted"}`}>+{option.dialCode}</span>
                 {isSelected && <Check className="size-3.5 text-accent" strokeWidth={2.5} aria-hidden="true" />}
               </li>
             );

@@ -16,7 +16,7 @@ export function requestLoginOtp(input: RequestLoginOtpInput): Promise<OtpChallen
   });
 }
 
-export function verifyLoginOtp(challengeId: string, code: string): Promise<unknown> {
+export function verifyLoginOtp(challengeId: string, code: string): Promise<{ data: { actor_context: string } }> {
   return postToApi("/api/v1/auth/otp/verify", {
     purpose: "login",
     challenge_id: challengeId,

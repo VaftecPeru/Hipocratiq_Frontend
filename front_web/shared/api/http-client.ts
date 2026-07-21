@@ -143,3 +143,18 @@ export async function postToApi<T>(
 
   return data as T;
 }
+
+export async function getFromApi<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_PREFIX}${path}`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  const data = (await response.json().catch(() => null)) as { message?: string } | null;
+
+  if (!response.ok) {
+    throw new ApiError(localizedErrorMessage(response.status, data?.message ?? null, response.headers.get("retry-after")), response.status);
+  }
+
+  return data as T;
+}
