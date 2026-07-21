@@ -44,18 +44,18 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
   };
 
   return (
-    <div className="w-full max-w-[38rem] py-2">
+    <div className="w-full max-w-152 py-2">
       <RegistrationHeader step="clinic" onBack={onBack} />
-      <h1 className="text-balance text-[clamp(1.55rem,4vw,2rem)] leading-tight font-extrabold tracking-[-0.04em]">Registra tu centro médico</h1>
-      <p className="mt-2 max-w-[31rem] text-[0.76rem] leading-5 text-muted">Únete a Hipocratiq y digitaliza la operación de tu clínica o centro hospitalario.</p>
+      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-tight font-extrabold tracking-[-0.04em]">Registra tu centro médico</h1>
+      <p className="mt-2.5 max-w-124 text-sm leading-5 text-muted">Únete a Hipocratiq y digitaliza la operación de tu clínica o centro hospitalario.</p>
 
-      <form className="mt-6 grid gap-5" onSubmit={onSubmit} aria-busy={pending} noValidate>
+      <form className="mt-7 grid gap-6" onSubmit={onSubmit} aria-busy={pending} noValidate>
         <FormGroup label="Datos de la institución">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <RegistrationField label="Nombre de la clínica" name="clinic_name" value={draft.clinic_name} error={errors.clinic_name} placeholder="Ej. Clínica Santa Elena" onChange={(value) => updateText("clinic_name", value)} autoComplete="organization" />
             <RegistrationField label={countryOption.taxIdLabel} name="tax_id" value={draft.tax_id} error={errors.tax_id} placeholder={countryOption.taxIdPlaceholder} onChange={(value) => updateText("tax_id", value)} autoComplete="off" maxLength={80} />
-            <div className="grid gap-1.5">
-              <label className="text-[0.68rem] font-bold text-ink" htmlFor="country_code">País / Región</label>
+            <div className="grid gap-2">
+              <label className="text-xs font-bold text-ink" htmlFor="country_code">País / Región</label>
               <CountrySelect id="country_code" name="country_code" mode="country" value={country} onChange={updateCountry} />
             </div>
             <RegistrationField label={countryOption.contactPhoneLabel} name="contact_phone" value={draft.contact_phone} error={errors.contact_phone} placeholder={countryOption.placeholder} onChange={(value) => updatePhone("contact_phone", value)} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />
@@ -66,7 +66,7 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
         <div className="h-px bg-line" aria-hidden="true" />
 
         <FormGroup label="Cuenta administradora">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <RegistrationField label="Nombre del administrador" name="admin_name" value={draft.admin_name} error={errors.admin_name} placeholder="Responsable legal" onChange={(value) => updateText("admin_name", value)} autoComplete="name" />
             <RegistrationField label="Correo institucional" name="admin_email" value={draft.admin_email} error={errors.admin_email} placeholder="admin@clinica.com" onChange={(value) => updateText("admin_email", value)} type="email" inputMode="email" autoComplete="email" />
             <RegistrationField label={countryOption.accessPhoneLabel} name="admin_phone_number" value={draft.admin_phone_number} error={errors.admin_phone_number} hint="Aquí recibirás los códigos de seguridad por SMS." placeholder={countryOption.placeholder} onChange={(value) => updatePhone("admin_phone_number", value)} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />
@@ -76,14 +76,14 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
         <div className="h-px bg-line" aria-hidden="true" />
 
         <FormGroup label="Seguridad de la cuenta">
-          <div className="grid gap-4">
+          <div className="grid gap-5">
             <RegistrationField label="Contraseña" name="password" value={draft.password} error={errors.password} hint="10+ caracteres, mayúsculas, minúsculas y números." placeholder="Crea una contraseña" onChange={(value) => updateText("password", value)} type="password" autoComplete="new-password" maxLength={72} />
             <RegistrationField label="Confirmar contraseña" name="password_confirmation" value={draft.password_confirmation} error={errors.password_confirmation} placeholder="Repite tu contraseña" onChange={(value) => updateText("password_confirmation", value)} type="password" autoComplete="new-password" maxLength={72} />
           </div>
         </FormGroup>
 
         <div>
-          <label className="flex items-start gap-2.5 text-[0.65rem] leading-5">
+          <label className="flex items-start gap-2.5 text-xs leading-5">
             <input className="mt-0.5 size-4 shrink-0 accent-accent" type="checkbox" checked={draft.terms_accepted} onChange={(event) => { update("terms_accepted", event.target.checked); onClearError("terms_accepted"); }} aria-invalid={errors.terms_accepted ? true : undefined} aria-describedby={errors.terms_accepted ? "terms_accepted-error" : undefined} required />
             <span className="text-muted">Represento legalmente a la institución y acepto los <a className="font-bold text-accent hover:underline" href="#terms">Términos de Servicio</a> de Hipocratiq.</span>
           </label>

@@ -228,7 +228,11 @@ export function LoginFlow() {
     startTransition(async () => {
       try {
         const response = await verifyLoginOtp(challengeId.current, code);
-        const destination = response.data.actor_context === "clinic_admin" ? "/clinic/dashboard" : "/dashboard";
+        const destination = response.data.actor_context === "clinic_admin"
+          ? "/clinic/dashboard"
+          : response.data.actor_context === "doctor"
+            ? "/doctor/dashboard"
+            : "/dashboard";
         setPassword("");
         dashboardPath.current = destination;
         dispatch({ type: "verified" });

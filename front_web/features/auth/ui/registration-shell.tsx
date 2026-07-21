@@ -4,10 +4,10 @@ import { BrandLogo } from "@/shared/ui/brand-logo";
 
 export function RegistrationShell({ children }: { children: ReactNode }) {
   return (
-    <main className="grid h-dvh overflow-hidden bg-white min-[900px]:grid-cols-[minmax(36rem,40%)_1fr]">
+    <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-[minmax(34rem,38%)_1fr]">
       <section
         className="grid h-dvh min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-        aria-label="Registro de clínica"
+        aria-label="Registro de cuenta"
       >
         <header className="px-[clamp(1.25rem,5vw,3.25rem)] pt-5 pb-2 sm:pt-7">
           <span className="grid size-10 place-items-center rounded-[0.7rem] bg-accent shadow-[0_0.45rem_1rem_rgb(8_98_221/20%)]">
@@ -22,7 +22,7 @@ export function RegistrationShell({ children }: { children: ReactNode }) {
           <div className="mx-auto grid min-h-full w-full place-items-center">{children}</div>
         </div>
 
-        <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-[0.6rem] text-[#91a0b8]">
+        <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-2xs text-[#91a0b8]">
           <span>© 2026 Hipocratiq</span>
           <div className="flex gap-5"><span>Soporte</span><span>Seguridad</span></div>
         </footer>

@@ -22,7 +22,7 @@ function InlineError({ id, message }: { id?: string; message?: string }) {
       aria-atomic="true"
     >
       <div className="overflow-hidden">
-        <p id={id} className="flex min-h-5 items-start gap-2 text-[0.7rem] leading-5 text-danger" role={message ? "alert" : undefined}>
+        <p id={id} className="flex min-h-5 items-start gap-2 text-xs leading-5 text-danger" role={message ? "alert" : undefined}>
           {message ? <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /> : null}
           {message}
         </p>
@@ -38,7 +38,7 @@ function GlobalError({ message }: { message: string | null }) {
 
   return (
     <div className="motion-safe:animate-[field-error-enter_200ms_cubic-bezier(0.22,1,0.36,1)]" aria-live="polite">
-      <p className="border-l-2 border-danger bg-[#fff2f3] px-3 py-2.5 text-[0.72rem] leading-5 text-danger" role="alert">{message}</p>
+      <p className="border-l-2 border-danger bg-[#fff2f3] px-3 py-2.5 text-xs leading-5 text-danger" role="alert">{message}</p>
     </div>
   );
 }
@@ -97,10 +97,10 @@ export function CredentialsStep({
         <span className="grid size-12 place-items-center rounded-xl bg-accent">
           <BrandLogo className="h-8 w-auto brightness-0 invert" priority />
         </span>
-        <p className="mt-2.5 text-[0.82rem] text-muted">Bienvenido a</p>
+        <p className="mt-2.5 text-sm text-muted">Bienvenido a</p>
         <Image className="mt-1.5 h-8 w-auto" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
       </div>
-      <p className="text-[0.8rem] leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
+      <p className="text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
       <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-[#f5f8fc] p-1" role="group" aria-label="Método de acceso">
         <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
@@ -111,10 +111,10 @@ export function CredentialsStep({
         </button>
       </div>
 
-      <form className="mt-4 grid gap-4" onSubmit={onSubmit} aria-busy={isPending} noValidate>
+      <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
         {identifierType === "email" ? (
           <div className="grid gap-2">
-            <label className="text-[0.7rem] font-bold text-ink" htmlFor="email">Correo electrónico</label>
+            <label className="text-xs font-bold text-ink" htmlFor="email">Correo electrónico</label>
             <div className={`${FIELD_CONTAINER_CLASSES} ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
               <Mail className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${identifierError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
               <input ref={emailInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent pr-4 text-xs text-ink outline-0 placeholder:text-[#a5b2c7]" id="email" name="email" type="email" inputMode="email" autoComplete="username" spellCheck={false} maxLength={255} placeholder="nombre@correo.com" value={email} onChange={(event) => onEmailChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
@@ -123,7 +123,7 @@ export function CredentialsStep({
           </div>
         ) : (
           <div className="grid gap-2">
-            <label className="text-[0.7rem] font-bold text-ink" htmlFor="phone">Número de celular</label>
+            <label className="text-xs font-bold text-ink" htmlFor="phone">Número de celular</label>
             <div className="flex items-center gap-0">
               <CountrySelect value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
               <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
@@ -136,8 +136,8 @@ export function CredentialsStep({
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-4">
-            <label className="text-[0.7rem] font-bold text-ink" htmlFor="password">Contraseña</label>
-            <button type="button" className={`text-[0.6rem] font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</button>
+            <label className="text-xs font-bold text-ink" htmlFor="password">Contraseña</label>
+            <button type="button" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</button>
           </div>
           <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
             <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
@@ -164,9 +164,9 @@ export function CredentialsStep({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-[0.72rem] text-muted">
+      <p className="mt-7 text-center text-xs text-muted">
         ¿No tienes una cuenta?{" "}
-         <Link href="/register" className={`border-0 bg-transparent p-0 text-[0.72rem] font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Regístrate aquí</Link>
+         <Link href="/register" className={`border-0 bg-transparent p-0 text-xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Regístrate aquí</Link>
       </p>
     </div>
   );
@@ -198,14 +198,14 @@ export function OtpStep({ destination, otpDigits, expiresIn, resendAfter, codeEr
         <ArrowLeft className="size-4" strokeWidth={2} aria-hidden="true" />
       </button>
       <BrandLogo className="mb-7 h-11 w-auto" />
-      <p className="mb-2 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Segundo factor</p>
-      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Verifica tu identidad</h1>
-      <p className="mt-3 text-[0.82rem] leading-6 text-muted">Enviamos un código de 6 dígitos a {destination}.</p>
+      <p className="mb-2 text-2xs font-extrabold tracking-[0.13em] text-accent uppercase">Segundo factor</p>
+      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Verifica tu identidad</h1>
+      <p className="mt-3 text-sm leading-6 text-muted">Enviamos un código de 6 dígitos a {destination}.</p>
 
       <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[0.7rem] font-bold text-ink">Código de seguridad</span>
-          <span className="font-mono text-[0.64rem] text-muted tabular-nums" aria-live="polite">{expiresIn > 0 ? formatCountdown(expiresIn) : "Expirado"}</span>
+          <span className="text-xs font-bold text-ink">Código de seguridad</span>
+          <span className="font-mono text-2xs text-muted tabular-nums" aria-live="polite">{expiresIn > 0 ? formatCountdown(expiresIn) : "Expirado"}</span>
         </div>
         <OtpCodeInput value={otpDigits} onChange={onOtpChange} disabled={isPending} hasError={Boolean(codeError)} />
 
@@ -216,9 +216,9 @@ export function OtpStep({ destination, otpDigits, expiresIn, resendAfter, codeEr
           {isPending ? <><Spinner /> Verificando…</> : "Verificar código"}
         </button>
 
-        <p className="m-0 text-center text-[0.67rem] text-muted">
+        <p className="m-0 text-center text-xs text-muted">
           ¿No recibiste el código?{" "}
-          <button className={`border-0 bg-transparent p-0 text-[0.67rem] font-bold text-accent ${FOCUS_RING_CLASSES}`} type="button" onClick={onResend} disabled={resendAfter > 0 || isPending}>
+          <button className={`border-0 bg-transparent p-0 text-xs font-bold text-accent ${FOCUS_RING_CLASSES}`} type="button" onClick={onResend} disabled={resendAfter > 0 || isPending}>
             {resendAfter > 0 ? `Reenviar en ${resendAfter}s` : "Reenviar"}
           </button>
         </p>
@@ -231,9 +231,9 @@ export function SuccessStep({ onContinue, isNavigating }: { onContinue: () => vo
   return (
     <div className="w-full max-w-96 text-center" role="status" aria-busy={isNavigating}>
       <span className="mx-auto mb-6 grid size-16 place-items-center rounded-full border-[0.65rem] border-success-soft bg-success text-white motion-safe:animate-[field-error-enter_300ms_cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true"><Check className="size-5" strokeWidth={3} /></span>
-      <p className="mb-2 text-[0.68rem] font-extrabold tracking-[0.13em] text-accent uppercase">Identidad confirmada</p>
-      <h1 className="text-balance text-[clamp(1.65rem,5vw,2.05rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">¡Verificación exitosa!</h1>
-      <p className="mt-3 text-[0.82rem] leading-6 text-muted">Tu acceso fue validado. Ya puedes ingresar al panel de control.</p>
+      <p className="mb-2 text-2xs font-extrabold tracking-[0.13em] text-accent uppercase">Identidad confirmada</p>
+      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">¡Verificación exitosa!</h1>
+      <p className="mt-3 text-sm leading-6 text-muted">Tu acceso fue validado. Ya puedes ingresar al panel de control.</p>
       <button className={`${PRIMARY_BUTTON_CLASSES} mt-7`} type="button" onClick={onContinue} disabled={isNavigating}>
         {isNavigating ? <><Spinner /> Ingresando…</> : "Ir al dashboard"}
       </button>

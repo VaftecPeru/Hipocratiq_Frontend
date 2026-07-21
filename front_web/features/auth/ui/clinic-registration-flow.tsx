@@ -14,6 +14,7 @@ import {
 import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { ClinicRegistrationForm } from "@/features/auth/ui/clinic-registration-form";
+import { DoctorRegistrationFlow } from "@/features/auth/ui/doctor-registration-flow";
 import { ClinicOtpStep, PlanStep, RegistrationSuccessStep, RoleStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName, RegistrationStep } from "@/features/auth/ui/clinic-registration-ui";
 import { ApiError } from "@/shared/api/http-client";
@@ -63,6 +64,7 @@ function validateDraft(draft: ClinicRegistrationDraft): RegistrationFieldErrors 
 export function ClinicRegistrationFlow() {
   const router = useRouter();
   const [step, setStep] = useState<RegistrationStep>("role");
+  const [isDoctorRegistration, setIsDoctorRegistration] = useState(false);
   const [draft, setDraft] = useState(initialDraft);
   const [plans, setPlans] = useState<ClinicPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -70,7 +72,7 @@ export function ClinicRegistrationFlow() {
   const [challengeId, setChallengeId] = useState("");
   const [expiresIn, setExpiresIn] = useState(0);
   const [resendAfter, setResendAfter] = useState(0);
-  const [code, setCode] = useState(Array.from({ length: 6 }, () => ""));
+  const [code, setCode] = useState(() => Array.from({ length: 6 }, () => ""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegistrationFieldErrors>({});
@@ -191,7 +193,8 @@ export function ClinicRegistrationFlow() {
     }
   }
 
-  if (step === "role") return <RoleStep onContinue={() => setStep("clinic")} />;
+  if (isDoctorRegistration) return <DoctorRegistrationFlow onBack={() => setIsDoctorRegistration(false)} />;
+  if (step === "role") return <RoleStep onSelectClinic={() => setStep("clinic")} onSelectDoctor={() => setIsDoctorRegistration(true)} />;
   if (step === "clinic") return <ClinicRegistrationForm draft={draft} setDraft={setDraft} errors={fieldErrors} pending={pending} globalError={error} onClearError={clearFieldError} onBack={() => setStep("role")} onSubmit={submitDraft} />;
   if (step === "plan") return <PlanStep plans={plans} selected={selectedPlan} cycle={cycle} pending={pending} error={error} onSelect={choosePlan} onCycleChange={setCycle} onBack={() => setStep("clinic")} />;
   if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} code={code} setCode={setCode} pending={pending} error={error} onVerify={verify} onResend={resend} onBack={() => setStep("plan")} />;
