@@ -16,10 +16,10 @@ export function PatientDashboard({ user }: { user: AuthenticatedUser }) {
   }
 
   return (
-    <main className="min-h-dvh bg-[#f6f8fc] px-5 py-8 sm:px-8">
+    <main className="min-h-dvh bg-paper px-5 py-8 sm:px-8">
       <div className="mx-auto max-w-4xl">
         <header className="flex items-center justify-between gap-4">
-          <div><p className="font-mono text-[0.62rem] font-semibold tracking-[0.14em] text-muted uppercase">Portal del paciente</p><h1 className="mt-2 text-2xl font-extrabold tracking-[-0.04em]">Hola, {user.name.split(" ")[0]}</h1></div>
+          <div><p className="font-mono text-xs font-semibold tracking-[0.14em] text-muted uppercase">Portal del paciente</p><h1 className="mt-2 font-display text-2xl italic tracking-[-0.02em]">Hola, <span className="not-italic font-sans font-extrabold">{user.name.split(" ")[0]}</span></h1></div>
           <button className="flex min-h-10 items-center gap-2 rounded-lg border border-line bg-white px-4 text-xs font-bold text-muted hover:text-accent" type="button" disabled={pending} onClick={handleLogout}><LogOut className="size-4" aria-hidden="true" />Cerrar sesión</button>
         </header>
 

@@ -39,7 +39,7 @@ export function LogoutButton({ appearance = "default" }: { appearance?: "default
           {error}
         </span>
       ) : null}
-      <button className={appearance === "navigation" ? "flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-[0.55rem] font-bold text-danger transition-colors hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7" : "min-h-10 border border-line bg-transparent px-4 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus"} type="button" onClick={handleLogout} disabled={isPending}>
+      <button className={appearance === "navigation" ? "flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-bold text-danger transition-colors hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7" : "min-h-10 border border-line bg-transparent px-4 text-xs font-bold text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus"} type="button" onClick={handleLogout} disabled={isPending}>
         {appearance === "navigation" ? <LogOut className="size-4" strokeWidth={1.8} aria-hidden="true" /> : null}
         {isPending ? "Cerrando..." : "Cerrar sesión"}
       </button>

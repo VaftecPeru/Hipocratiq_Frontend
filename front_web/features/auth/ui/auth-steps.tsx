@@ -9,10 +9,10 @@ import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
 import { Spinner } from "@/shared/ui/spinner";
 import Link from "next/link";
 
-const FIELD_CONTAINER_CLASSES = "flex min-h-12 items-center overflow-hidden rounded-[0.65rem] border border-line bg-white transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
+const FIELD_CONTAINER_CLASSES = "flex min-h-10 items-center overflow-hidden rounded-lg border border-line bg-white transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
 const INVALID_FIELD_CLASSES = "border-danger focus-within:border-danger focus-within:shadow-[0_0_0_3px_rgb(186_59_70/14%)]";
-const FOCUS_RING_CLASSES = "focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-[#98c1fb]";
-const PRIMARY_BUTTON_CLASSES = `flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.65rem] border-0 bg-accent text-xs font-extrabold text-white shadow-[0_0.6rem_1.15rem_rgb(8_98_221/22%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-[#064fb8] not-disabled:hover:shadow-[0_0.75rem_1.4rem_rgb(8_98_221/28%)] disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING_CLASSES}`;
+const FOCUS_RING_CLASSES = "focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus-ring";
+const PRIMARY_BUTTON_CLASSES = `flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border-0 bg-accent text-2xs font-extrabold text-white shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-accent-hover not-disabled:hover:shadow-[0_0.6rem_1.2rem_rgb(8_98_221/24%)] disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING_CLASSES}`;
 
 function InlineError({ id, message }: { id?: string; message?: string }) {
   return (
@@ -38,7 +38,7 @@ function GlobalError({ message }: { message: string | null }) {
 
   return (
     <div className="motion-safe:animate-[field-error-enter_200ms_cubic-bezier(0.22,1,0.36,1)]" aria-live="polite">
-      <p className="border-l-2 border-danger bg-[#fff2f3] px-3 py-2.5 text-xs leading-5 text-danger" role="alert">{message}</p>
+      <p className="border-l-2 border-danger bg-danger-soft px-3 py-2.5 text-xs leading-5 text-danger" role="alert">{message}</p>
     </div>
   );
 }
@@ -102,11 +102,11 @@ export function CredentialsStep({
       </div>
       <p className="text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
-      <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-[#f5f8fc] p-1" role="group" aria-label="Método de acceso">
-        <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
+      <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Método de acceso">
+        <button type="button" className={`flex min-h-8 items-center justify-center gap-2 rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
           <Smartphone className="size-3.5" strokeWidth={1.8} aria-hidden="true" /> Celular
         </button>
-        <button type="button" className={`flex min-h-9 items-center justify-center gap-2 rounded-lg border-0 text-xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "email" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("email")} aria-pressed={identifierType === "email"}>
+        <button type="button" className={`flex min-h-8 items-center justify-center gap-2 rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "email" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("email")} aria-pressed={identifierType === "email"}>
           <Mail className="size-3.5" strokeWidth={1.8} aria-hidden="true" /> Correo
         </button>
       </div>
@@ -114,20 +114,20 @@ export function CredentialsStep({
       <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
         {identifierType === "email" ? (
           <div className="grid gap-2">
-            <label className="text-xs font-bold text-ink" htmlFor="email">Correo electrónico</label>
+            <label className="text-2xs font-bold text-ink" htmlFor="email">Correo electrónico</label>
             <div className={`${FIELD_CONTAINER_CLASSES} ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
-              <Mail className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${identifierError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
-              <input ref={emailInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent pr-4 text-xs text-ink outline-0 placeholder:text-[#a5b2c7]" id="email" name="email" type="email" inputMode="email" autoComplete="username" spellCheck={false} maxLength={255} placeholder="nombre@correo.com" value={email} onChange={(event) => onEmailChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
+              <Mail className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${identifierError ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
+              <input ref={emailInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent pr-4 text-2xs text-ink outline-0 placeholder:text-placeholder" id="email" name="email" type="email" inputMode="email" autoComplete="username" spellCheck={false} maxLength={255} placeholder="nombre@correo.com" value={email} onChange={(event) => onEmailChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
             </div>
             <InlineError id="identifier-error" message={identifierError} />
           </div>
         ) : (
           <div className="grid gap-2">
-            <label className="text-xs font-bold text-ink" htmlFor="phone">Número de celular</label>
+            <label className="text-2xs font-bold text-ink" htmlFor="phone">Número de celular</label>
             <div className="flex items-center gap-0">
               <CountrySelect value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
               <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
-                <input ref={phoneInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent px-3 text-xs text-ink outline-0 placeholder:text-[#a5b2c7]" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
+                <input ref={phoneInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent px-3 text-2xs text-ink outline-0 placeholder:text-placeholder" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
               </div>
             </div>
             <InlineError id="identifier-error" message={identifierError} />
@@ -136,15 +136,15 @@ export function CredentialsStep({
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-4">
-            <label className="text-xs font-bold text-ink" htmlFor="password">Contraseña</label>
+            <label className="text-2xs font-bold text-ink" htmlFor="password">Contraseña</label>
             <button type="button" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</button>
           </div>
           <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
-            <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-[#8ca0bf]"}`} strokeWidth={1.7} aria-hidden="true" />
-            <input ref={passwordInput} className="min-h-11 w-full min-w-0 border-0 bg-transparent pr-1 text-xs text-ink outline-0" id="password" name="password" type={isPasswordVisible ? "text" : "password"} autoComplete="current-password" maxLength={72} value={password} onChange={(event) => onPasswordChange(event.target.value)} onBlur={onPasswordBlur} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
+            <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
+            <input ref={passwordInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent pr-1 text-2xs text-ink outline-0" id="password" name="password" type={isPasswordVisible ? "text" : "password"} autoComplete="current-password" maxLength={72} value={password} onChange={(event) => onPasswordChange(event.target.value)} onBlur={onPasswordBlur} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
             <button
               type="button"
-              className={`mr-1 grid size-10 shrink-0 place-items-center rounded-md border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING_CLASSES}`}
+              className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING_CLASSES}`}
               onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
               aria-label={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
               aria-pressed={isPasswordVisible}
@@ -204,7 +204,7 @@ export function OtpStep({ destination, otpDigits, expiresIn, resendAfter, codeEr
 
       <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-xs font-bold text-ink">Código de seguridad</span>
+          <span className="text-2xs font-bold text-ink">Código de seguridad</span>
           <span className="font-mono text-2xs text-muted tabular-nums" aria-live="polite">{expiresIn > 0 ? formatCountdown(expiresIn) : "Expirado"}</span>
         </div>
         <OtpCodeInput value={otpDigits} onChange={onOtpChange} disabled={isPending} hasError={Boolean(codeError)} />

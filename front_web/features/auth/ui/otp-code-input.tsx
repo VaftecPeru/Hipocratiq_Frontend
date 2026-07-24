@@ -60,7 +60,7 @@ export function OtpCodeInput({ value, onChange, disabled, hasError }: OtpCodeInp
           ref={(node) => {
             inputRefs.current[index] = node;
           }}
-          className={`aspect-square min-w-0 rounded-[0.65rem] border bg-[#f8faff] text-center font-mono text-[clamp(1rem,4vw,1.35rem)] font-bold text-ink outline-0 transition-[border-color,background-color,box-shadow] duration-200 focus:bg-white focus-visible:outline-[3px] focus-visible:outline-offset-3 ${hasError ? "border-danger focus:border-danger focus:shadow-[0_0_0_3px_rgb(186_59_70/14%)] focus-visible:outline-[#e99aa1]" : "border-line focus:border-accent focus:shadow-[0_0_0_3px_rgb(8_98_221/12%)] focus-visible:outline-[#98c1fb]"}`}
+          className={`aspect-square min-w-0 rounded-[0.65rem] border bg-otp-bg text-center font-mono text-[clamp(1rem,4vw,1.35rem)] font-bold text-ink outline-0 transition-[border-color,background-color,box-shadow] duration-200 focus:bg-white focus-visible:outline-[3px] focus-visible:outline-offset-3 ${hasError ? "border-danger focus:border-danger focus:shadow-[0_0_0_3px_rgb(186_59_70/14%)] focus-visible:outline-focus-ring-danger" : "border-line focus:border-accent focus:shadow-[0_0_0_3px_rgb(8_98_221/12%)] focus-visible:outline-focus-ring"}`}
           type="text"
           inputMode="numeric"
           autoComplete={index === 0 ? "one-time-code" : "off"}

@@ -8,10 +8,10 @@ export function AuthVisualPanel() {
       className="relative hidden h-dvh min-h-0 overflow-hidden bg-[linear-gradient(155deg,#e4eefb_0%,#a8c9f2_45%,#3178d8_100%)] min-[900px]:block"
       aria-label="Vista previa de la plataforma"
     >
-      <div className="absolute top-5 right-6 z-10 flex min-h-9 items-center gap-2 rounded-full border border-white/55 bg-white/80 px-3.5 text-2xs font-bold text-[#496584] backdrop-blur-xl">
+      <div className="absolute top-5 right-6 z-10 flex min-h-9 items-center gap-2 rounded-full border border-white/55 bg-white/80 px-3.5 text-2xs font-bold text-ink-secondary backdrop-blur-xl">
         <PeruFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />
         <span>PE</span>
-        <span className="h-3.5 w-px bg-[#c3d2e5]" aria-hidden="true" />
+        <span className="h-3.5 w-px bg-line-strong" aria-hidden="true" />
         <span>ES</span>
       </div>
 
@@ -26,7 +26,7 @@ export function AuthVisualPanel() {
         />
       </div>
 
-      <div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-[clamp(1.5rem,7%,4rem)] z-10 w-[min(20rem,calc(100%_-_3rem))] rounded-xl border border-white/30 bg-white/20 p-5 text-white shadow-[0_1rem_3rem_rgb(6_42_102/14%)] backdrop-blur-2xl">
+      <div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-[clamp(1.5rem,7%,4rem)] z-10 w-[min(20rem,calc(100%_-_3rem))] rounded-xl border border-white/30 bg-white/20 p-5 text-white shadow-[0_1rem_3rem_rgb(6_42_102/14%),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-2xl">
         <span className="mb-3 grid size-9 place-items-center rounded-lg bg-white/20" aria-hidden="true">
           <ShieldCheck className="size-5" strokeWidth={1.7} />
         </span>

@@ -78,21 +78,21 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
               <li key={item.href}>
                 {item.available ? (
                   <Link
-                    className={"flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-[0.55rem] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                    className={"flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={isActive ? "page" : undefined}
                   >
-                    <Icon className="size-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                    <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
                     {item.label}
                   </Link>
                 ) : (
                   <span
-                    className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-[0.55rem] font-medium text-muted/70 lg:min-h-7"
+                    className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
                     aria-disabled="true"
                     title="Disponible próximamente"
                   >
-                    <Icon className="size-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                    <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
                     {item.label}
                   </span>
                 )}
@@ -103,20 +103,20 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
 
         <div className="mt-2 border-t border-line px-2 pt-2">
           <button
-            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-[0.62rem] font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
+            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
             type="button"
             aria-expanded={isSettingsOpen}
             aria-controls={settingsId}
             onClick={() => setIsSettingsOpen((current) => !current)}
           >
-            <Settings className="size-3.5 text-muted" strokeWidth={1.8} aria-hidden="true" />
+            <Settings className="size-3.5 text-muted" strokeWidth={1.7} aria-hidden="true" />
             <span>Configuración</span>
-            <ChevronDown className={`ml-auto size-3 text-muted transition-transform ${isSettingsOpen ? "rotate-180" : ""}`} strokeWidth={1.8} aria-hidden="true" />
+            <ChevronDown className={`ml-auto size-3 text-muted transition-transform ${isSettingsOpen ? "rotate-180" : ""}`} strokeWidth={1.7} aria-hidden="true" />
           </button>
           {isSettingsOpen ? (
             <ul className="mt-1 grid gap-0.5 border-l border-line pl-7" id={settingsId}>
               {settingsItems.map((item) => (
-                <li className="px-2.5 py-1 text-[0.56rem] text-muted/80" key={item}>
+                <li className="px-2.5 py-1 text-2xs text-muted/80" key={item}>
                   {item}
                 </li>
               ))}
@@ -168,9 +168,9 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
         </div>
 
         <form action="/clinics" className="relative hidden w-full max-w-xl md:block" role="search">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" strokeWidth={1.8} aria-hidden="true" />
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-icon-input" strokeWidth={1.7} aria-hidden="true" />
           <input
-            className="h-7 w-full rounded-lg border border-line bg-paper pr-2.5 pl-8 text-[0.54rem] text-ink outline-none transition-colors placeholder:text-muted/80 focus:border-accent focus:ring-3 focus:ring-focus/45"
+            className="h-8 w-full rounded-lg border border-line bg-paper pr-2.5 pl-8 text-xs text-ink outline-none transition-colors placeholder:text-placeholder focus:border-accent focus:ring-3 focus:ring-focus/45"
             type="search"
             name="q"
             aria-label="Buscar en la plataforma"
@@ -179,30 +179,33 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
         </form>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center overflow-hidden rounded-lg border border-line text-[0.56rem] font-bold sm:flex" aria-label="Países administrados">
+          <div className="hidden items-center overflow-hidden rounded-lg border border-line text-2xs font-bold sm:flex" aria-label="Países administrados">
             <span className="flex h-7 items-center gap-1.5 border-r border-line px-2.5"><MexicoFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />MX</span>
             <span className="flex h-7 items-center gap-1.5 px-2.5"><PeruFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />PE</span>
           </div>
           <button className="relative grid size-7 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ver notificaciones">
             <Bell className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
-            <span className="absolute top-0 right-0 grid size-3.5 place-items-center rounded-full bg-danger text-[0.48rem] font-extrabold text-white">3</span>
+            <span className="absolute top-0 right-0 grid size-3.5 place-items-center rounded-full bg-danger text-2xs font-extrabold text-white">3</span>
           </button>
           <div className="hidden h-8 w-px bg-line sm:block" aria-hidden="true" />
           <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-full bg-accent text-[0.58rem] font-extrabold text-white" aria-hidden="true">{getInitials(userName)}</span>
+            <span className="grid size-7 place-items-center rounded-full bg-accent text-2xs font-extrabold text-white" aria-hidden="true">{getInitials(userName)}</span>
             <div className="hidden xl:block">
-              <p className="max-w-36 truncate text-[0.55rem] font-extrabold">{userName}</p>
-              <p className="text-[0.48rem] text-muted">Super Administrador</p>
+              <p className="max-w-36 truncate text-xs font-extrabold">{userName}</p>
+              <p className="text-2xs text-muted">Super Administrador</p>
             </div>
           </div>
         </div>
       </header>
 
       {isMenuOpen ? (
-        <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
-          <div className="border-b border-line"><Brand /></div>
-          <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} />
-        </aside>
+        <>
+          <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
+          <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
+            <div className="border-b border-line"><Brand /></div>
+            <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} />
+          </aside>
+        </>
       ) : null}
 
       <main id="main-content" className="min-w-0 lg:ml-52">
