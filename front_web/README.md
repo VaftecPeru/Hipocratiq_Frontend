@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hipocratiq Web
 
-## Getting Started
+Frontend Next.js para el registro y autenticación de clínicas, médicos y pacientes, conectado al backend Laravel de [back_api](../back_api/README.md).
 
-First, run the development server:
+## Requisitos
 
-```bash
+- Node.js LTS y npm.
+- Backend Laravel disponible en `http://127.0.0.1:8000`.
+- PostgreSQL y Redis levantados por el backend.
+
+## Inicio local
+
+Desde `front_web`:
+
+```powershell
+Copy-Item .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación queda en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+En otra terminal, inicia el backend desde `back_api`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```powershell
+docker compose up -d
+php artisan migrate --seed
+php artisan serve --host=127.0.0.1 --port=8000
+```
 
-## Learn More
+## Variables de entorno
 
-To learn more about Next.js, take a look at the following resources:
+`.env.example` contiene los valores locales. Las variables principales son:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Uso |
+| --- | --- |
+| `BACKEND_URL` | URL interna del backend para llamadas server-side |
+| `APP_URL` | URL pública local de Next.js |
+| `NEXT_PUBLIC_API_URL` | URL pública usada por despliegues que no pasan por el proxy local |
+| `NEXT_PUBLIC_APP_URL` | URL pública del frontend |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+El cliente del navegador usa el proxy `/backend`, definido en el flujo de Next.js, para mantener cookies y CSRF en el mismo origen. No pongas credenciales Twilio, Redis ni `APP_KEY` en variables `NEXT_PUBLIC_*`.
 
-## Deploy on Vercel
+## Autenticación y CSRF
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Las peticiones web se realizan con `credentials: include`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Se solicita `/backend/sanctum/csrf-cookie`.
+2. Se conserva la cookie `XSRF-TOKEN` y la cookie de sesión.
+3. Cada `POST` envía `X-XSRF-TOKEN`.
+
+Una respuesta `419` indica que el token CSRF expiró; el cliente debe solicitarlo de nuevo. Una respuesta `429` incluye `Retry-After` y se muestra como espera al usuario.
+
+## Flujos de registro
+
+- Clínica administradora: datos de clínica y administrador → plan → OTP.
+- Médico de clínica: datos profesionales → clínica activa con cobertura → OTP.
+- Médico independiente: datos profesionales → plan obligatorio → OTP.
+- Paciente: clínica activa obligatoria → OTP → selección de plan diferida a otro apartado.
+
+Los OTP expiran en 5 minutos, permiten 5 reenvíos y requieren 60 segundos entre reenvíos. El backend es la fuente de verdad para esos valores.
+
+La referencia de payloads, respuestas y límites está en [back_api/docs/API.md](../back_api/docs/API.md), y el contrato formal en [documentacion/openapi.yaml](../documentacion/openapi.yaml).
+
+## Comandos
+
+```powershell
+npm run dev
+npm run lint
+npm run build
+npm run start
+```
+
+Ejecuta `npm run build` antes de desplegar para detectar errores de TypeScript, rutas estáticas y variables de entorno ausentes.
+
+## Producción
+
+- Configura `BACKEND_URL` con la URL privada o interna del backend.
+- Configura `APP_URL`, `NEXT_PUBLIC_APP_URL` y los dominios stateful/CORS equivalentes en el backend.
+- Sirve frontend y backend bajo HTTPS para que las cookies seguras funcionen.
+- Nunca expongas secretos mediante `NEXT_PUBLIC_*`.

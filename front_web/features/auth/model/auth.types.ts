@@ -14,6 +14,7 @@ export type AuthenticatedUser = {
   is_global: boolean;
   clinic?: { id: number; name: string; plan: string; status: string } | null;
   doctor?: { medical_license: string; specialty: string; practice_type: "clinic" | "independent"; clinic: { id: number; name: string } | null; plan: string | null } | null;
+  patient?: { clinic: { id: number; name: string } | null; plan: string | null } | null;
 };
 
 export type AuthenticatedSession = {
@@ -34,5 +35,6 @@ export type OtpChallengeResponse = {
     next_step: "verify_otp";
     expires_in: number;
     resend_after: number;
+    resends_remaining: number;
   };
 };

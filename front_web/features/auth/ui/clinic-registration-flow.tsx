@@ -15,6 +15,7 @@ import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { ClinicRegistrationForm } from "@/features/auth/ui/clinic-registration-form";
 import { DoctorRegistrationFlow } from "@/features/auth/ui/doctor-registration-flow";
+import { PatientRegistrationFlow } from "@/features/auth/ui/patient-registration-flow";
 import { ClinicOtpStep, PlanStep, RegistrationSuccessStep, RoleStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName, RegistrationStep } from "@/features/auth/ui/clinic-registration-ui";
 import { ApiError } from "@/shared/api/http-client";
@@ -65,6 +66,7 @@ export function ClinicRegistrationFlow() {
   const router = useRouter();
   const [step, setStep] = useState<RegistrationStep>("role");
   const [isDoctorRegistration, setIsDoctorRegistration] = useState(false);
+  const [isPatientRegistration, setIsPatientRegistration] = useState(false);
   const [draft, setDraft] = useState(initialDraft);
   const [plans, setPlans] = useState<ClinicPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -72,6 +74,7 @@ export function ClinicRegistrationFlow() {
   const [challengeId, setChallengeId] = useState("");
   const [expiresIn, setExpiresIn] = useState(0);
   const [resendAfter, setResendAfter] = useState(0);
+  const [resendsRemaining, setResendsRemaining] = useState(5);
   const [code, setCode] = useState(() => Array.from({ length: 6 }, () => ""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +153,7 @@ export function ClinicRegistrationFlow() {
       setChallengeId(response.data.challenge_id);
       setExpiresIn(response.data.expires_in);
       setResendAfter(response.data.resend_after);
+      setResendsRemaining(response.data.resends_remaining);
       setStep("otp");
     } catch (caught) {
       handleError(caught);
@@ -185,6 +189,7 @@ export function ClinicRegistrationFlow() {
       setChallengeId(response.data.challenge_id);
       setExpiresIn(response.data.expires_in);
       setResendAfter(response.data.resend_after);
+      setResendsRemaining(response.data.resends_remaining);
       setCode(Array.from({ length: 6 }, () => ""));
     } catch (caught) {
       handleError(caught);
@@ -194,9 +199,10 @@ export function ClinicRegistrationFlow() {
   }
 
   if (isDoctorRegistration) return <DoctorRegistrationFlow onBack={() => setIsDoctorRegistration(false)} />;
-  if (step === "role") return <RoleStep onSelectClinic={() => setStep("clinic")} onSelectDoctor={() => setIsDoctorRegistration(true)} />;
+  if (isPatientRegistration) return <PatientRegistrationFlow onBack={() => setIsPatientRegistration(false)} />;
+  if (step === "role") return <RoleStep onSelectClinic={() => setStep("clinic")} onSelectDoctor={() => setIsDoctorRegistration(true)} onSelectPatient={() => setIsPatientRegistration(true)} />;
   if (step === "clinic") return <ClinicRegistrationForm draft={draft} setDraft={setDraft} errors={fieldErrors} pending={pending} globalError={error} onClearError={clearFieldError} onBack={() => setStep("role")} onSubmit={submitDraft} />;
   if (step === "plan") return <PlanStep plans={plans} selected={selectedPlan} cycle={cycle} pending={pending} error={error} onSelect={choosePlan} onCycleChange={setCycle} onBack={() => setStep("clinic")} />;
-  if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} code={code} setCode={setCode} pending={pending} error={error} onVerify={verify} onResend={resend} onBack={() => setStep("plan")} />;
+  if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} resendsRemaining={resendsRemaining} code={code} setCode={setCode} pending={pending} error={error} onVerify={verify} onResend={resend} onBack={() => setStep("plan")} />;
   return <RegistrationSuccessStep onContinue={() => router.replace("/clinic/dashboard")} />;
 }

@@ -24,7 +24,7 @@ export type ClinicRegistrationDraft = {
 };
 
 type PlansResponse = { data: ClinicPlan[] };
-type ChallengeResponse = { data: { challenge_id: string; expires_in: number; resend_after: number } };
+type ChallengeResponse = { data: { challenge_id: string; expires_in: number; resend_after: number; resends_remaining: number } };
 
 export function getClinicPlans(): Promise<PlansResponse> {
   return getFromApi<PlansResponse>("/api/v1/auth/register/clinic/plans");

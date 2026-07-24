@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { ArrowLeft, Building2, ChevronDown, CircleAlert, CreditCard, LockKeyhole } from "lucide-react";
 import type { ClinicRegistrationDraft } from "@/features/auth/api/clinic-registration";
 import type { DoctorRegistrationDraft } from "@/features/auth/api/doctor-registration";
+import type { PatientRegistrationDraft } from "@/features/auth/api/patient-registration";
 
 export type RegistrationStep = "role" | "clinic" | "plan" | "otp" | "success";
-export type RegistrationFieldName = keyof ClinicRegistrationDraft | keyof DoctorRegistrationDraft;
+export type RegistrationFieldName = keyof ClinicRegistrationDraft | keyof DoctorRegistrationDraft | keyof PatientRegistrationDraft;
 export type RegistrationFieldErrors = Partial<Record<RegistrationFieldName, string>>;
 
 export const registrationButtonClasses = "flex min-h-12 items-center justify-center gap-2 rounded-[0.65rem] bg-accent px-4 text-xs font-extrabold text-white shadow-[0_0.6rem_1.15rem_rgb(8_98_221/22%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-[#064fb8] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus";

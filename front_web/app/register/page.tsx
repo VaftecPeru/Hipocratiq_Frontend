@@ -5,6 +5,6 @@ import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 
 export default async function RegisterPage() {
   const session = await getAuthenticatedSession();
-  if (session) redirect(session.actor_context === "clinic_admin" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : "/dashboard");
+  if (session) redirect(session.actor_context === "clinic_admin" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : session.actor_context === "patient" ? "/patient/dashboard" : "/dashboard");
   return <RegistrationShell><ClinicRegistrationFlow /></RegistrationShell>;
 }
