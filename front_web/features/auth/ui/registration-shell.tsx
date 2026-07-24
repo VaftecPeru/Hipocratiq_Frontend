@@ -22,9 +22,12 @@ export function RegistrationShell({ children }: { children: ReactNode }) {
           <div className="mx-auto grid min-h-full w-full place-items-center">{children}</div>
         </div>
 
-        <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-2xs text-[#91a0b8]">
+        <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-2xs text-footer-text">
           <span>© 2026 Hipocratiq</span>
-          <div className="flex gap-5"><span>Soporte</span><span>Seguridad</span></div>
+          <div className="flex gap-5">
+            <a href="/soporte" className="transition-colors hover:text-ink">Soporte</a>
+            <a href="/seguridad" className="transition-colors hover:text-ink">Seguridad</a>
+          </div>
         </footer>
       </section>
 

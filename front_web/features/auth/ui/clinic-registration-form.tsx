@@ -55,7 +55,7 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
             <RegistrationField label="Nombre de la clínica" name="clinic_name" value={draft.clinic_name} error={errors.clinic_name} placeholder="Ej. Clínica Santa Elena" onChange={(value) => updateText("clinic_name", value)} autoComplete="organization" />
             <RegistrationField label={countryOption.taxIdLabel} name="tax_id" value={draft.tax_id} error={errors.tax_id} placeholder={countryOption.taxIdPlaceholder} onChange={(value) => updateText("tax_id", value)} autoComplete="off" maxLength={80} />
             <div className="grid gap-2">
-              <label className="text-xs font-bold text-ink" htmlFor="country_code">País / Región</label>
+              <label className="text-2xs font-bold text-ink" htmlFor="country_code">País / Región</label>
               <CountrySelect id="country_code" name="country_code" mode="country" value={country} onChange={updateCountry} />
             </div>
             <RegistrationField label={countryOption.contactPhoneLabel} name="contact_phone" value={draft.contact_phone} error={errors.contact_phone} placeholder={countryOption.placeholder} onChange={(value) => updatePhone("contact_phone", value)} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />

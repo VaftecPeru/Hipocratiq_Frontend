@@ -17,11 +17,11 @@ export default async function Home() {
           <LoginFlow />
         </div>
 
-        <footer className="flex min-h-16 items-center justify-between gap-4 px-[clamp(1.25rem,4vw,3rem)] text-2xs text-[#91a0b8] max-sm:flex-col max-sm:items-start max-sm:py-4">
+        <footer className="flex min-h-16 items-center justify-between gap-4 px-[clamp(1.25rem,4vw,3rem)] text-2xs text-footer-text max-sm:flex-col max-sm:items-start max-sm:py-4">
           <span>© 2026 Hipocratiq</span>
           <div className="flex gap-5">
-            <span>Soporte</span>
-            <span>Seguridad</span>
+            <a href="/soporte" className="transition-colors hover:text-ink">Soporte</a>
+            <a href="/seguridad" className="transition-colors hover:text-ink">Seguridad</a>
           </div>
         </footer>
       </section>
