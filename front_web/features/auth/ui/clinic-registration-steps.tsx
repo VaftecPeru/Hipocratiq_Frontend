@@ -6,7 +6,7 @@ import { GlobalError, RegistrationHeader, registrationButtonClasses } from "@/fe
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
 import { Spinner } from "@/shared/ui/spinner";
 
-export function RoleStep({ onSelectClinic, onSelectDoctor }: { onSelectClinic: () => void; onSelectDoctor: () => void }) {
+export function RoleStep({ onSelectClinic, onSelectDoctor, onSelectPatient }: { onSelectClinic: () => void; onSelectDoctor: () => void; onSelectPatient: () => void }) {
   return (
     <div className="w-full max-w-108 py-4">
       <h1 className="text-[clamp(1.55rem,4vw,2rem)] font-extrabold tracking-[-0.04em]">Elige tu rol</h1>
@@ -21,9 +21,9 @@ export function RoleStep({ onSelectClinic, onSelectDoctor }: { onSelectClinic: (
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Stethoscope className="size-4" aria-hidden="true" /></span>
           <span><strong className="block text-xs font-extrabold">Médico</strong><small className="mt-1 block text-[0.67rem] text-muted">Para profesionales afiliados o independientes.</small></span>
         </button>
-        <button className="flex min-h-18 items-center gap-3.5 rounded-xl border border-line px-5 text-left opacity-55" type="button" disabled>
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-subtle text-muted"><UserRound className="size-4" aria-hidden="true" /></span>
-          <span><strong className="block text-xs font-extrabold">Paciente</strong><small className="mt-1 block text-[0.67rem] text-muted">Disponible próximamente.</small></span>
+        <button className="flex min-h-18 items-center gap-3.5 rounded-xl border border-line px-5 text-left hover:border-accent focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus" type="button" onClick={onSelectPatient}>
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><UserRound className="size-4" aria-hidden="true" /></span>
+          <span><strong className="block text-xs font-extrabold">Paciente</strong><small className="mt-1 block text-[0.67rem] text-muted">Elige una clínica; configurarás el plan después.</small></span>
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export function PlanStep({ plans, selected, cycle, pending, error, subject = "cl
   );
 }
 
-export function ClinicOtpStep({ challengeId, expiresIn, resendAfter, code, setCode, pending, error, recipientDescription = "móvil del administrador clínico", onVerify, onResend, onBack }: { challengeId: string; expiresIn: number; resendAfter: number; code: string[]; setCode: (code: string[]) => void; pending: boolean; error: string | null; recipientDescription?: string; onVerify: (event: FormEvent<HTMLFormElement>) => void; onResend: () => void; onBack: () => void }) {
+export function ClinicOtpStep({ challengeId, expiresIn, resendAfter, resendsRemaining, code, setCode, pending, error, recipientDescription = "móvil del administrador clínico", onVerify, onResend, onBack }: { challengeId: string; expiresIn: number; resendAfter: number; resendsRemaining: number; code: string[]; setCode: (code: string[]) => void; pending: boolean; error: string | null; recipientDescription?: string; onVerify: (event: FormEvent<HTMLFormElement>) => void; onResend: () => void; onBack: () => void }) {
   return (
     <div className="w-full max-w-108 py-4">
       <RegistrationHeader step="otp" onBack={onBack} />
@@ -78,7 +78,7 @@ export function ClinicOtpStep({ challengeId, expiresIn, resendAfter, code, setCo
         <OtpCodeInput value={code} onChange={setCode} disabled={pending} hasError={Boolean(error)} />
         <GlobalError message={error} />
         <button className={registrationButtonClasses} type="submit" disabled={pending || !challengeId || expiresIn === 0}>{pending ? <><Spinner />Verificando</> : "Verificar y crear cuenta"}</button>
-        <button className="min-h-10 text-[0.68rem] font-bold text-accent disabled:text-muted" type="button" disabled={pending || resendAfter > 0} onClick={onResend}>{resendAfter > 0 ? `Reenviar en ${resendAfter}s` : "Reenviar código"}</button>
+        <button className="min-h-10 text-[0.68rem] font-bold text-accent disabled:text-muted" type="button" disabled={pending || resendAfter > 0 || resendsRemaining === 0} onClick={onResend}>{resendsRemaining === 0 ? "Límite de 5 reenvíos alcanzado" : resendAfter > 0 ? `Reenviar en ${resendAfter}s · ${resendsRemaining} disponibles` : `Reenviar código · ${resendsRemaining} disponibles`}</button>
       </form>
     </div>
   );

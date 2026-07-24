@@ -24,7 +24,7 @@ export type DoctorRegistrationDraft = {
   terms_accepted: boolean;
 };
 
-type ChallengeData = { challenge_id: string; expires_in: number; resend_after: number; next_step: "verify_otp" };
+type ChallengeData = { challenge_id: string; expires_in: number; resend_after: number; resends_remaining: number; next_step: "verify_otp" };
 type DraftResponse = { data: ChallengeData | { next_step: "select_plan" } };
 type ChallengeResponse = { data: ChallengeData };
 type ClinicsResponse = { data: RegistrationClinic[] };

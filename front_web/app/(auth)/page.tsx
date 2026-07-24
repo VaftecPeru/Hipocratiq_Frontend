@@ -7,7 +7,7 @@ export default async function Home() {
   const session = await getAuthenticatedSession();
 
   if (session) {
-    redirect(session.actor_context === "clinic_admin" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : "/dashboard");
+    redirect(session.actor_context === "clinic_admin" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : session.actor_context === "patient" ? "/patient/dashboard" : "/dashboard");
   }
 
   return (

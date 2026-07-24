@@ -17,5 +17,9 @@ export default async function PlatformLayout({ children }: Readonly<{ children: 
     redirect("/doctor/dashboard");
   }
 
+  if (session.actor_context === "patient") {
+    redirect("/patient/dashboard");
+  }
+
   return <PlatformShell userName={session.user.name}>{children}</PlatformShell>;
 }

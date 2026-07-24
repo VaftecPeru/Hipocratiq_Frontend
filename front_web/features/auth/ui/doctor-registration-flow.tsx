@@ -52,6 +52,7 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [challengeId, setChallengeId] = useState("");
   const [expiresIn, setExpiresIn] = useState(0);
   const [resendAfter, setResendAfter] = useState(0);
+  const [resendsRemaining, setResendsRemaining] = useState(5);
   const [code, setCode] = useState(() => Array.from({ length: 6 }, () => ""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +78,8 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
     setError(caught instanceof Error ? caught.message : "No pudimos completar el registro médico.");
   }
 
-  function applyChallenge(data: { challenge_id: string; expires_in: number; resend_after: number }) {
-    setChallengeId(data.challenge_id); setExpiresIn(data.expires_in); setResendAfter(data.resend_after); setStep("otp");
+  function applyChallenge(data: { challenge_id: string; expires_in: number; resend_after: number; resends_remaining: number }) {
+    setChallengeId(data.challenge_id); setExpiresIn(data.expires_in); setResendAfter(data.resend_after); setResendsRemaining(data.resends_remaining); setStep("otp");
   }
 
   async function submitDraft(event: FormEvent<HTMLFormElement>) {
@@ -116,6 +117,6 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
 
   if (step === "details") return <DoctorRegistrationForm draft={draft} clinics={clinics} errors={fieldErrors} pending={pending} globalError={error} onChange={setDraft} onClearError={clearFieldError} onBack={onBack} onSubmit={submitDraft} />;
   if (step === "plan") return <PlanStep plans={plans} selected={selectedPlan} cycle={cycle} pending={pending} error={error} subject="doctor" onSelect={choosePlan} onCycleChange={setCycle} onBack={() => setStep("details")} />;
-  if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} code={code} setCode={setCode} pending={pending} error={error} recipientDescription="móvil del médico" onVerify={verify} onResend={resend} onBack={() => setStep(draft.practice_type === "independent" ? "plan" : "details")} />;
+  if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} resendsRemaining={resendsRemaining} code={code} setCode={setCode} pending={pending} error={error} recipientDescription="móvil del médico" onVerify={verify} onResend={resend} onBack={() => setStep(draft.practice_type === "independent" ? "plan" : "details")} />;
   return <RegistrationSuccessStep title="Cuenta médica activada" description="Tu identidad fue verificada y ya puedes entrar a tu panel profesional." buttonLabel="Entrar al panel médico" onContinue={() => router.replace("/doctor/dashboard")} />;
 }
