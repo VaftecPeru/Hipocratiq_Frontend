@@ -24,6 +24,36 @@ export function verifyLoginOtp(challengeId: string, code: string): Promise<{ dat
   });
 }
 
+export function requestPasswordResetOtp(identifier: string): Promise<OtpChallengeResponse> {
+  return postToApi<OtpChallengeResponse>("/api/v1/auth/otp/request", {
+    purpose: "password_reset",
+    client_type: "web",
+    actor_context: "staff",
+    identifier,
+  });
+}
+
+export function verifyPasswordResetOtp(
+  challengeId: string,
+  code: string,
+  password: string,
+  passwordConfirmation: string,
+): Promise<{ success: true; data: { next_step: "login" } }> {
+  return postToApi("/api/v1/auth/otp/verify", {
+    purpose: "password_reset",
+    challenge_id: challengeId,
+    code,
+    password,
+    password_confirmation: passwordConfirmation,
+  });
+}
+
+export function resendOtp(challengeId: string): Promise<OtpChallengeResponse> {
+  return postToApi<OtpChallengeResponse>("/api/v1/auth/otp/resend", {
+    challenge_id: challengeId,
+  });
+}
+
 export function logout(): Promise<unknown> {
   return postToApi("/api/v1/auth/logout");
 }

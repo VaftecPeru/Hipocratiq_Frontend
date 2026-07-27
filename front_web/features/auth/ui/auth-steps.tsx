@@ -137,7 +137,7 @@ export function CredentialsStep({
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-4">
             <label className="text-2xs font-bold text-ink" htmlFor="password">Contraseña</label>
-            <button type="button" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</button>
+            <Link href="/recover" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</Link>
           </div>
           <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
             <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
