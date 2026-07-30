@@ -6,12 +6,6 @@ type RouteContext = {
 };
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
-
-function rewriteSetCookieForProxy(cookie: string): string {
-  return cookie
-    .replace(/;\s*[Dd]omain=[^;]*/g, "")
-    .replace(/;\s*[Ss]ameSite=[^;]*/gi, "; SameSite=None; Secure");
-}
 const EXCLUDED_RESPONSE_HEADERS = new Set([
   "access-control-allow-credentials",
   "access-control-allow-origin",
@@ -67,7 +61,7 @@ async function forwardRequest(request: NextRequest, context: RouteContext): Prom
     const setCookies = responseHeaders.getSetCookie?.() ?? [];
 
     for (const cookie of setCookies) {
-      response.headers.append("set-cookie", rewriteSetCookieForProxy(cookie));
+      response.headers.append("set-cookie", cookie);
     }
 
     return response;
