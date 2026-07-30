@@ -59,7 +59,6 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [fieldErrors, setFieldErrors] = useState<RegistrationFieldErrors>({});
 
   useEffect(() => { getDoctorRegistrationClinics().then((response) => setClinics(response.data)).catch(handleError); }, []);
-  useEffect(() => { if (step === "plan") getDoctorPlans().then((response) => setPlans(response.data)).catch(handleError); }, [step]);
   useEffect(() => { document.getElementById("registration-scroll-region")?.scrollTo({ top: 0 }); }, [step]);
   useEffect(() => {
     if (step !== "otp") return;
@@ -89,8 +88,13 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
     setPending(true);
     try {
       const response = await startDoctorRegistration(draft);
-      if (response.data.next_step === "verify_otp") applyChallenge(response.data);
-      else setStep("plan");
+      if (response.data.next_step === "verify_otp") {
+        applyChallenge(response.data);
+      } else {
+        const plansResponse = await getDoctorPlans();
+        setPlans(plansResponse.data);
+        setStep("plan");
+      }
     } catch (caught) { handleError(caught); } finally { setPending(false); }
   }
 

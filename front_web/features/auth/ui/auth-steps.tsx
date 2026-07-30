@@ -2,7 +2,7 @@ import Image from "next/image";
 import { useState, type FormEventHandler, type RefObject } from "react";
 import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
-import type { CountryCode, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import type { CountryCode, LoginActorContext, LoginIdentifierType } from "@/features/auth/model/auth.types";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
@@ -15,18 +15,17 @@ const FOCUS_RING_CLASSES = "focus-visible:outline-[3px] focus-visible:outline-of
 const PRIMARY_BUTTON_CLASSES = `flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border-0 bg-accent text-2xs font-extrabold text-white shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-accent-hover not-disabled:hover:shadow-[0_0.6rem_1.2rem_rgb(8_98_221/24%)] disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING_CLASSES}`;
 
 function InlineError({ id, message }: { id?: string; message?: string }) {
+  if (!message) return null;
   return (
     <div
-      className={`grid transition-[grid-template-rows,opacity,transform] duration-200 ease-out motion-reduce:transition-none ${message ? "grid-rows-[1fr] translate-y-0 opacity-100" : "grid-rows-[0fr] -translate-y-1 opacity-0"}`}
+      className="translate-y-0 opacity-100 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className="overflow-hidden">
-        <p id={id} className="flex min-h-5 items-start gap-2 text-xs leading-5 text-danger" role={message ? "alert" : undefined}>
-          {message ? <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /> : null}
-          {message}
-        </p>
-      </div>
+      <p id={id} className="flex min-h-5 items-start gap-2 text-xs leading-5 text-danger" role="alert">
+        <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+        {message}
+      </p>
     </div>
   );
 }
@@ -44,6 +43,7 @@ function GlobalError({ message }: { message: string | null }) {
 }
 
 type CredentialsStepProps = {
+  actorContext: LoginActorContext;
   identifierType: LoginIdentifierType;
   country: CountryCode;
   email: string;
@@ -56,6 +56,7 @@ type CredentialsStepProps = {
   emailInput: RefObject<HTMLInputElement | null>;
   phoneInput: RefObject<HTMLInputElement | null>;
   passwordInput: RefObject<HTMLInputElement | null>;
+  onActorContextChange: (context: LoginActorContext) => void;
   onIdentifierTypeChange: (type: LoginIdentifierType) => void;
   onCountryChange: (country: CountryCode) => void;
   onEmailChange: (value: string) => void;
@@ -67,6 +68,7 @@ type CredentialsStepProps = {
 };
 
 export function CredentialsStep({
+  actorContext,
   identifierType,
   country,
   email,
@@ -79,6 +81,7 @@ export function CredentialsStep({
   emailInput,
   phoneInput,
   passwordInput,
+  onActorContextChange,
   onIdentifierTypeChange,
   onCountryChange,
   onEmailChange,
@@ -102,7 +105,19 @@ export function CredentialsStep({
       </div>
       <p className="text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
-      <div className="mt-6 grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Método de acceso">
+      <div className="mt-6">
+        <p className="mb-2 text-2xs font-bold text-ink">Tipo de cuenta</p>
+        <div className="grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Tipo de cuenta">
+          <button type="button" className={`flex min-h-8 items-center justify-center rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${actorContext === "staff" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onActorContextChange("staff")} aria-pressed={actorContext === "staff"}>
+            Personal de salud
+          </button>
+          <button type="button" className={`flex min-h-8 items-center justify-center rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${actorContext === "patient" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onActorContextChange("patient")} aria-pressed={actorContext === "patient"}>
+            Paciente
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Método de acceso">
         <button type="button" className={`flex min-h-8 items-center justify-center gap-2 rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
           <Smartphone className="size-3.5" strokeWidth={1.8} aria-hidden="true" /> Celular
         </button>
@@ -134,28 +149,30 @@ export function CredentialsStep({
           </div>
         )}
 
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between gap-4">
-            <label className="text-2xs font-bold text-ink" htmlFor="password">Contraseña</label>
-            <Link href="/recover" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</Link>
+        {actorContext === "staff" ? (
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <label className="text-2xs font-bold text-ink" htmlFor="password">Contraseña</label>
+              <Link href="/recover" className={`text-2xs font-medium text-muted hover:text-accent hover:underline ${FOCUS_RING_CLASSES}`}>¿Olvidaste tu contraseña?</Link>
+            </div>
+            <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
+              <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
+              <input ref={passwordInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent pr-1 text-2xs text-ink outline-0" id="password" name="password" type={isPasswordVisible ? "text" : "password"} autoComplete="current-password" maxLength={72} value={password} onChange={(event) => onPasswordChange(event.target.value)} onBlur={onPasswordBlur} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
+              <button
+                type="button"
+                className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING_CLASSES}`}
+                onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+                aria-label={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={isPasswordVisible}
+              >
+                {isPasswordVisible
+                  ? <EyeOff className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                  : <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />}
+              </button>
+            </div>
+            <InlineError id="password-error" message={passwordError} />
           </div>
-          <div className={`${FIELD_CONTAINER_CLASSES} ${passwordError ? INVALID_FIELD_CLASSES : ""}`}>
-            <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${passwordError ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
-            <input ref={passwordInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent pr-1 text-2xs text-ink outline-0" id="password" name="password" type={isPasswordVisible ? "text" : "password"} autoComplete="current-password" maxLength={72} value={password} onChange={(event) => onPasswordChange(event.target.value)} onBlur={onPasswordBlur} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
-            <button
-              type="button"
-              className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING_CLASSES}`}
-              onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
-              aria-label={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
-              aria-pressed={isPasswordVisible}
-            >
-              {isPasswordVisible
-                ? <EyeOff className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                : <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />}
-            </button>
-          </div>
-          <InlineError id="password-error" message={passwordError} />
-        </div>
+        ) : null}
 
         <GlobalError message={globalError} />
 

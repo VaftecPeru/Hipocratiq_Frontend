@@ -4,7 +4,7 @@ import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { AuthStep, CountryCode, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { ApiError } from "@/shared/api/http-client";
 
@@ -103,6 +103,7 @@ export function LoginFlow() {
   const phoneInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [flow, dispatch] = useReducer(flowReducer, INITIAL_FLOW_STATE);
+  const [actorContext, setActorContext] = useState<LoginActorContext>("staff");
   const [identifierType, setIdentifierType] = useState<LoginIdentifierType>("phone");
   const [country, setCountry] = useState<CountryCode>("PE");
   const [email, setEmail] = useState("");
@@ -141,7 +142,7 @@ export function LoginFlow() {
   function focusFirstError(errors: FieldErrors) {
     const target = errors.identifier
       ? identifierType === "email" ? emailInput.current : phoneInput.current
-      : errors.password ? passwordInput.current : null;
+      : actorContext === "staff" && errors.password ? passwordInput.current : null;
     window.requestAnimationFrame(() => target?.focus());
   }
 
@@ -172,7 +173,7 @@ export function LoginFlow() {
     const identifierMessage = getIdentifierValidationMessage();
     const fieldErrors: FieldErrors = {
       identifier: identifierMessage ?? undefined,
-      password: password ? undefined : "Ingresa tu contraseña.",
+      password: actorContext === "staff" && !password ? "Ingresa tu contraseña." : undefined,
     };
 
     if (Object.values(fieldErrors).some(Boolean)) {
@@ -188,7 +189,9 @@ export function LoginFlow() {
     const identifier = identifierType === "email"
       ? email.trim().toLowerCase()
       : toE164PhoneNumber(phone, country);
-    const response = await requestLoginOtp({ identifier, password });
+    const response = await requestLoginOtp(actorContext === "staff"
+      ? { identifier, actorContext, password }
+      : { identifier, actorContext });
     challengeId.current = response.data.challenge_id;
     dispatch({
       type: "otpIssued",
@@ -227,25 +230,19 @@ export function LoginFlow() {
 
     startTransition(async () => {
       try {
+        const response = await verifyLoginOtp(challengeId.current, code);
+        const destination = response.data.actor_context === "clinic_admin"
+          ? "/clinic/dashboard"
+          : response.data.actor_context === "doctor"
+            ? "/doctor/dashboard"
+            : response.data.actor_context === "patient"
+              ? "/patient/dashboard"
+              : "/dashboard";
 
-const response = await verifyLoginOtp(challengeId.current, code);
-
-//  GUARDAR TOKEN para que el servidor SSR pueda autenticarse
-if (response.data.access_token) {
-  localStorage.setItem("token", response.data.access_token);
-  document.cookie = `token=${response.data.access_token}; path=/; max-age=7200; SameSite=Lax; Secure`;
-}
-
-const destination = response.data.actor_context === "clinic_admin"
-  ? "/clinic/dashboard"
-  : response.data.actor_context === "doctor"
-    ? "/doctor/dashboard"
-    : "/dashboard";
-setPassword("");
-dashboardPath.current = destination;
-dispatch({ type: "verified" });
-router.prefetch(destination);
-        
+        setPassword("");
+        dashboardPath.current = destination;
+        dispatch({ type: "verified" });
+        router.prefetch(destination);
       } catch (caughtError) {
         handleError(caughtError);
       } finally {
@@ -308,6 +305,7 @@ router.prefetch(destination);
 
   return (
     <CredentialsStep
+      actorContext={actorContext}
       identifierType={identifierType}
       country={country}
       email={email}
@@ -320,15 +318,23 @@ router.prefetch(destination);
       emailInput={emailInput}
       phoneInput={phoneInput}
       passwordInput={passwordInput}
+      onActorContextChange={(context) => {
+        setActorContext(context);
+        setPassword("");
+        dispatch({ type: "fieldCleared", field: "password" });
+      }}
       onIdentifierTypeChange={(type) => { setIdentifierType(type); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onCountryChange={(value) => { setCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onEmailChange={(value) => { setEmail(value); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onPhoneChange={(value) => { setPhone(value.replace(/\D/g, "").slice(0, COUNTRY_OPTIONS[country].nationalLength)); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onPasswordChange={(value) => { setPassword(value); dispatch({ type: "fieldCleared", field: "password" }); }}
       onIdentifierBlur={validateIdentifierField}
-      onPasswordBlur={() => dispatch(password
-        ? { type: "fieldCleared", field: "password" }
-        : { type: "fieldInvalid", field: "password", message: "Ingresa tu contraseña." })}
+      onPasswordBlur={() => {
+        if (actorContext !== "staff") return;
+        dispatch(password
+          ? { type: "fieldCleared", field: "password" }
+          : { type: "fieldInvalid", field: "password", message: "Ingresa tu contraseña." });
+      }}
       onSubmit={submitCredentials}
     />
   );

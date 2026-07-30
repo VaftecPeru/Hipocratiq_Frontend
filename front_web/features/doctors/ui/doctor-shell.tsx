@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Bell, CalendarDays, ClipboardList, House, Menu, Settings, Stethoscope, Users, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -30,9 +31,16 @@ export function DoctorShell({ children, userName, subtitle }: { children: React.
     <div className="min-h-svh bg-paper text-ink">
       <aside className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-30 w-60 flex-col border-r border-line bg-surface lg:flex`}>
         <div className="flex h-16 items-center border-b border-line px-5">
-          <span className="grid size-9 place-items-center rounded-xl bg-accent">
-            <Stethoscope className="size-5 text-white" aria-hidden="true" />
-          </span>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent">
+            <Image
+              src="/logo_hipocratiq.webp"
+              alt="Hipocratiq"
+              width={28}
+              height={28}
+              className="object-contain brightness-0 invert"
+              priority
+            />
+          </div>
           <span className="ml-2 text-sm font-extrabold tracking-[0.06em]">HIPOCRATIQ</span>
         </div>
 

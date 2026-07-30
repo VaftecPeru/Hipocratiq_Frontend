@@ -2,6 +2,15 @@ const API_PREFIX = "/backend";
 
 type ValidationErrors = Record<string, string[]>;
 
+type ApiErrorPayload = {
+  message?: string;
+  errors?: ValidationErrors;
+};
+
+async function readJson<T>(response: Response): Promise<T | null> {
+  return response.json().catch(() => null) as Promise<T | null>;
+}
+
 const STATUS_MESSAGES: Partial<Record<number, string>> = {
   400: "La solicitud no es válida.",
   401: "Tu sesión expiró. Vuelve a iniciar sesión.",
@@ -120,28 +129,24 @@ export async function postToApi<T>(
     body: payload ? JSON.stringify(payload) : undefined,
   });
 
-  const data = (await response.json().catch(() => null)) as {
-    message?: string;
-    errors?: ValidationErrors;
-  } | null;
-
   if (!response.ok) {
-    const firstValidationError = data?.errors
-      ? Object.values(data.errors).flat()[0]
+    const errorData = await readJson<ApiErrorPayload>(response);
+    const firstValidationError = errorData?.errors
+      ? Object.values(errorData.errors).flat()[0]
       : null;
 
     throw new ApiError(
       localizedErrorMessage(
         response.status,
-        firstValidationError ?? data?.message ?? null,
+        firstValidationError ?? errorData?.message ?? null,
         response.headers.get("retry-after"),
       ),
       response.status,
-      data?.errors,
+      errorData?.errors,
     );
   }
 
-  return data as T;
+  return (await readJson<T>(response)) as T;
 }
 
 export async function getFromApi<T>(path: string): Promise<T> {
@@ -150,11 +155,19 @@ export async function getFromApi<T>(path: string): Promise<T> {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
-  const data = (await response.json().catch(() => null)) as { message?: string } | null;
-
   if (!response.ok) {
-    throw new ApiError(localizedErrorMessage(response.status, data?.message ?? null, response.headers.get("retry-after")), response.status);
+    const errorData = await readJson<ApiErrorPayload>(response);
+
+    throw new ApiError(
+      localizedErrorMessage(
+        response.status,
+        errorData?.message ?? null,
+        response.headers.get("retry-after"),
+      ),
+      response.status,
+      errorData?.errors,
+    );
   }
 
-  return data as T;
+  return (await readJson<T>(response)) as T;
 }

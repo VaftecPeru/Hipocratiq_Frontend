@@ -49,10 +49,15 @@ const CLINIC_STEPS: StepConfig[] = [
   { key: "otp", label: "Verificar", icon: LockKeyhole },
 ];
 
+const REGISTRATION_BACK_LABELS: Record<string, string> = {
+  clinic: "Volver a selección",
+  plan: "Volver a datos",
+  otp: "Volver a planes",
+};
+
 export function RegistrationHeader({ step, onBack, steps }: { step: Exclude<RegistrationStep, "role" | "success">; onBack: () => void; steps?: StepConfig[] }) {
   const allSteps = steps ?? CLINIC_STEPS;
   const currentIndex = allSteps.findIndex((s) => s.key === step);
-  const backLabels: Record<string, string> = { clinic: "Volver a selección", plan: "Volver a datos", otp: "Volver a planes" };
 
   return (
     <div className="mb-8">
@@ -62,7 +67,7 @@ export function RegistrationHeader({ step, onBack, steps }: { step: Exclude<Regi
         onClick={onBack}
       >
         <ArrowLeft className="size-3.5" aria-hidden="true" />
-        {backLabels[step] ?? "Volver"}
+        {REGISTRATION_BACK_LABELS[step] ?? "Volver"}
       </button>
 
       {/* Step progress */}
@@ -71,7 +76,6 @@ export function RegistrationHeader({ step, onBack, steps }: { step: Exclude<Regi
           const Icon = s.icon;
           const isCompleted = index < currentIndex;
           const isCurrent = index === currentIndex;
-          const isUpcoming = index > currentIndex;
 
           return (
             <div key={s.key} className="flex items-center">
@@ -269,6 +273,7 @@ export function RegistrationSelect({ label, name, value, onChange, error, hint, 
             onClick={() => { if (!disabled) { setIsOpen((v) => !v); if (!isOpen) { const idx = options?.findIndex((o) => o.value === String(value)) ?? -1; setFocusedIndex(idx >= 0 ? idx : 0); } } }}
             onKeyDown={handleKeyDown}
             disabled={disabled}
+            role="combobox"
             aria-haspopup="listbox"
             aria-expanded={isOpen}
             aria-controls={listboxId}

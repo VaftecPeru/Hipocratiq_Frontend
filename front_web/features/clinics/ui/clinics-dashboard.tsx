@@ -18,7 +18,8 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useReducer, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useReducer, useTransition } from "react";
 import MexicoFlag from "country-flag-icons/react/3x2/MX";
 import PeruFlag from "country-flag-icons/react/3x2/PE";
 import UnitedStatesFlag from "country-flag-icons/react/3x2/US";
@@ -26,23 +27,15 @@ import type {
   Clinic,
   ClinicActivity,
   ClinicCountryCode,
+  ClinicsDashboardPageData,
+  ClinicsFilters,
   ClinicPlan,
-  ClinicsDashboardData,
   ClinicStatus,
 } from "@/features/clinics/model/clinic.types";
 
 type ClinicsDashboardProps = {
-  initialData: ClinicsDashboardData;
-  initialSearch?: string;
-};
-
-type FiltersState = {
-  search: string;
-  country: ClinicCountryCode | "all";
-  plan: ClinicPlan | "all";
-  status: ClinicStatus | "all";
-  city: string;
-  page: number;
+  initialData: ClinicsDashboardPageData;
+  initialFilters: ClinicsFilters;
 };
 
 type FiltersAction =
@@ -56,7 +49,7 @@ type FiltersAction =
   | { type: "nextPage"; totalPages: number }
   | { type: "clear" };
 
-function filtersReducer(state: FiltersState, action: FiltersAction): FiltersState {
+function filtersReducer(state: ClinicsFilters, action: FiltersAction): ClinicsFilters {
   switch (action.type) {
     case "search":
     case "country":
@@ -71,7 +64,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
     case "nextPage":
       return { ...state, page: Math.min(action.totalPages, state.page + 1) };
     case "clear":
-      return { search: "", country: "all", plan: "all", status: "all", city: "all", page: 1 };
+      return { search: "", country: "all", plan: "all", status: "all", city: "", page: 1 };
   }
 }
 
@@ -108,8 +101,23 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-function normalizeSearch(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+function percentageOf(value: number, total: number): string {
+  return total === 0 ? "0.0" : ((value / total) * 100).toFixed(1);
+}
+
+function paginationItems(currentPage: number, lastPage: number): Array<number | "ellipsis"> {
+  const pages = Array.from(
+    new Set(
+      [1, lastPage, currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2]
+        .filter((page) => page >= 1 && page <= lastPage),
+    ),
+  ).sort((a, b) => a - b);
+
+  return pages.flatMap((page, index) => {
+    const previous = pages[index - 1];
+
+    return previous && page - previous > 1 ? ["ellipsis", page] : [page];
+  });
 }
 
 function CountryFlag({ countryCode }: { countryCode: ClinicCountryCode }) {
@@ -160,19 +168,27 @@ function MetricCard({
   );
 }
 
-function PlanDistributionCard({ data }: { data: ClinicsDashboardData["planDistribution"] }) {
+function PlanDistributionCard({ data }: { data: ClinicsDashboardPageData["planDistribution"] }) {
   const enterprisePct = data.find((d) => d.plan === "enterprise")?.percentage ?? 0;
   const professionalPct = data.find((d) => d.plan === "professional")?.percentage ?? 0;
+  const basicPct = data.find((d) => d.plan === "basic")?.percentage ?? 0;
+  const hasSubscriptions = data.some((item) => item.count > 0);
   const stop1 = enterprisePct;
   const stop2 = stop1 + professionalPct;
+  const background = hasSubscriptions
+    ? `conic-gradient(var(--plan-enterprise) 0 ${stop1}%, var(--plan-professional) ${stop1}% ${stop2}%, var(--plan-basic) ${stop2}% 100%)`
+    : "var(--surface-subtle)";
+  const distributionLabel = hasSubscriptions
+    ? `Enterprise ${enterprisePct}%, Profesional ${professionalPct}% y Básico ${basicPct}%`
+    : "No hay suscripciones activas";
 
   return (
     <article className="grid min-h-22 grid-cols-[3.25rem_1fr] items-center gap-3 rounded-xl border border-line bg-surface p-3.5 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)] motion-safe:animate-[fade-up-in_400ms_ease-out_both]" style={{ animationDelay: "240ms" }}>
       <div
         className="size-13 rounded-full p-1.5"
-        style={{ background: `conic-gradient(var(--plan-enterprise) 0 ${stop1}%, var(--plan-professional) ${stop1}% ${stop2}%, var(--plan-basic) ${stop2}% 100%)` }}
+        style={{ background }}
         role="img"
-        aria-label={`Enterprise ${enterprisePct}%, Profesional ${professionalPct}% y Básico ${100 - stop2}%`}
+        aria-label={distributionLabel}
       >
         <div className="size-full rounded-full bg-surface" />
       </div>
@@ -221,14 +237,28 @@ function StatusBadge({ status }: { status: ClinicStatus }) {
   );
 }
 
-function ClinicsTable({ clinics, rowOffset }: { clinics: Clinic[]; rowOffset: number }) {
+function ClinicsTable({
+  clinics,
+  rowOffset,
+  hasActiveFilters,
+}: {
+  clinics: Clinic[];
+  rowOffset: number;
+  hasActiveFilters: boolean;
+}) {
   if (clinics.length === 0) {
     return (
       <div className="grid min-h-72 place-items-center px-6 py-12 text-center" role="status">
         <div>
           <span className="mx-auto grid size-12 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true"><Search className="size-5" /></span>
-          <h3 className="mt-4 text-xs font-extrabold">No encontramos clínicas</h3>
-          <p className="mt-1 max-w-sm text-xs leading-5 text-muted">Prueba otro nombre o limpia filtros para ampliar resultados.</p>
+          <h3 className="mt-4 text-xs font-extrabold">
+            {hasActiveFilters ? "No encontramos coincidencias" : "Todavía no hay clínicas registradas"}
+          </h3>
+          <p className="mt-1 max-w-sm text-xs leading-5 text-muted">
+            {hasActiveFilters
+              ? "Prueba otro nombre o limpia filtros para ampliar resultados."
+              : "Las clínicas aparecerán aquí cuando se complete el primer registro."}
+          </p>
         </div>
       </div>
     );
@@ -302,7 +332,7 @@ function ClinicsTable({ clinics, rowOffset }: { clinics: Clinic[]; rowOffset: nu
   );
 }
 
-function SummaryPanel({ data }: { data: ClinicsDashboardData }) {
+function SummaryPanel({ data }: { data: ClinicsDashboardPageData }) {
   const summaryRows = [
     { label: "Total de clínicas", value: numberFormatter.format(data.totals.clinics), icon: Building2 },
     { label: "Total de usuarios", value: numberFormatter.format(data.totals.users), icon: Users },
@@ -324,8 +354,13 @@ function SummaryPanel({ data }: { data: ClinicsDashboardData }) {
       </section>
 
       <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-xs font-extrabold">Actividad reciente</h2><span className="size-2 rounded-full bg-success shadow-[0_0_0_0.2rem_var(--success-soft)]" aria-label="Actualización en tiempo real" /></div>
+        <div className="flex items-center justify-between gap-3"><h2 className="text-xs font-extrabold">Actividad reciente</h2><span className="size-2 rounded-full bg-success shadow-[0_0_0_0.2rem_var(--success-soft)]" aria-label="Datos cargados desde el servidor" /></div>
         <ol className="mt-3 grid gap-3">
+          {data.recentActivity.length === 0 ? (
+            <li className="rounded-lg bg-surface-subtle px-3 py-4 text-center text-xs text-muted">
+              Aún no hay actividad de clínicas.
+            </li>
+          ) : null}
           {data.recentActivity.map((activity) => {
             const activityStyle = ACTIVITY_STYLES[activity.type];
             const Icon = activityStyle.icon;
@@ -344,42 +379,45 @@ function SummaryPanel({ data }: { data: ClinicsDashboardData }) {
   );
 }
 
-export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDashboardProps) {
-  const [{ search, country, plan, status, city, page }, dispatch] = useReducer(filtersReducer, {
-    search: initialSearch,
-    country: "all",
-    plan: "all",
-    status: "all",
-    city: "all",
-    page: 1,
-  });
+export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboardProps) {
+  const [filters, dispatch] = useReducer(filtersReducer, initialFilters);
+  const { search, country, plan, status, city } = filters;
   const [isPending, startTransition] = useTransition();
-  const deferredSearch = useDeferredValue(search);
-  const pageSize = 10;
-  const normalizedSearch = normalizeSearch(deferredSearch);
-  const cities = Array.from(new Set(initialData.clinics.map((clinic) => clinic.city))).sort((a, b) => a.localeCompare(b, "es"));
-  const filteredClinics = initialData.clinics.filter((clinic) => {
-    const searchableContent = normalizeSearch(`${clinic.name} ${clinic.country} ${clinic.city}`);
-    return (
-      (!normalizedSearch || searchableContent.includes(normalizedSearch)) &&
-      (country === "all" || clinic.countryCode === country) &&
-      (plan === "all" || clinic.plan === plan) &&
-      (status === "all" || clinic.status === status) &&
-      (city === "all" || clinic.city === city)
-    );
-  });
-  const totalPages = Math.max(1, Math.ceil(filteredClinics.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const rowOffset = (currentPage - 1) * pageSize;
-  const paginatedClinics = filteredClinics.slice(rowOffset, rowOffset + pageSize);
-  const hasActiveFilters = Boolean(search) || country !== "all" || plan !== "all" || status !== "all" || city !== "all";
+  const router = useRouter();
+  const pathname = usePathname();
+  const currentPage = initialData.pagination.currentPage;
+  const totalPages = initialData.pagination.lastPage;
+  const rowOffset = (currentPage - 1) * initialData.pagination.perPage;
+  const hasActiveFilters =
+    Boolean(search.trim()) ||
+    country !== "all" ||
+    plan !== "all" ||
+    status !== "all" ||
+    Boolean(city.trim());
+
+  function navigate(next: ClinicsFilters) {
+    const params = new URLSearchParams();
+
+    if (next.search.trim()) params.set("q", next.search.trim());
+    if (next.country !== "all") params.set("country", next.country);
+    if (next.plan !== "all") params.set("plan", next.plan);
+    if (next.status !== "all") params.set("status", next.status);
+    if (next.city.trim()) params.set("city", next.city.trim());
+    if (next.page > 1) params.set("page", String(next.page));
+
+    const query = params.toString();
+    startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }));
+  }
 
   function updateFilter(action: FiltersAction) {
-    startTransition(() => dispatch(action));
+    const next = filtersReducer(filters, action);
+
+    dispatch(action);
+    navigate(next);
   }
 
   function clearFilters() {
-    startTransition(() => dispatch({ type: "clear" }));
+    updateFilter({ type: "clear" });
   }
 
   return (
@@ -390,9 +428,9 @@ export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDas
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(11rem,0.8fr))_minmax(19rem,1.45fr)]" aria-label="Indicadores de clínicas">
-        <MetricCard label="Clínicas activas" value={initialData.totals.activeClinics} helper={`${((initialData.totals.activeClinics / initialData.totals.clinics) * 100).toFixed(1)}% del total`} tone="accent" index={0} />
-        <MetricCard label="Clínicas suspendidas" value={initialData.totals.suspendedClinics} helper={`${((initialData.totals.suspendedClinics / initialData.totals.clinics) * 100).toFixed(1)}% del total`} tone="warning" index={1} />
-        <MetricCard label="Total de clínicas" value={initialData.totals.clinics} helper="Cobertura MX + PE" tone="violet" index={2} />
+        <MetricCard label="Clínicas activas" value={initialData.totals.activeClinics} helper={`${percentageOf(initialData.totals.activeClinics, initialData.totals.clinics)}% del total`} tone="accent" index={0} />
+        <MetricCard label="Clínicas suspendidas" value={initialData.totals.suspendedClinics} helper={`${percentageOf(initialData.totals.suspendedClinics, initialData.totals.clinics)}% del total`} tone="warning" index={1} />
+        <MetricCard label="Total de clínicas" value={initialData.totals.clinics} helper="Datos consolidados del sistema" tone="violet" index={2} />
         <PlanDistributionCard data={initialData.planDistribution} />
       </section>
 
@@ -401,22 +439,24 @@ export function ClinicsDashboard({ initialData, initialSearch = "" }: ClinicsDas
           <label className="grid gap-1 text-2xs font-bold text-muted">País<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={country} onChange={(event) => updateFilter({ type: "country", value: event.target.value as ClinicCountryCode | "all" })}><option value="all">Todos</option><option value="MX">México</option><option value="PE">Perú</option><option value="US">Estados Unidos</option></select></label>
           <label className="grid gap-1 text-2xs font-bold text-muted">Plan<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={plan} onChange={(event) => updateFilter({ type: "plan", value: event.target.value as ClinicPlan | "all" })}><option value="all">Todos</option>{Object.entries(PLAN_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           <label className="grid gap-1 text-2xs font-bold text-muted">Estado<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={status} onChange={(event) => updateFilter({ type: "status", value: event.target.value as ClinicStatus | "all" })}><option value="all">Todos</option><option value="active">Activas</option><option value="suspended">Suspendidas</option></select></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Ciudad<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={city} onChange={(event) => updateFilter({ type: "city", value: event.target.value })}><option value="all">Todas</option>{cities.map((cityName) => <option value={cityName} key={cityName}>{cityName}</option>)}</select></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre, país o ciudad..." onChange={(event) => dispatch({ type: "search", value: event.target.value })} /></span></label>
+          <label className="grid gap-1 text-2xs font-bold text-muted">Ciudad<input className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={city} placeholder="Ej. Lima" onChange={(event) => updateFilter({ type: "city", value: event.target.value })} /></label>
+          <label className="grid gap-1 text-2xs font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre, país o ciudad..." onChange={(event) => updateFilter({ type: "search", value: event.target.value })} /></span></label>
           <button className={`mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-8 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-accent-soft-hover" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
         </div>
       </section>
 
       <div className="mt-4 grid items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_17.5rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="clinics-results-title" aria-busy={isPending}>
-          <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${filteredClinics.length} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-2xs text-muted sm:block">Datos operativos consolidados</span>}</div>
-          <ClinicsTable clinics={paginatedClinics} rowOffset={rowOffset} />
+          <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${numberFormatter.format(initialData.pagination.total)} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-2xs text-muted sm:block">Datos operativos consolidados</span>}</div>
+          <ClinicsTable clinics={initialData.clinics} rowOffset={rowOffset} hasActiveFilters={hasActiveFilters} />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
-            <p className="text-2xs text-muted">Mostrando {filteredClinics.length === 0 ? 0 : rowOffset + 1} a {Math.min(rowOffset + pageSize, filteredClinics.length)} de {filteredClinics.length} clínicas cargadas</p>
+            <p className="text-2xs text-muted">Mostrando {initialData.pagination.from ?? 0} a {initialData.pagination.to ?? 0} de {initialData.pagination.total} clínicas</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página anterior" disabled={currentPage === 1} onClick={() => dispatch({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => <button className={`grid size-7 place-items-center rounded-md text-xs font-bold focus-visible:outline-3 focus-visible:outline-focus ${pageNumber === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={pageNumber} aria-label={`Página ${pageNumber}`} aria-current={pageNumber === currentPage ? "page" : undefined} onClick={() => dispatch({ type: "page", value: pageNumber })}>{pageNumber}</button>)}
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages} onClick={() => dispatch({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
+              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página anterior" disabled={currentPage === 1 || isPending} onClick={() => updateFilter({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
+              {paginationItems(currentPage, totalPages).map((item, index) => item === "ellipsis"
+                ? <span className="grid size-7 place-items-center text-xs text-muted" key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                : <button className={`grid size-7 place-items-center rounded-md text-xs font-bold focus-visible:outline-3 focus-visible:outline-focus ${item === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={item} aria-label={`Página ${item}`} aria-current={item === currentPage ? "page" : undefined} disabled={isPending} onClick={() => updateFilter({ type: "page", value: item })}>{item}</button>)}
+              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages || isPending} onClick={() => updateFilter({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
             </div>
           </div>
         </section>

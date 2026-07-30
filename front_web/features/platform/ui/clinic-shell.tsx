@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Bell, Building2, CalendarDays, ChartNoAxesCombined, FileText, House, LogOut, Menu, Settings, Users, X } from "lucide-react";
+import { Bell, Building2, CalendarDays, ChartNoAxesCombined, FileText, House, Menu, Settings, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -24,7 +24,7 @@ const navigation: NavigationItem[] = [
   { label: "Configuración", href: "/clinic/configuracion", icon: Settings },
 ];
 
-export function ClinicShell({ children, clinicName, userName }: { children: React.ReactNode; clinicName: string; userName: string }) {
+export function ClinicShell({ children, clinicName }: { children: React.ReactNode; clinicName: string; userName: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
