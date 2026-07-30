@@ -1,35 +1,43 @@
-import type { OtpChallengeResponse } from "@/features/auth/model/auth.types";
-import { postToApi } from "@/shared/api/http-client";
+import type {
+  LoginActorContext,
+  OtpChallengeResponse,
+  WebLoginVerificationResponse,
+} from "@/features/auth/model/auth.types";
+import { ApiError, postToApi } from "@/shared/api/http-client";
 
-type RequestLoginOtpInput = {
-  identifier: string;
-  password: string;
-};
+type RequestLoginOtpInput =
+  | { identifier: string; actorContext: "staff"; password: string }
+  | { identifier: string; actorContext: "patient"; password?: never };
+
+function clearLegacyBrowserToken(): void {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.removeItem("token");
+  document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
+}
 
 export function requestLoginOtp(input: RequestLoginOtpInput): Promise<OtpChallengeResponse> {
-  return postToApi<OtpChallengeResponse>("/api/v1/auth/otp/request", {
+  clearLegacyBrowserToken();
+
+  const payload: Record<string, unknown> & { actor_context: LoginActorContext } = {
     purpose: "login",
     client_type: "web",
-    actor_context: "staff",
+    actor_context: input.actorContext,
     identifier: input.identifier,
-    password: input.password,
-  });
+  };
+
+  if (input.actorContext === "staff") {
+    payload.password = input.password;
+  }
+
+  return postToApi<OtpChallengeResponse>("/api/v1/auth/otp/request", payload);
 }
 
 export function verifyLoginOtp(
   challengeId: string,
   code: string,
-): Promise<{
-  data: {
-    token_type: string;
-    access_token: string;
-    expires_at: string;
-    user: unknown;
-    actor_context: string;
-    next_step: string | null;
-  };
-}> {
-  return postToApi("/api/v1/auth/otp/verify", {
+): Promise<WebLoginVerificationResponse> {
+  return postToApi<WebLoginVerificationResponse>("/api/v1/auth/otp/verify", {
     purpose: "login",
     challenge_id: challengeId,
     code,
@@ -66,6 +74,14 @@ export function resendOtp(challengeId: string): Promise<OtpChallengeResponse> {
   });
 }
 
-export function logout(): Promise<unknown> {
-  return postToApi("/api/v1/auth/logout");
+export async function logout(): Promise<void> {
+  try {
+    await postToApi("/api/v1/auth/logout");
+  } catch (error) {
+    if (! (error instanceof ApiError && error.status === 401)) {
+      throw error;
+    }
+  } finally {
+    clearLegacyBrowserToken();
+  }
 }

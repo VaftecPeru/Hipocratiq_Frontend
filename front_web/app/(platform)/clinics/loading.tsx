@@ -1,5 +1,3 @@
-import { Skeleton } from "boneyard-js/react";
-
 export default function ClinicsLoading() {
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6" role="status" aria-live="polite" aria-busy="true">

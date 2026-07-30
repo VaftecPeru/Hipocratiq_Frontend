@@ -27,6 +27,7 @@ async function forwardRequest(request: NextRequest, context: RouteContext): Prom
   headers.delete("connection");
   headers.delete("content-length");
   headers.delete("host");
+  headers.delete("authorization");
   headers.set("accept", "application/json");
   headers.set("origin", serverEnv.appUrl);
   headers.set("x-forwarded-host", request.nextUrl.host);
@@ -40,6 +41,7 @@ async function forwardRequest(request: NextRequest, context: RouteContext): Prom
       cache: "no-store",
       redirect: "manual",
       duplex: "half",
+      signal: AbortSignal.timeout(10_000),
     } as RequestInit & { duplex: "half" });
 
     const response = new Response(upstreamResponse.body, {
@@ -63,7 +65,13 @@ async function forwardRequest(request: NextRequest, context: RouteContext): Prom
     }
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("Backend proxy request failed.", {
+      method: request.method,
+      path: targetUrl.pathname,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
     return Response.json({
       success: false,
       code: "BACKEND_UNAVAILABLE",

@@ -1,4 +1,5 @@
 export type LoginIdentifierType = "email" | "phone";
+export type LoginActorContext = "staff" | "patient";
 export type AuthStep = "credentials" | "otp" | "success";
 export type CountryCode = "PE" | "MX" | "US";
 
@@ -26,6 +27,15 @@ export type AuthenticatedSession = {
 export type SessionResponse = {
   success: boolean;
   data: AuthenticatedSession;
+};
+
+export type WebLoginVerificationResponse = {
+  success: true;
+  data: {
+    user: AuthenticatedUser;
+    actor_context: AuthenticatedSession["actor_context"];
+    next_step: null;
+  };
 };
 
 export type OtpChallengeResponse = {

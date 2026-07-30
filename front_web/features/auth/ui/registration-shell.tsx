@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { BrandLogo } from "@/shared/ui/brand-logo";
@@ -25,8 +26,8 @@ export function RegistrationShell({ children }: { children: ReactNode }) {
         <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-2xs text-footer-text">
           <span>© 2026 Hipocratiq</span>
           <div className="flex gap-5">
-            <a href="/soporte" className="transition-colors hover:text-ink">Soporte</a>
-            <a href="/seguridad" className="transition-colors hover:text-ink">Seguridad</a>
+            <Link href="/soporte" className="transition-colors hover:text-ink">Soporte</Link>
+            <Link href="/seguridad" className="transition-colors hover:text-ink">Seguridad</Link>
           </div>
         </footer>
       </section>

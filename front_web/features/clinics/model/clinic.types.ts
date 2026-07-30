@@ -44,3 +44,25 @@ export type ClinicsDashboardData = {
   planDistribution: PlanDistribution[];
   recentActivity: ClinicActivity[];
 };
+
+export type ClinicsPagination = {
+  currentPage: number;
+  from: number | null;
+  lastPage: number;
+  perPage: number;
+  to: number | null;
+  total: number;
+};
+
+export type ClinicsDashboardPageData = ClinicsDashboardData & {
+  pagination: ClinicsPagination;
+};
+
+export type ClinicsFilters = {
+  search: string;
+  country: ClinicCountryCode | "all";
+  plan: ClinicPlan | "all";
+  status: ClinicStatus | "all";
+  city: string;
+  page: number;
+};

@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getClinicsDashboardData } from "@/features/clinics/api/server-clinics";
+import type {
+  ClinicCountryCode,
+  ClinicPlan,
+  ClinicsFilters,
+  ClinicStatus,
+} from "@/features/clinics/model/clinic.types";
 import { ClinicsDashboard } from "@/features/clinics/ui/clinics-dashboard";
 
 export const metadata: Metadata = {
@@ -7,11 +14,91 @@ export const metadata: Metadata = {
   description: "Administración global de clínicas y tenants.",
 };
 
-export default async function ClinicsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const [{ q = "" }, clinicsDashboardData] = await Promise.all([
-    searchParams,
-    getClinicsDashboardData(),
-  ]);
+type SearchParam = string | string[] | undefined;
 
-  return <ClinicsDashboard initialData={clinicsDashboardData} initialSearch={q} />;
+type ClinicsPageSearchParams = {
+  q?: SearchParam;
+  country?: SearchParam;
+  plan?: SearchParam;
+  status?: SearchParam;
+  city?: SearchParam;
+  page?: SearchParam;
+};
+
+function firstValue(value: SearchParam): string {
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function oneOf<T extends string>(value: string, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+export default async function ClinicsPage({
+  searchParams,
+}: {
+  searchParams: Promise<ClinicsPageSearchParams>;
+}) {
+  const params = await searchParams;
+  const rawPage = Number.parseInt(firstValue(params.page), 10);
+  const filters: ClinicsFilters = {
+    search: firstValue(params.q).slice(0, 100),
+    country: oneOf<ClinicCountryCode | "all">(
+      firstValue(params.country),
+      ["all", "MX", "PE", "US"],
+      "all",
+    ),
+    plan: oneOf<ClinicPlan | "all">(
+      firstValue(params.plan),
+      ["all", "basic", "professional", "enterprise"],
+      "all",
+    ),
+    status: oneOf<ClinicStatus | "all">(
+      firstValue(params.status),
+      ["all", "active", "suspended"],
+      "all",
+    ),
+    city: firstValue(params.city).slice(0, 255),
+    page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+  };
+  const result = await getClinicsDashboardData(filters);
+
+  if (!result.ok) {
+    return (
+      <main className="mx-auto grid min-h-[60vh] w-full max-w-2xl place-items-center px-5 py-12">
+        <section
+          className="w-full rounded-2xl border border-danger/25 bg-surface p-7 text-center shadow-[0_0.5rem_2rem_rgb(16_27_51/6%)]"
+          role="alert"
+        >
+          <p className="text-xs font-bold tracking-[0.13em] text-danger uppercase">
+            Clínicas no disponibles
+          </p>
+          <h1 className="mt-2 font-display text-2xl italic">No se pudieron cargar los datos</h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted">{result.message}</p>
+          <Link
+            className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-accent px-4 text-sm font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            href="/clinics"
+          >
+            Volver a intentar
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const dashboardKey = [
+    filters.search,
+    filters.country,
+    filters.plan,
+    filters.status,
+    filters.city,
+    filters.page,
+  ].join("|");
+
+  return (
+    <ClinicsDashboard
+      key={dashboardKey}
+      initialData={result.data}
+      initialFilters={filters}
+    />
+  );
 }
