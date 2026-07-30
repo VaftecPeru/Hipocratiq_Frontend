@@ -227,16 +227,25 @@ export function LoginFlow() {
 
     startTransition(async () => {
       try {
-        const response = await verifyLoginOtp(challengeId.current, code);
-        const destination = response.data.actor_context === "clinic_admin"
-          ? "/clinic/dashboard"
-          : response.data.actor_context === "doctor"
-            ? "/doctor/dashboard"
-            : "/dashboard";
-        setPassword("");
-        dashboardPath.current = destination;
-        dispatch({ type: "verified" });
-        router.prefetch(destination);
+
+const response = await verifyLoginOtp(challengeId.current, code);
+
+//  GUARDAR TOKEN para que el servidor SSR pueda autenticarse
+if (response.data.access_token) {
+  localStorage.setItem("token", response.data.access_token);
+  document.cookie = `token=${response.data.access_token}; path=/; max-age=7200; SameSite=Lax; Secure`;
+}
+
+const destination = response.data.actor_context === "clinic_admin"
+  ? "/clinic/dashboard"
+  : response.data.actor_context === "doctor"
+    ? "/doctor/dashboard"
+    : "/dashboard";
+setPassword("");
+dashboardPath.current = destination;
+dispatch({ type: "verified" });
+router.prefetch(destination);
+        
       } catch (caughtError) {
         handleError(caughtError);
       } finally {
