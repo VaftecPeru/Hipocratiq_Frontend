@@ -13,8 +13,6 @@ export type PatientRegistrationDraft = {
   country_code: string;
   phone_number: string;
   clinic_id: number | null;
-  password: string;
-  password_confirmation: string;
   terms_accepted: boolean;
 };
 

@@ -68,13 +68,6 @@ export function PatientRegistrationForm({ draft, clinics, errors, pending, globa
           </div>
         </FormGroup>
 
-        <FormGroup label="Seguridad (opcional)">
-          <div className="grid gap-5">
-            <RegistrationField label="Contraseña" name="password" value={draft.password} error={errors.password} hint="Puedes ingresar con OTP; agrega una contraseña si también deseas usarla." placeholder="10+ caracteres" onChange={(value) => update("password", value)} type="password" autoComplete="new-password" maxLength={72} />
-            {draft.password ? <RegistrationField label="Confirmar contraseña" name="password_confirmation" value={draft.password_confirmation} error={errors.password_confirmation} placeholder="Repite tu contraseña" onChange={(value) => update("password_confirmation", value)} type="password" autoComplete="new-password" maxLength={72} /> : null}
-          </div>
-        </FormGroup>
-
         <div><label className="flex items-start gap-2.5 text-xs leading-5"><input className="mt-0.5 size-4 shrink-0 accent-accent" type="checkbox" checked={draft.terms_accepted} onChange={(event) => update("terms_accepted", event.target.checked)} aria-invalid={errors.terms_accepted ? true : undefined} aria-describedby={errors.terms_accepted ? "patient-terms-error" : undefined} required /><span className="text-muted">Acepto los Términos de Servicio y el tratamiento de mis datos para gestionar mi atención.</span></label><InlineError id="patient-terms-error" message={errors.terms_accepted} /></div>
         <GlobalError message={globalError} />
         <button className={`${registrationButtonClasses} w-full`} type="submit" disabled={pending || clinics.length === 0}>{pending ? <><Spinner />Enviando código</> : "Verificar mi teléfono"}</button>
