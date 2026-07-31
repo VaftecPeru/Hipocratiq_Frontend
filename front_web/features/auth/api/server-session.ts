@@ -17,6 +17,7 @@ export const getAuthenticatedSession = cache(async (): Promise<AuthenticatedSess
       Accept: "application/json",
       Cookie: cookieHeader,
       Origin: serverEnv.appUrl,
+      Referer: `${serverEnv.appUrl}/`,
     },
     signal: AbortSignal.timeout(10_000),
   });
