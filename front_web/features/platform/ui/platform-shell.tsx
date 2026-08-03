@@ -44,10 +44,10 @@ const navigationItems: NavigationItem[] = [
   { label: "Usuarios", href: "/users", icon: Users, available: true },
   { label: "Membresías", href: "/memberships", icon: CreditCard, available: true },
   { label: "Facturación", href: "/billing", icon: FileText, available: true },
-  { label: "Reportes", href: "/reports", icon: BarChart3 },
-  { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor },
-  { label: "Auditoría global", href: "/audit", icon: CircleAlert },
-  { label: "Soporte", href: "/support", icon: MessageSquare },
+  { label: "Reportes", href: "/reports", icon: BarChart3, available: true },
+  { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor, available: true },
+  { label: "Auditoría global", href: "/audit", icon: CircleAlert, available: true },
+  { label: "Soporte", href: "/support", icon: MessageSquare, available: true },
 ];
 
 const settingsItems = ["General", "Idiomas y región", "Integraciones", "IA epidemiológica", "Notificaciones", "Respaldos"];
