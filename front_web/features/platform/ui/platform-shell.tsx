@@ -41,9 +41,9 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, available: true },
   { label: "Clínicas", href: "/clinics", icon: Building2, available: true },
-  { label: "Usuarios", href: "/users", icon: Users },
-  { label: "Membresías", href: "/memberships", icon: CreditCard },
-  { label: "Facturación", href: "/billing", icon: FileText },
+  { label: "Usuarios", href: "/users", icon: Users, available: true },
+  { label: "Membresías", href: "/memberships", icon: CreditCard, available: true },
+  { label: "Facturación", href: "/billing", icon: FileText, available: true },
   { label: "Reportes", href: "/reports", icon: BarChart3 },
   { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor },
   { label: "Auditoría global", href: "/audit", icon: CircleAlert },
