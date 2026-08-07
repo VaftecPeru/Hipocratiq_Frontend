@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
@@ -17,10 +19,7 @@ import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { Sparkline } from "@/shared/ui/sparkline";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
-
-export const metadata: Metadata = {
-  title: "Soporte",
-};
+import { CreateTicketModal } from "@/shared/ui/common-modals";
 
 const stats: Array<StatCardProps> = [
   { label: "Tickets Totales", value: "1,458", change: "+9.6% vs mes anterior", direction: "up", icon: Headset, tone: "accent" },
@@ -306,6 +305,8 @@ function RecentActivityCard() {
 }
 
 export default function SupportPage() {
+  const [createTicketOpen, setCreateTicketOpen] = useState(false);
+
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
@@ -313,7 +314,7 @@ export default function SupportPage() {
           <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Soporte</h1>
           <p className="mt-0.5 text-xs text-muted">Gestiona tickets, SLA, escalaciones y rendimiento del soporte en la plataforma para México y Perú.</p>
         </div>
-        <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled title="Disponible al conectar la gestión de tickets">
+        <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateTicketOpen(true)}>
           <Plus className="size-3.5" strokeWidth={2.4} aria-hidden="true" />Nuevo Ticket Interno
         </button>
       </div>
@@ -356,6 +357,8 @@ export default function SupportPage() {
       <footer className="mt-4 flex items-center gap-1.5 border-t border-line py-4 text-2xs text-muted">
         <Info className="size-3" aria-hidden="true" />Los datos se actualizan cada 10 minutos. Última actualización: Hoy, 10:30 AM
       </footer>
+
+      <CreateTicketModal isOpen={createTicketOpen} onClose={() => setCreateTicketOpen(false)} />
     </div>
   );
 }

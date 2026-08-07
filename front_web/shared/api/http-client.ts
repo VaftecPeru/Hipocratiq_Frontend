@@ -149,11 +149,51 @@ export async function postToApi<T>(
   return (await readJson<T>(response)) as T;
 }
 
-export async function getFromApi<T>(path: string): Promise<T> {
+export async function patchToApi<T>(
+  path: string,
+  payload?: Record<string, unknown>,
+): Promise<T> {
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(`${API_PREFIX}${path}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-XSRF-TOKEN": csrfToken,
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  if (!response.ok) {
+    const errorData = await readJson<ApiErrorPayload>(response);
+    const firstValidationError = errorData?.errors
+      ? Object.values(errorData.errors).flat()[0]
+      : null;
+
+    throw new ApiError(
+      localizedErrorMessage(
+        response.status,
+        firstValidationError ?? errorData?.message ?? null,
+        response.headers.get("retry-after"),
+      ),
+      response.status,
+      errorData?.errors,
+    );
+  }
+
+  return (await readJson<T>(response)) as T;
+}
+
+export async function getFromApi<T>(
+  path: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
   const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
     headers: { Accept: "application/json" },
     cache: "no-store",
+    signal: options.signal,
   });
   if (!response.ok) {
     const errorData = await readJson<ApiErrorPayload>(response);

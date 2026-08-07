@@ -33,6 +33,11 @@ import type {
   ClinicPlan,
   ClinicStatus,
 } from "@/features/clinics/model/clinic.types";
+import {
+  ClinicDetailModal,
+  EditClinicModal,
+  SuspendClinicDialog,
+} from "./clinic-modals";
 
 type ClinicsDashboardProps = {
   initialData: ClinicsDashboardPageData;
@@ -401,16 +406,41 @@ function PlanDistributionCard({ data }: { data: ClinicsDashboardPageData["planDi
   );
 }
 
-function ClinicActions({ clinicName }: { clinicName: string }) {
+function ClinicActions({
+  clinicName,
+  onViewDetail,
+  onEdit,
+  onSuspend,
+}: {
+  clinicName: string;
+  onViewDetail: () => void;
+  onEdit: () => void;
+  onSuspend: () => void;
+}) {
   return (
     <div className="flex justify-end gap-1">
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Ver ${clinicName}`} disabled title="Disponible al conectar el detalle de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Ver ${clinicName}`}
+        onClick={onViewDetail}
+      >
         <Eye className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Editar ${clinicName}`} disabled title="Disponible al conectar la edición de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Editar ${clinicName}`}
+        onClick={onEdit}
+      >
         <Pencil className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Más acciones para ${clinicName}`} disabled title="Disponible al conectar acciones de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Más acciones para ${clinicName}`}
+        onClick={onSuspend}
+      >
         <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
@@ -434,10 +464,16 @@ function ClinicsTable({
   clinics,
   rowOffset,
   hasActiveFilters,
+  onViewDetail,
+  onEdit,
+  onSuspend,
 }: {
   clinics: Clinic[];
   rowOffset: number;
   hasActiveFilters: boolean;
+  onViewDetail: (clinicName: string) => void;
+  onEdit: (clinicName: string) => void;
+  onSuspend: (clinicName: string) => void;
 }) {
   if (clinics.length === 0) {
     return (
@@ -495,7 +531,14 @@ function ClinicsTable({
                 <td className="px-3 py-2"><StatusBadge status={clinic.status} /></td>
                 <td className="px-3 py-2 text-right font-mono font-semibold">{currencyFormatter.format(clinic.monthlyBilling)}</td>
                 <td className="whitespace-nowrap px-3 py-2">{clinic.lastPayment ?? "—"}</td>
-                <td className="px-2 py-1.5"><ClinicActions clinicName={clinic.name} /></td>
+                <td className="px-2 py-1.5">
+                  <ClinicActions
+                    clinicName={clinic.name}
+                    onViewDetail={() => onViewDetail(clinic.name)}
+                    onEdit={() => onEdit(clinic.name)}
+                    onSuspend={() => onSuspend(clinic.name)}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -517,7 +560,7 @@ function ClinicsTable({
               <div><dt className="text-muted">Usuarios</dt><dd className="mt-1 font-mono font-bold">{clinic.users}</dd></div>
               <div><dt className="text-muted">Pacientes</dt><dd className="mt-1 font-mono font-bold">{numberFormatter.format(clinic.patients)}</dd></div>
             </dl>
-            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} /></div>
+            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} onViewDetail={() => onViewDetail(clinic.name)} onEdit={() => onEdit(clinic.name)} onSuspend={() => onSuspend(clinic.name)} /></div>
           </article>
         ))}
       </div>
@@ -579,6 +622,12 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
   const router = useRouter();
   const pathname = usePathname();
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [detailClinicOpen, setDetailClinicOpen] = useState(false);
+  const [editClinicOpen, setEditClinicOpen] = useState(false);
+  const [suspendClinicOpen, setSuspendClinicOpen] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
+
   const currentPage = initialData.pagination.currentPage;
   const totalPages = initialData.pagination.lastPage;
   const rowOffset = (currentPage - 1) * initialData.pagination.perPage;
@@ -677,7 +726,23 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
       <div className="mt-4 grid items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_17.5rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="clinics-results-title" aria-busy={isPending}>
           <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${numberFormatter.format(initialData.pagination.total)} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-2xs text-muted sm:block">Datos operativos consolidados</span>}</div>
-          <ClinicsTable clinics={initialData.clinics} rowOffset={rowOffset} hasActiveFilters={hasActiveFilters} />
+          <ClinicsTable
+            clinics={initialData.clinics}
+            rowOffset={rowOffset}
+            hasActiveFilters={hasActiveFilters}
+            onViewDetail={(clinicName) => {
+              setSelectedClinic(clinicName);
+              setDetailClinicOpen(true);
+            }}
+            onEdit={(clinicName) => {
+              setSelectedClinic(clinicName);
+              setEditClinicOpen(true);
+            }}
+            onSuspend={(clinicName) => {
+              setSelectedClinic(clinicName);
+              setSuspendClinicOpen(true);
+            }}
+          />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando {initialData.pagination.from ?? 0} a {initialData.pagination.to ?? 0} de {initialData.pagination.total} clínicas</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
@@ -691,6 +756,59 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
         </section>
         <SummaryPanel data={initialData} />
       </div>
+
+      <ClinicDetailModal
+        isOpen={detailClinicOpen}
+        onClose={() => setDetailClinicOpen(false)}
+        clinic={
+          selectedClinic
+            ? {
+                id: "clinic-001",
+                name: selectedClinic,
+                country: "MX" as const,
+                city: "Ciudad de México",
+                address: "Av. Insurgentes Sur 1234, Col. Del Valle",
+                phone: "+52 55 1234 5678",
+                email: "contacto@clinica.com",
+                plan: "professional" as const,
+                adminName: "Dr. Carlos Mendoza",
+                adminEmail: "admin@clinica.com",
+                status: "active" as const,
+                users: 15,
+                patients: 3200,
+                createdAt: "15 de marzo, 2024",
+              }
+            : null
+        }
+      />
+      <EditClinicModal
+        isOpen={editClinicOpen}
+        onClose={() => setEditClinicOpen(false)}
+        clinic={
+          selectedClinic
+            ? {
+                name: selectedClinic,
+                country: "MX" as const,
+                city: "Ciudad de México",
+                address: "Av. Insurgentes Sur 1234, Col. Del Valle",
+                phone: "+52 55 1234 5678",
+                email: "contacto@clinica.com",
+                plan: "professional" as const,
+                adminName: "Dr. Carlos Mendoza",
+                adminEmail: "admin@clinica.com",
+              }
+            : null
+        }
+      />
+      <SuspendClinicDialog
+        isOpen={suspendClinicOpen}
+        onClose={() => setSuspendClinicOpen(false)}
+        onConfirm={() => {
+          setSuspendClinicOpen(false);
+          setSelectedClinic(null);
+        }}
+        clinicName={selectedClinic ?? ""}
+      />
     </div>
   );
 }

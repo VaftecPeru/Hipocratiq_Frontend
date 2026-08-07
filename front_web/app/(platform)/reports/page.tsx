@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -16,10 +18,7 @@ import {
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { Sparkline, type SparklineTone } from "@/shared/ui/sparkline";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
-
-export const metadata: Metadata = {
-  title: "Reportes",
-};
+import { ExportReportModal } from "@/shared/ui/common-modals";
 
 const stats: Array<StatCardProps> = [
   { label: "Ingresos Totales", value: "USD $3,627,540", change: "+14.6% vs. mes anterior", direction: "up", icon: DollarSign, tone: "success" },
@@ -323,6 +322,8 @@ function ExecutiveTrendsCard() {
 }
 
 export default function ReportsPage() {
+  const [exportOpen, setExportOpen] = useState(false);
+
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
@@ -334,7 +335,7 @@ export default function ReportsPage() {
           <button className="flex min-h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink transition-colors hover:border-accent/60 focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-70" type="button" disabled title="Disponible al conectar el rango de fechas">
             <Calendar className="size-3.5 text-muted" strokeWidth={1.8} aria-hidden="true" />1 May 2024 - 31 May 2024<ChevronDown className="size-3 text-muted" aria-hidden="true" />
           </button>
-          <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled title="Disponible al conectar la exportación de reportes">
+          <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setExportOpen(true)}>
             <Download className="size-3.5" strokeWidth={2} aria-hidden="true" />Exportar reporte global
           </button>
         </div>
@@ -363,6 +364,8 @@ export default function ReportsPage() {
       <footer className="mt-4 flex items-center gap-1.5 border-t border-line py-4 text-2xs text-muted">
         <Info className="size-3" aria-hidden="true" />Los datos se actualizan cada 10 minutos. Última actualización: Hoy, 10:30 AM
       </footer>
+
+      <ExportReportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} />
     </div>
   );
 }

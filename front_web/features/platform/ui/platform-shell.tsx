@@ -15,6 +15,7 @@ import {
   Monitor,
   Search,
   Settings,
+  Siren,
   Users,
   X,
 } from "lucide-react";
@@ -47,10 +48,20 @@ const navigationItems: NavigationItem[] = [
   { label: "Reportes", href: "/reports", icon: BarChart3, available: true },
   { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor, available: true },
   { label: "Auditoría global", href: "/audit", icon: CircleAlert, available: true },
+  { label: "Emergencia", href: "/emergency", icon: Siren, available: true },
   { label: "Soporte", href: "/support", icon: MessageSquare, available: true },
 ];
 
-const settingsItems = ["General", "Idiomas y región", "Integraciones", "IA epidemiológica", "Notificaciones", "Respaldos"];
+type SettingsItem = { label: string; href: string; available: boolean };
+
+const settingsItems: SettingsItem[] = [
+  { label: "General", href: "/settings/general", available: true },
+  { label: "Idiomas y región", href: "/settings/languages", available: true },
+  { label: "Integraciones", href: "/settings/integrations", available: true },
+  { label: "IA epidemiológica", href: "/settings/ai", available: true },
+  { label: "Notificaciones", href: "/settings/notifications", available: true },
+  { label: "Respaldos", href: "/settings/backups", available: true },
+];
 
 function getInitials(name: string) {
   return name
@@ -63,7 +74,7 @@ function getInitials(name: string) {
 
 function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
 
   return (
@@ -114,12 +125,29 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
             <ChevronDown className={`ml-auto size-3 text-muted transition-transform ${isSettingsOpen ? "rotate-180" : ""}`} strokeWidth={1.7} aria-hidden="true" />
           </button>
           {isSettingsOpen ? (
-            <ul className="mt-1 grid gap-0.5 border-l border-line pl-7" id={settingsId}>
-              {settingsItems.map((item) => (
-                <li className="px-2.5 py-1 text-2xs text-muted/80" key={item}>
-                  {item}
-                </li>
-              ))}
+            <ul className="mt-1 grid gap-0.5 border-l border-line pl-4" id={settingsId}>
+              {settingsItems.map((item) => {
+                const isActive = pathname === item.href;
+
+                return (
+                  <li key={item.label}>
+                    {item.available ? (
+                      <Link
+                        className={"flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                        href={item.href}
+                        onClick={onNavigate}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className="flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
+                        {item.label}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>

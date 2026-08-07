@@ -10,7 +10,6 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
-  SlidersHorizontal,
   Trash2,
   Users,
   UserX,
@@ -20,6 +19,7 @@ import type { BadgeTone } from "@/shared/ui/data-badge";
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { FilterField } from "@/shared/ui/filter-field";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
+import { AuditFiltersButton } from "@/features/platform/ui/audit-modals";
 
 export const metadata: Metadata = {
   title: "Auditoría Global",
@@ -286,7 +286,7 @@ export default function AuditPage() {
         </div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <span className="relative flex-1"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40" type="search" placeholder="Buscar en resultados..." aria-label="Buscar en resultados" /></span>
-          <button className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button"><SlidersHorizontal className="size-3.5" strokeWidth={1.8} aria-hidden="true" />Filtros</button>
+          <AuditFiltersButton />
         </div>
       </section>
 

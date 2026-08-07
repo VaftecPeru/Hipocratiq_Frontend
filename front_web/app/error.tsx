@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function AppError({
@@ -32,12 +33,12 @@ export default function AppError({
           >
             Reintentar
           </button>
-          <a
+          <Link
             href="/"
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Ir al inicio
-          </a>
+          </Link>
         </div>
       </div>
     </main>

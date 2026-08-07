@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowUpRight,
@@ -22,10 +24,7 @@ import { DataBadge, type BadgeTone } from "@/shared/ui/data-badge";
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { FilterField } from "@/shared/ui/filter-field";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
-
-export const metadata: Metadata = {
-  title: "Facturación",
-};
+import { AdvancedFiltersModal, ExportReportModal } from "@/shared/ui/common-modals";
 
 type PlanName = "Básico" | "Profesional" | "Enterprise";
 type PaymentStatus = "paid" | "pending" | "failed";
@@ -136,23 +135,52 @@ function PaymentBadge({ status }: { status: PaymentStatus }) {
   return <DataBadge tone={config.tone} dot>{config.label}</DataBadge>;
 }
 
-function InvoiceActions({ reference }: { reference: string }) {
+function InvoiceActions({
+  reference,
+  onView,
+  onDownload,
+}: {
+  reference: string;
+  onView: () => void;
+  onDownload: () => void;
+}) {
   return (
     <div className="flex justify-end gap-1">
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Ver ${reference}`} disabled title="Disponible al conectar el detalle de facturas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Ver ${reference}`}
+        onClick={onView}
+      >
         <Eye className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Descargar ${reference}`} disabled title="Disponible al conectar la descarga de facturas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Descargar ${reference}`}
+        onClick={onDownload}
+      >
         <Download className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Más acciones para ${reference}`} disabled title="Disponible al conectar acciones de facturación">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Más acciones para ${reference}`}
+        onClick={onView}
+      >
         <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
   );
 }
 
-function InvoicesTable() {
+function InvoicesTable({
+  onView,
+  onDownload,
+}: {
+  onView: (reference: string) => void;
+  onDownload: (reference: string) => void;
+}) {
   return (
     <>
       <div className="hidden overflow-x-auto lg:block">
@@ -186,7 +214,7 @@ function InvoicesTable() {
                 <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono font-bold text-ink">{invoice.amount}</td>
                 <td className="px-3 py-2.5"><PaymentBadge status={invoice.status} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-muted">{invoice.paidDate ?? "—"}</td>
-                <td className="px-2 py-1.5"><InvoiceActions reference={invoice.reference} /></td>
+                <td className="px-2 py-1.5"><InvoiceActions reference={invoice.reference} onView={() => onView(invoice.reference)} onDownload={() => onDownload(invoice.reference)} /></td>
               </tr>
             ))}
           </tbody>
@@ -209,7 +237,7 @@ function InvoicesTable() {
               <div><dt className="text-2xs text-muted">País</dt><dd className="mt-1 flex items-center gap-1.5"><CountryFlag countryCode={invoice.countryCode} />{invoice.countryCode === "MX" ? "México" : "Perú"}</dd></div>
               <div><dt className="text-2xs text-muted">{invoice.paidDate ? "Fecha de pago" : "Periodo"}</dt><dd className="mt-1 font-medium">{invoice.paidDate ?? invoice.period}</dd></div>
             </dl>
-            <div className="mt-2 flex justify-end"><InvoiceActions reference={invoice.reference} /></div>
+            <div className="mt-2 flex justify-end"><InvoiceActions reference={invoice.reference} onView={() => onView(invoice.reference)} onDownload={() => onDownload(invoice.reference)} /></div>
           </article>
         ))}
       </div>
@@ -279,6 +307,9 @@ function RevenueTrend() {
 }
 
 export default function BillingPage() {
+  const [exportOpen, setExportOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -286,7 +317,7 @@ export default function BillingPage() {
           <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Facturación</h1>
           <p className="mt-0.5 text-xs text-muted">Controla pagos, facturas e ingresos de todas las clínicas de la plataforma.</p>
         </div>
-        <button className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled title="Disponible al conectar la generación de facturas">
+        <button className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setExportOpen(true)}>
           <FileText className="size-3.5" strokeWidth={2} aria-hidden="true" />Generar Factura
         </button>
       </div>
@@ -306,14 +337,17 @@ export default function BillingPage() {
           <FilterField label="Estado de pago" value="Todos" />
           <FilterField label="Periodo" value="Julio 2026" />
           <label className="grid gap-1 text-2xs font-bold text-muted">Buscar factura<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" placeholder="Buscar por clínica, factura o monto..." /></span></label>
-          <button className="mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border border-line px-2.5 text-xs font-bold text-muted transition-colors hover:border-accent/60 focus-visible:outline-3 focus-visible:outline-focus md:min-h-8" type="button"><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />Filtros</button>
+          <button className="mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border border-line px-2.5 text-xs font-bold text-muted transition-colors hover:border-accent/60 focus-visible:outline-3 focus-visible:outline-focus md:min-h-8" type="button" onClick={() => setFiltersOpen(true)}><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />Filtros</button>
         </div>
       </section>
 
       <div className="mt-4 grid items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_17.5rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="invoices-results-title">
           <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="invoices-results-title">1,420 facturas encontradas</h2><span className="hidden text-2xs text-muted sm:block">Datos de referencia</span></div>
-          <InvoicesTable />
+          <InvoicesTable
+            onView={(ref) => setExportOpen(true)}
+            onDownload={(ref) => setExportOpen(true)}
+          />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando 1 a 10 de 1,420 facturas</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
@@ -366,6 +400,9 @@ export default function BillingPage() {
         <DonutChart title="Facturación por País" centerValue="$342.8K" centerLabel="Este mes" segments={revenueByCountry} action={<span className="rounded-md bg-surface-subtle px-2 py-0.5 text-2xs font-bold text-muted"><CalendarClock className="mr-1 inline size-3 align-[-1px]" aria-hidden="true" />Jul</span>} />
         <RevenueTrend />
       </section>
+
+      <ExportReportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} />
+      <AdvancedFiltersModal isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} />
     </div>
   );
 }
