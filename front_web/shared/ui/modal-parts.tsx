@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
+import { FilterSelect } from "@/shared/ui/filter-select";
 
 /**
  * Piezas de formulario compartidas por los modales de la plataforma.
@@ -67,33 +67,24 @@ export function ModalSelect({
   defaultValue?: string;
   required?: boolean;
   value?: string;
-  onChange?: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onChange?: (value: string) => void;
 }) {
-  return (
-    <div className="grid min-w-0 gap-1.5">
-      <label className="text-2xs font-bold text-muted" htmlFor={id}>
-        {label}
-        {required ? <span className="ml-0.5 text-danger">*</span> : null}
-      </label>
-      <div className="relative">
-        <select className={`${FIELD_BASE} appearance-none pr-9`} defaultValue={defaultValue} id={id} onChange={onChange} value={value}>
-          {options.map((option) => {
-            const item = typeof option === "string" ? { value: option, label: option } : option;
+  const normalizedOptions = options.map((option) =>
+    typeof option === "string" ? { value: option, label: option } : option,
+  );
 
-            return (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            );
-          })}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-muted"
-          strokeWidth={1.9}
-          aria-hidden="true"
-        />
-      </div>
-    </div>
+  return (
+    <FilterSelect
+      id={id}
+      label={label}
+      options={normalizedOptions}
+      value={value}
+      defaultValue={defaultValue ?? normalizedOptions[0]?.value}
+      onChange={onChange}
+      required={required}
+      density="form"
+      surface="input"
+    />
   );
 }
 
@@ -155,17 +146,20 @@ export function ModalPrimaryButton({
   onClick,
   tone = "accent",
   type = "button",
+  disabled = false,
 }: {
   children: ReactNode;
   onClick?: () => void;
   tone?: "accent" | "danger";
   type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   return (
     <button
-      className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus sm:flex-initial sm:px-5 ${
+      className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5 ${
         tone === "danger" ? "bg-danger hover:bg-danger/90" : "bg-accent hover:bg-accent-hover"
       }`}
+      disabled={disabled}
       onClick={onClick}
       type={type}
     >

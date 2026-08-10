@@ -1,6 +1,7 @@
-import { ApiError, getFromApi } from "@/shared/api/http-client";
+import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
 import type {
   AdminUser,
+  AdminAssignableRole,
   AdminUserRole,
   AdminUsersDashboardData,
   AdminUsersFilters,
@@ -15,6 +16,7 @@ type ApiUser = {
   phone_number: string;
   country_code: CountryCode;
   role: AdminUserRole;
+  assignable_roles?: AdminAssignableRole[];
   clinic: { id: number; name: string; address: string } | null;
   last_login_at: string | null;
   status: AdminUserStatus;
@@ -49,7 +51,7 @@ type ApiAdminUsersResponse = {
       occurred_at: string;
     }>;
   };
-  filter_options: { clinics: Array<{ id: number; name: string }> };
+  filter_options: { clinics: Array<{ id: number; name: string; country_code: CountryCode; status: "active" | "suspended" }> };
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
@@ -76,6 +78,9 @@ function formatDate(value: string | null, includeTime = false): string {
 }
 
 function mapUser(user: ApiUser): AdminUser {
+  const fallbackAssignableRoles: AdminAssignableRole[] = ["super_admin", "clinic_admin"];
+  if (user.role === "doctor" || user.role === "patient") fallbackAssignableRoles.push(user.role);
+
   return {
     id: user.id,
     name: user.name,
@@ -83,11 +88,68 @@ function mapUser(user: ApiUser): AdminUser {
     phoneNumber: user.phone_number,
     countryCode: user.country_code,
     role: user.role,
+    assignableRoles: user.assignable_roles ?? fallbackAssignableRoles,
     clinic: user.clinic,
     lastAccess: formatDate(user.last_login_at, true),
     status: user.status,
     createdAt: formatDate(user.created_at),
   };
+}
+
+export type UpdateAdminUserPayload = {
+  name: string;
+  email: string | null;
+  phoneNumber: string;
+  countryCode: CountryCode;
+  status: AdminUserStatus;
+};
+
+export type CreateAdminUserPayload = {
+  name: string;
+  email: string | null;
+  phoneNumber: string;
+  countryCode: CountryCode;
+  role: "super_admin" | "clinic_admin";
+  clinicId: number | null;
+};
+
+export async function createAdminUser(payload: CreateAdminUserPayload): Promise<AdminUser> {
+  const response = await postToApi<{ data: ApiUser }>("/api/v1/auth/admin/users", {
+    name: payload.name,
+    email: payload.email,
+    phone_number: payload.phoneNumber,
+    country_code: payload.countryCode,
+    role: payload.role,
+    clinic_id: payload.role === "super_admin" ? null : payload.clinicId,
+  });
+
+  return mapUser(response.data);
+}
+
+export async function updateAdminUser(
+  userId: number,
+  payload: UpdateAdminUserPayload,
+): Promise<AdminUser> {
+  const response = await patchToApi<{ data: ApiUser }>(`/api/v1/auth/admin/users/${userId}`, {
+    name: payload.name,
+    email: payload.email,
+    phone_number: payload.phoneNumber,
+    country_code: payload.countryCode,
+    status: payload.status,
+  });
+
+  return mapUser(response.data);
+}
+
+export async function sendAdminUserMessage(
+  userId: number,
+  payload: { subject: string; body: string; sendCopy: boolean },
+): Promise<void> {
+  await postToApi(`/api/v1/auth/admin/users/${userId}/messages`, {
+    subject: payload.subject,
+    body: payload.body,
+    send_copy: payload.sendCopy,
+  });
 }
 
 export async function getAdminUsers(
@@ -145,7 +207,12 @@ export async function getAdminUsers(
       role: item.role,
       occurredAt: formatDate(item.occurred_at, true),
     })),
-    clinics: payload.filter_options.clinics,
+    clinics: payload.filter_options.clinics.map((clinic) => ({
+      id: clinic.id,
+      name: clinic.name,
+      countryCode: clinic.country_code,
+      status: clinic.status,
+    })),
     pagination: {
       currentPage: payload.meta.current_page,
       from: payload.meta.from,

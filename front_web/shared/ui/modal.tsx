@@ -24,6 +24,7 @@ const SIZE_CLASSES = {
 export function Modal({ isOpen, onClose, title, description, children, size = "md", footer }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const portalTarget = typeof document === "undefined" ? null : document.body;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,17 +62,15 @@ export function Modal({ isOpen, onClose, title, description, children, size = "m
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !portalTarget) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      ref={overlayRef}
-      onClick={(e) => e.target === overlayRef.current && onClose()}
-    >
-      <div
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" ref={overlayRef}>
+      <button
         className="fixed inset-0 bg-ink/40 backdrop-blur-sm motion-safe:animate-[fade-in_200ms_ease-out]"
-        aria-hidden="true"
+        type="button"
+        aria-label="Cerrar modal"
+        onClick={onClose}
       />
       <div
         className={`relative w-full ${SIZE_CLASSES[size]} max-h-[90vh] overflow-hidden rounded-xl border border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/20%)] motion-safe:animate-[modal-in_300ms_ease-out]`}
@@ -111,6 +110,6 @@ export function Modal({ isOpen, onClose, title, description, children, size = "m
         ) : null}
       </div>
     </div>,
-    document.body
+    portalTarget
   );
 }

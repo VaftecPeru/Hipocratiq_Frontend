@@ -29,6 +29,7 @@ import type {
   AdminUserStatus,
 } from "@/features/users/model/admin-user.types";
 import {
+  CreateUserModal,
   UserDetailModal,
   EditUserModal,
   SendMessageModal,
@@ -266,6 +267,7 @@ function UsersTable({
 }
 
 export default function UsersPage() {
+  const [createUserOpen, setCreateUserOpen] = useState(false);
   const [detailUserOpen, setDetailUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [messageUserOpen, setMessageUserOpen] = useState(false);
@@ -275,6 +277,7 @@ export default function UsersPage() {
   const [data, setData] = useState<AdminUsersDashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -302,7 +305,7 @@ export default function UsersPage() {
       });
 
     return () => controller.abort();
-  }, [filters]);
+  }, [filters, refreshVersion]);
 
   const totals = data?.totals ?? { users: 0, activeUsers: 0, administrators: 0, doctors: 0, patients: 0 };
   const stats: Array<StatCardProps> = [
@@ -370,9 +373,12 @@ export default function UsersPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
-      <div>
-        <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Usuarios</h1>
-        <p className="mt-0.5 text-xs text-muted">Gestiona los usuarios registrados en la plataforma.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Usuarios</h1>
+          <p className="mt-0.5 text-xs text-muted">Gestiona los usuarios registrados en la plataforma.</p>
+        </div>
+        <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateUserOpen(true)}><UserPlus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nuevo usuario</button>
       </div>
 
       <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Indicadores de usuarios">
@@ -463,9 +469,23 @@ export default function UsersPage() {
         <DonutChart title="Usuarios por País" centerValue={numberFormatter.format(totals.users)} centerLabel="Total" segments={countryDistribution} />
       </section>
 
+      <CreateUserModal
+        key={createUserOpen ? "create-open" : "create-closed"}
+        clinics={data?.clinics ?? []}
+        isOpen={createUserOpen}
+        onClose={() => setCreateUserOpen(false)}
+        onCreated={(user) => {
+          setSelectedUser(user);
+          setRefreshVersion((current) => current + 1);
+        }}
+      />
       <UserDetailModal
         isOpen={detailUserOpen}
         onClose={() => setDetailUserOpen(false)}
+        onMessage={() => {
+          setDetailUserOpen(false);
+          setMessageUserOpen(true);
+        }}
         user={
           selectedUser
             ? {
@@ -487,9 +507,14 @@ export default function UsersPage() {
       <EditUserModal
         isOpen={editUserOpen}
         onClose={() => setEditUserOpen(false)}
+        onUpdated={(updatedUser) => {
+          setSelectedUser(updatedUser);
+          setRefreshVersion((current) => current + 1);
+        }}
         user={
           selectedUser
             ? {
+                id: selectedUser.id,
                 name: selectedUser.name,
                 email: selectedUser.email ?? "",
                 role: ROLE_LABELS[selectedUser.role],
@@ -497,6 +522,7 @@ export default function UsersPage() {
                 city: selectedUser.clinic?.address ?? COUNTRY_LABELS[selectedUser.countryCode],
                 clinic: selectedUser.clinic?.name ?? null,
                 phone: selectedUser.phoneNumber,
+                status: selectedUser.status,
               }
             : null
         }
@@ -504,7 +530,7 @@ export default function UsersPage() {
       <SendMessageModal
         isOpen={messageUserOpen}
         onClose={() => setMessageUserOpen(false)}
-        userName={selectedUser?.name ?? ""}
+        user={selectedUser ? { id: selectedUser.id, name: selectedUser.name } : null}
       />
     </div>
   );

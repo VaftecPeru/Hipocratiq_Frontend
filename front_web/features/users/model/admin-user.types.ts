@@ -1,6 +1,7 @@
 import type { CountryCode } from "@/shared/ui/country-flag";
 
 export type AdminUserRole = "super_admin" | "clinic_admin" | "doctor" | "patient" | "unassigned";
+export type AdminAssignableRole = Exclude<AdminUserRole, "unassigned">;
 export type AdminUserRoleLabel = "Superadministrador" | "Administrador de Clínica" | "Médico" | "Paciente" | "Sin rol";
 export type AdminUserStatus = "pending_verification" | "active" | "suspended" | "disabled";
 
@@ -11,6 +12,7 @@ export type AdminUser = {
   phoneNumber: string;
   countryCode: CountryCode;
   role: AdminUserRole;
+  assignableRoles: AdminAssignableRole[];
   clinic: { id: number; name: string; address: string } | null;
   lastAccess: string;
   status: AdminUserStatus;
@@ -41,7 +43,7 @@ export type AdminUsersDashboardData = {
     role: AdminUserRole;
     occurredAt: string;
   }>;
-  clinics: Array<{ id: number; name: string }>;
+  clinics: Array<{ id: number; name: string; countryCode: CountryCode; status: "active" | "suspended" }>;
   pagination: {
     currentPage: number;
     from: number | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Bell, CalendarDays, ClipboardList, House, Menu, Settings, Stethoscope, Users, X } from "lucide-react";
+import { Bell, CalendarDays, ClipboardList, House, Menu, Settings, Users, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

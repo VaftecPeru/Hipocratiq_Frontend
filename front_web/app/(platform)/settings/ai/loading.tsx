@@ -38,7 +38,7 @@ export default function EpidemiologicalAiLoading() {
           <div className="mt-4">
             <div className="h-2.5 w-32 rounded bg-line/50" />
             <div className="mt-2 flex flex-wrap gap-2">
-              {["7rem", "5.5rem", "8rem", "10rem"].map((width) => <div className="h-8 rounded-lg border border-line bg-surface-subtle" key={width} style={{ width }} />)}
+              {["7rem", "5.5rem", "8rem", "10rem"].map((width, index) => <div className="h-8 rounded-lg border border-line bg-surface-subtle" key={`${width}-${index}`} style={{ width }} />)}
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function EpidemiologicalAiLoading() {
 
           <div className="mt-3 hidden space-y-3 lg:block">
             <div className="flex gap-3 border-b border-line pb-2">
-              {["4rem", "6rem", "3.5rem", "5rem", "4rem"].map((width) => <div className="h-2.5 rounded bg-line/40" key={width} style={{ width }} />)}
+              {["4rem", "6rem", "3.5rem", "5rem", "4rem"].map((width, index) => <div className="h-2.5 rounded bg-line/40" key={`${width}-${index}`} style={{ width }} />)}
             </div>
             {Array.from({ length: 5 }, (_, index) => (
               <div className="flex items-center gap-3" key={index}>

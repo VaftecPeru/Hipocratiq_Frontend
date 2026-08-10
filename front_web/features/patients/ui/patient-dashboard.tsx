@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Activity,
   BellRing,
@@ -83,7 +82,6 @@ const quickActions = [
 ] as const;
 
 export function PatientDashboard({ user }: { user: AuthenticatedUser }) {
-  const [_pending, _setPending] = useState(false);
   const firstName = user.name.trim().split(/\s+/)[0] || "Paciente";
   const clinicName = user.patient?.clinic?.name ?? "tu clínica";
 

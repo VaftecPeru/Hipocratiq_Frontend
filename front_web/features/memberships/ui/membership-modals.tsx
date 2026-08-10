@@ -429,7 +429,7 @@ function NewSubscriptionForm({
         options={clinicOptions}
         required
         value={clinicId}
-        onChange={(event) => setClinicId(event.target.value)}
+        onChange={setClinicId}
       />
       <ModalSelect
         id="sub-plan"
@@ -437,7 +437,7 @@ function NewSubscriptionForm({
         options={planOptions(plans)}
         required
         value={planId}
-        onChange={(event) => setPlanId(event.target.value)}
+        onChange={setPlanId}
       />
       <ModalSelect
         id="sub-billing"
@@ -448,7 +448,7 @@ function NewSubscriptionForm({
         ]}
         required
         value={billingCycle}
-        onChange={(event) => setBillingCycle(event.target.value)}
+        onChange={setBillingCycle}
       />
       <ModalField
         id="sub-start"
@@ -562,7 +562,7 @@ function UpgradeSubscriptionForm({
         options={planOptions(plans)}
         required
         value={planId}
-        onChange={(event) => setPlanId(event.target.value)}
+        onChange={setPlanId}
       />
       <ModalField
         id="upgrade-date"

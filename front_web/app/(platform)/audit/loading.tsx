@@ -1,6 +1,6 @@
 export default function AuditLoading() {
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6" role="status" aria-live="polite" aria-busy="true">
+    <div className="mx-auto w-full max-w-[1560px] min-w-0 px-4 py-5 sm:px-5 lg:px-6" role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">Cargando auditoría global</span>
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -29,8 +29,8 @@ export default function AuditLoading() {
         <div className="mt-3 flex gap-2"><div className="h-9 flex-1 rounded-lg bg-surface-subtle" /><div className="h-9 w-24 rounded-lg bg-accent-soft" /></div>
       </div>
 
-      <div className="mt-4 grid items-start gap-4 min-[1600px]:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="animate-pulse overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="mt-4 grid min-w-0 items-start gap-4 min-[1600px]:grid-cols-[minmax(0,1fr)_minmax(20rem,22rem)]">
+        <div className="min-w-0 animate-pulse overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex min-h-10 items-center border-b border-line px-3"><div className="h-3 w-40 rounded bg-line/60" /></div>
           <div className="hidden xl:block">
             <div className="flex border-b border-line bg-surface-subtle/50 px-3 py-2.5">
@@ -50,13 +50,13 @@ export default function AuditLoading() {
           <div className="flex items-center justify-between border-t border-line px-4 py-3"><div className="h-3 w-40 rounded bg-line/40" /><div className="flex gap-1">{Array.from({ length: 5 }, (_, index) => <div className="size-7 rounded-md bg-surface-subtle" key={index} />)}</div></div>
         </div>
 
-        <div className="grid content-start gap-3 md:grid-cols-2 min-[1600px]:grid-cols-1">
+        <div className="grid min-w-0 content-start gap-3 md:grid-cols-2 min-[1600px]:grid-cols-1">
           {Array.from({ length: 2 }, (_, card) => (
-            <div className="animate-pulse rounded-xl border border-line bg-surface p-4" key={card}>
+            <div className="min-w-0 animate-pulse overflow-hidden rounded-xl border border-line bg-surface p-3.5" key={card}>
               <div className="h-3.5 w-28 rounded bg-line/60" />
               <div className="mt-3 space-y-3">
                 {Array.from({ length: 5 }, (_, index) => (
-                  <div className="flex items-center gap-2" key={index}><div className="size-7 rounded-md bg-surface-subtle" /><div className="h-3 flex-1 rounded bg-line/40" /><div className="h-3 w-10 rounded bg-line/50" /></div>
+                  <div className="flex min-w-0 items-center gap-2" key={index}><div className="size-7 shrink-0 rounded-md bg-surface-subtle" /><div className="h-3 min-w-0 flex-1 rounded bg-line/40" /><div className="h-3 w-10 shrink-0 rounded bg-line/50" /></div>
                 ))}
               </div>
             </div>

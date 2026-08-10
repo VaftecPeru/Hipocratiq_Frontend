@@ -1,364 +1,254 @@
 "use client";
 
-import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   CheckCircle2,
-  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
   Headset,
-  Info,
   Inbox,
-  MoreHorizontal,
   Plus,
   RefreshCw,
-  Star,
-  Wrench,
+  Search,
+  ShieldCheck,
+  UsersRound,
 } from "lucide-react";
-import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  createAdminSupportTicket,
+  getAdminSupportTickets,
+} from "@/features/platform/api/browser-support";
+import type {
+  SupportDashboardSummary,
+  SupportTicket,
+  SupportTicketFilters,
+  SupportTicketPriority,
+  SupportTicketStatus,
+} from "@/features/platform/model/support.types";
+import { SupportTicketModal } from "@/features/platform/ui/support-ticket-modal";
+import { SupportTicketWorkflowModal } from "@/features/platform/ui/support-ticket-workflow-modal";
+import { CountryFlag } from "@/shared/ui/country-flag";
 import { DonutChart } from "@/shared/ui/donut-chart";
-import { Sparkline } from "@/shared/ui/sparkline";
+import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
-import { CreateTicketModal } from "@/shared/ui/common-modals";
 
-const stats: Array<StatCardProps> = [
-  { label: "Tickets Totales", value: "1,458", change: "+9.6% vs mes anterior", direction: "up", icon: Headset, tone: "accent" },
-  { label: "Abiertos", value: "248", change: "6.2% vs mes anterior", direction: "down", icon: Inbox, tone: "danger" },
-  { label: "En Proceso", value: "326", change: "+4.8% vs mes anterior", direction: "up", icon: RefreshCw, tone: "warning" },
-  { label: "Resueltos", value: "884", change: "+12.4% vs mes anterior", direction: "up", icon: CheckCircle2, tone: "success" },
-  { label: "SLA Cumplido", value: "94.2%", change: "+3.1% vs mes anterior", direction: "up", icon: Star, tone: "violet" },
-];
+const STATUS_LABELS: Record<SupportTicketStatus, string> = {
+  open: "Abierto",
+  in_progress: "En proceso",
+  waiting_on_customer: "Esperando cliente",
+  resolved: "Resuelto",
+  closed: "Cerrado",
+};
 
-const priorityByLevel = [
-  { label: "Alta", value: "412", percentage: 28, color: "var(--danger)" },
-  { label: "Media", value: "746", percentage: 51, color: "var(--warning)" },
-  { label: "Baja", value: "300", percentage: 21, color: "var(--accent)" },
-];
+const PRIORITY_LABELS: Record<SupportTicketPriority, string> = {
+  low: "Baja",
+  normal: "Normal",
+  high: "Alta",
+  urgent: "Urgente",
+};
 
-type IncidentCategory = { rank: number; label: string; tickets: number };
+const CATEGORY_LABELS: Record<string, string> = {
+  technical: "Técnico",
+  billing: "Facturación",
+  functionality: "Funcionalidad",
+  general: "Consulta general",
+};
 
-const incidentCategories: IncidentCategory[] = [
-  { rank: 1, label: "Acceso y Autenticación", tickets: 342 },
-  { rank: 2, label: "Reportes e Información", tickets: 286 },
-  { rank: 3, label: "Facturación y Pagos", tickets: 214 },
-  { rank: 4, label: "Funciones Clínicas", tickets: 198 },
-];
+const PRIORITY_COLORS: Record<SupportTicketPriority, string> = {
+  urgent: "var(--danger)",
+  high: "var(--warning)",
+  normal: "var(--accent)",
+  low: "var(--success)",
+};
 
-type Agent = { name: string; resolved: number; sla: string; rating: number };
-
-const agents: Agent[] = [
-  { name: "Ana Torres", resolved: 184, sla: "96.3%", rating: 4.8 },
-  { name: "Luis Martínez", resolved: 162, sla: "95.1%", rating: 4.7 },
-  { name: "María González", resolved: 149, sla: "94.6%", rating: 4.6 },
-  { name: "Carlos Mendoza", resolved: 138, sla: "93.8%", rating: 4.6 },
-  { name: "Sofía Herrera", resolved: 121, sla: "92.7%", rating: 4.5 },
-];
-
-type Escalation = { id: string; label: string; count: number; icon: LucideIcon; tone: "danger" | "warning" | "violet" };
-
-const escalations: Escalation[] = [
-  { id: "esc-1", label: "Escalaciones Abiertas", count: 18, icon: AlertTriangle, tone: "danger" },
-  { id: "esc-2", label: "En Espera de Cliente", count: 27, icon: Clock, tone: "warning" },
-  { id: "esc-3", label: "Escalada a Ingeniería", count: 11, icon: Wrench, tone: "violet" },
-];
-
-type ClinicSupport = { name: string; tickets: number; trend: number[] };
-
-const clinicsMexico: ClinicSupport[] = [
-  { name: "Clínica San José - CDMX", tickets: 128, trend: [4, 6, 5, 7, 6, 8, 7] },
-  { name: "Clínica del Valle - GDL", tickets: 96, trend: [5, 4, 6, 5, 7, 6, 7] },
-  { name: "Hospital Central - MTY", tickets: 82, trend: [3, 5, 4, 6, 5, 6, 7] },
-  { name: "Clínica Cumbres - PUE", tickets: 61, trend: [4, 5, 4, 5, 6, 5, 6] },
-  { name: "Clínica Santa Fe - CDMX", tickets: 54, trend: [3, 4, 5, 4, 5, 5, 6] },
-];
-
-const clinicsPeru: ClinicSupport[] = [
-  { name: "Clínica Arequipa - Arequipa", tickets: 94, trend: [5, 6, 5, 7, 6, 7, 8] },
-  { name: "Clínica San Pablo - Lima", tickets: 81, trend: [4, 5, 6, 5, 6, 7, 7] },
-  { name: "Clínica del Norte - Trujillo", tickets: 63, trend: [3, 4, 5, 5, 6, 6, 6] },
-  { name: "Clínica Miraflores - Lima", tickets: 49, trend: [4, 4, 5, 4, 5, 6, 5] },
-  { name: "Clínica Chiclayo - Chiclayo", tickets: 36, trend: [3, 4, 4, 5, 4, 5, 5] },
-];
-
-type ActivityItem = { id: string; title: string; meta: string; time: string; tone: "danger" | "warning" | "accent" | "success" };
-
-const recentActivity: ActivityItem[] = [
-  { id: "TK-48217", title: "Problema de inicio de sesión", meta: "Usuario: Dr. Pérez · Clínica San José", time: "Hoy, 10:15 AM", tone: "danger" },
-  { id: "TK-48216", title: "Error en generación de reporte", meta: "Usuario: Ana Torres · Clínica del Valle", time: "Hoy, 09:42 AM", tone: "warning" },
-  { id: "TK-48215", title: "Duda sobre facturación", meta: "Usuario: Contabilidad · Hospital Central", time: "Hoy, 08:31 AM", tone: "accent" },
-  { id: "TK-48214", title: "Integración con laboratorio", meta: "Usuario: Luis Martínez · Clínica Arequipa", time: "Ayer, 05:28 PM", tone: "success" },
-  { id: "TK-48213", title: "Actualización de permisos", meta: "Usuario: Mariela López · Clínica Miraflores", time: "Ayer, 03:11 PM", tone: "success" },
-];
-
-const SLA_ACTUAL = 94.2;
-const SLA_META = 90;
+const EMPTY_SUMMARY: SupportDashboardSummary = {
+  totals: { tickets: 0, open: 0, inProgress: 0, waitingOnCustomer: 0, resolvedToday: 0, overdue: 0, unassigned: 0 },
+  sla: { compliancePercentage: 100, targetPercentage: 90, evaluatedTickets: 0 },
+  byPriority: [],
+  byCategory: [],
+  byCountry: [],
+  agents: [],
+  escalations: [],
+  recentActivity: [],
+  generatedAt: "",
+};
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 
-const ESCALATION_TONE: Record<Escalation["tone"], string> = {
-  danger: "bg-danger-soft text-danger",
-  warning: "bg-warning-soft text-warning",
-  violet: "bg-violet-soft text-violet",
+const TICKET_STATUS_CLASSES: Record<SupportTicketStatus, string> = {
+  open: "bg-danger-soft text-danger",
+  in_progress: "bg-warning-soft text-warning",
+  waiting_on_customer: "bg-violet-soft text-violet",
+  resolved: "bg-success-soft text-success",
+  closed: "bg-surface-subtle text-muted",
 };
 
-const ACTIVITY_DOT: Record<ActivityItem["tone"], string> = {
-  danger: "bg-danger",
-  warning: "bg-warning",
-  accent: "bg-accent",
-  success: "bg-success",
-};
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function StarRating({ rating }: { rating: number }) {
-  const rounded = Math.round(rating);
+function TicketStatusBadge({ status }: { status: SupportTicketStatus }) {
+  return <span className={`inline-flex rounded-md px-2 py-1 text-2xs font-extrabold ${TICKET_STATUS_CLASSES[status]}`}>{STATUS_LABELS[status]}</span>;
+}
+
+function SupportFilters({
+  filters,
+  countries,
+  onChange,
+}: {
+  filters: SupportTicketFilters;
+  countries: string[];
+  onChange: (changes: Partial<SupportTicketFilters>) => void;
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="flex items-center gap-0.5" aria-hidden="true">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Star
-            key={index}
-            className={`size-3.5 ${index < rounded ? "fill-warning text-warning" : "fill-line/60 text-line/60"}`}
-            strokeWidth={0}
+    <section className="grid gap-3 rounded-xl border border-line bg-surface p-3 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)] sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1.8fr)_repeat(3,minmax(9rem,1fr))]" aria-label="Filtros de soporte">
+      <label className="grid gap-1 text-2xs font-bold text-muted">
+        Buscar ticket
+        <span className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2" />
+          <input
+            className="h-9 w-full rounded-lg border border-line bg-surface-input pl-9 pr-3 text-xs text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40"
+            type="search"
+            placeholder="Ticket ID, asunto o email..."
+            value={filters.search ?? ""}
+            onChange={(event) => onChange({ search: event.target.value, page: 1 })}
           />
-        ))}
-      </span>
-      <span className="font-mono text-2xs font-bold text-ink">{rating.toFixed(1)}</span>
-    </span>
-  );
-}
-
-function SlaGauge() {
-  const cx = 100;
-  const cy = 100;
-  const r = 82;
-  const toPoint = (fraction: number) => {
-    const angle = Math.PI * (1 - fraction);
-    return [Number((cx + r * Math.cos(angle)).toFixed(2)), Number((cy - r * Math.sin(angle)).toFixed(2))] as const;
-  };
-  const [startX, startY] = toPoint(0);
-  const [endX, endY] = toPoint(1);
-  const [valueX, valueY] = toPoint(SLA_ACTUAL / 100);
-  const [metaX, metaY] = toPoint(SLA_META / 100);
-
-  return (
-    <article className="flex flex-col rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="sla-gauge-title">
-      <h2 className="text-center text-xs font-extrabold" id="sla-gauge-title">Cumplimiento de SLA</h2>
-      <div className="relative mx-auto mt-2 w-full max-w-[16rem]">
-        <svg viewBox="0 0 200 118" className="w-full" role="img" aria-label={`Cumplimiento de SLA ${SLA_ACTUAL}%, meta ${SLA_META}%`}>
-          <path d={`M${startX} ${startY} A${r} ${r} 0 0 1 ${endX} ${endY}`} fill="none" stroke="var(--surface-subtle)" strokeWidth="16" strokeLinecap="round" />
-          <path d={`M${startX} ${startY} A${r} ${r} 0 0 1 ${valueX} ${valueY}`} fill="none" stroke="var(--success)" strokeWidth="16" strokeLinecap="round" />
-          <circle cx={metaX} cy={metaY} r="3.5" fill="var(--surface)" stroke="var(--ink)" strokeWidth="2" />
-        </svg>
-        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-          <span className="font-mono text-3xl font-bold leading-none tracking-[-0.05em] text-success">{SLA_ACTUAL}%</span>
-          <span className="mt-1 text-2xs font-bold text-muted">Meta: {SLA_META}%</span>
-        </div>
-      </div>
-      <div className="mt-1 flex items-center justify-between text-2xs font-semibold text-muted">
-        <span>0%</span>
-        <span>100%</span>
-      </div>
-    </article>
-  );
-}
-
-function IncidentCategoriesCard() {
-  return (
-    <article className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="incident-categories-title">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-xs font-extrabold" id="incident-categories-title">Top Categorías de Incidentes</h2>
-        <span className="text-2xs font-bold text-muted">Tickets</span>
-      </div>
-      <ul className="mt-3 divide-y divide-line">
-        {incidentCategories.map((category) => (
-          <li className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-3 py-2.5" key={category.rank}>
-            <span className="grid size-6 place-items-center rounded-md bg-accent-soft font-mono text-2xs font-extrabold text-accent" aria-hidden="true">{category.rank}</span>
-            <span className="truncate text-xs font-semibold text-ink">{category.label}</span>
-            <span className="font-mono text-xs font-bold text-ink">{category.tickets}</span>
-          </li>
-        ))}
-      </ul>
-    </article>
-  );
-}
-
-function TeamPerformanceCard() {
-  return (
-    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="team-performance-title">
-      <h2 className="text-sm font-extrabold" id="team-performance-title">Rendimiento del Equipo de Soporte</h2>
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-lg border-collapse text-left">
-          <caption className="sr-only">Rendimiento por agente de soporte</caption>
-          <thead>
-            <tr className="border-b border-line text-2xs font-bold text-muted">
-              <th className="py-2 pr-3 font-bold" scope="col">Agente</th>
-              <th className="px-3 py-2 font-bold" scope="col">Tickets Resueltos</th>
-              <th className="px-3 py-2 font-bold" scope="col">SLA Cumplido</th>
-              <th className="px-3 py-2 font-bold" scope="col">Calificación Promedio</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {agents.map((agent) => (
-              <tr className="text-xs transition-colors hover:bg-accent-soft/35" key={agent.name}>
-                <th className="py-2.5 pr-3" scope="row">
-                  <span className="flex items-center gap-2">
-                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-2xs font-extrabold text-accent" aria-hidden="true">{getInitials(agent.name)}</span>
-                    <span className="whitespace-nowrap font-bold text-ink">{agent.name}</span>
-                  </span>
-                </th>
-                <td className="whitespace-nowrap px-3 py-2.5 font-mono text-muted">{agent.resolved}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-mono text-muted">{agent.sla}</td>
-                <td className="whitespace-nowrap px-3 py-2.5"><StarRating rating={agent.rating} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </article>
-  );
-}
-
-function EscalationsCard() {
-  return (
-    <article className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="escalations-title">
-      <h2 className="text-sm font-extrabold" id="escalations-title">Escalaciones</h2>
-      <ul className="mt-3 grid gap-3">
-        {escalations.map((escalation) => {
-          const Icon = escalation.icon;
-          return (
-            <li key={escalation.id}>
-              <button
-                className="flex w-full items-center gap-3 rounded-xl border border-line px-3 py-3 text-left transition-colors hover:border-accent/60 disabled:cursor-not-allowed"
-                type="button"
-                disabled
-                title="Disponible al conectar la gestión de escalaciones"
-              >
-                <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${ESCALATION_TONE[escalation.tone]}`} aria-hidden="true"><Icon className="size-4" strokeWidth={1.8} /></span>
-                <span className="min-w-0 flex-1 truncate text-xs font-bold text-ink">{escalation.label}</span>
-                <span className="font-mono text-lg font-bold tracking-[-0.05em] text-ink">{escalation.count}</span>
-                <span className="text-muted" aria-hidden="true">›</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </article>
-  );
-}
-
-function ClinicSupportCard({ title, countryCode, clinics }: { title: string; countryCode: CountryCode; clinics: ClinicSupport[] }) {
-  const titleId = `clinic-support-${countryCode}`;
-  return (
-    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby={titleId}>
-      <h2 className="flex items-center gap-2 text-sm font-extrabold" id={titleId}><CountryFlag countryCode={countryCode} />{title}</h2>
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-xs border-collapse text-left">
-          <caption className="sr-only">{title}</caption>
-          <thead>
-            <tr className="border-b border-line text-2xs font-bold text-muted">
-              <th className="py-2 pr-3 font-bold" scope="col">Clínica</th>
-              <th className="px-3 py-2 font-bold" scope="col">Tickets</th>
-              <th className="py-2 pl-3 text-right font-bold" scope="col">Tendencia</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {clinics.map((clinic) => (
-              <tr className="text-xs" key={clinic.name}>
-                <th className="whitespace-nowrap py-2.5 pr-3 font-semibold text-ink" scope="row">{clinic.name}</th>
-                <td className="whitespace-nowrap px-3 py-2.5 font-mono text-muted">{clinic.tickets}</td>
-                <td className="py-2.5 pl-3"><Sparkline values={clinic.trend} tone="accent" className="ml-auto h-6 w-20" ariaLabel={`Tendencia de ${clinic.name}`} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </article>
-  );
-}
-
-function RecentActivityCard() {
-  return (
-    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="recent-activity-title">
-      <h2 className="text-sm font-extrabold" id="recent-activity-title">Actividad Reciente de Soporte</h2>
-      <ol className="mt-3 divide-y divide-line">
-        {recentActivity.map((item) => (
-          <li className="grid grid-cols-[auto_1fr_auto] items-start gap-2.5 py-2.5" key={item.id}>
-            <span className={`mt-1.5 size-2 shrink-0 rounded-full ${ACTIVITY_DOT[item.tone]}`} aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-ink"><span className="font-mono text-accent">#{item.id}</span> {item.title}</p>
-              <p className="mt-0.5 truncate text-2xs text-muted">{item.meta}</p>
-            </div>
-            <time className="whitespace-nowrap text-2xs text-muted">{item.time}</time>
-          </li>
-        ))}
-      </ol>
-    </article>
+        </span>
+      </label>
+      <FilterSelect label="País" value={filters.countryCode ?? ""} options={[{ value: "", label: "Todos los países" }, ...countries.map((country) => ({ value: country, label: country }))]} onChange={(countryCode) => onChange({ countryCode: countryCode || undefined, page: 1 })} />
+      <FilterSelect label="Estado" value={filters.status ?? ""} options={[{ value: "", label: "Todos" }, ...(Object.keys(STATUS_LABELS) as SupportTicketStatus[]).map((status) => ({ value: status, label: STATUS_LABELS[status] }))]} onChange={(status) => onChange({ status: (status || undefined) as SupportTicketStatus | undefined, page: 1 })} />
+      <FilterSelect label="Prioridad" value={filters.priority ?? ""} options={[{ value: "", label: "Todas" }, ...(Object.keys(PRIORITY_LABELS) as SupportTicketPriority[]).map((priority) => ({ value: priority, label: PRIORITY_LABELS[priority] }))]} onChange={(priority) => onChange({ priority: (priority || undefined) as SupportTicketPriority | undefined, page: 1 })} />
+    </section>
   );
 }
 
 export default function SupportPage() {
-  const [createTicketOpen, setCreateTicketOpen] = useState(false);
+  const [filters, setFilters] = useState<SupportTicketFilters>({ page: 1, perPage: 20 });
+  const [data, setData] = useState<Awaited<ReturnType<typeof getAdminSupportTickets>> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createVersion, setCreateVersion] = useState(0);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+      getAdminSupportTickets(filters, controller.signal)
+        .then(setData)
+        .catch((requestError: unknown) => {
+          if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+          setError(requestError instanceof Error ? requestError.message : "No pudimos cargar soporte.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoading(false);
+        });
+    }, filters.search ? 300 : 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [filters, refreshVersion]);
+
+  const refresh = useCallback(() => setRefreshVersion((version) => version + 1), []);
+  const summary = data?.summary ?? EMPTY_SUMMARY;
+  const stats = useMemo<Array<StatCardProps>>(() => [
+    { label: "Tickets Totales", value: numberFormatter.format(summary.totals.tickets), change: "Cobertura global", direction: "up", icon: Headset, tone: "accent" },
+    { label: "Abiertos", value: numberFormatter.format(summary.totals.open), change: `${summary.totals.unassigned} sin asignar`, direction: summary.totals.unassigned > 0 ? "down" : "up", icon: Inbox, tone: "danger" },
+    { label: "En Proceso", value: numberFormatter.format(summary.totals.inProgress), change: `${summary.totals.waitingOnCustomer} esperando cliente`, direction: "up", icon: RefreshCw, tone: "warning" },
+    { label: "Resueltos Hoy", value: numberFormatter.format(summary.totals.resolvedToday), change: "Cierres operativos", direction: "up", icon: CheckCircle2, tone: "success" },
+    { label: "SLA Cumplido", value: `${summary.sla.compliancePercentage}%`, change: `Meta ${summary.sla.targetPercentage}%`, direction: summary.sla.compliancePercentage >= summary.sla.targetPercentage ? "up" : "down", icon: ShieldCheck, tone: "violet" },
+  ], [summary]);
+  const prioritySegments = summary.byPriority.map((item) => ({
+    label: PRIORITY_LABELS[item.key],
+    value: numberFormatter.format(item.count),
+    percentage: item.percentage,
+    color: PRIORITY_COLORS[item.key],
+  }));
+
+  const handleCreated = async (payload: Parameters<typeof createAdminSupportTicket>[0]) => {
+    const ticket = await createAdminSupportTicket(payload);
+    refresh();
+    return ticket;
+  };
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
-      <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+      <header className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
         <div>
-          <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Soporte</h1>
-          <p className="mt-0.5 text-xs text-muted">Gestiona tickets, SLA, escalaciones y rendimiento del soporte en la plataforma para México y Perú.</p>
+          <p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Operación global</p>
+          <h1 className="mt-0.5 text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Centro de Soporte</h1>
+          <p className="mt-0.5 text-xs text-muted">Supervisa tickets, SLA, responsables y escalaciones de todos los países.</p>
         </div>
-        <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateTicketOpen(true)}>
-          <Plus className="size-3.5" strokeWidth={2.4} aria-hidden="true" />Nuevo Ticket Interno
-        </button>
-      </div>
+        <div className="flex gap-2">
+          <button className="flex min-h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink" type="button" onClick={refresh}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />Actualizar</button>
+          <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white hover:bg-accent-hover" type="button" onClick={() => { setCreateVersion((version) => version + 1); setCreateOpen(true); }}><Plus className="size-3.5" />Nuevo ticket</button>
+        </div>
+      </header>
 
-      <section className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Indicadores de soporte">
-        {stats.map((item, index) => (
-          <div className={index === stats.length - 1 ? "col-span-2 md:col-span-1" : ""} key={item.label}>
-            <StatCard {...item} index={index} />
+      {error ? <p className="mt-4 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger" role="alert">{error}</p> : null}
+
+      <section className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Indicadores reales de soporte">
+        {stats.map((item, index) => <StatCard {...item} index={index} key={item.label} />)}
+      </section>
+
+      <div className="mt-4"><SupportFilters filters={filters} countries={data?.countries ?? []} onChange={(changes) => setFilters((current) => ({ ...current, ...changes }))} /></div>
+
+      <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="support-queue-title">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div><h2 className="text-sm font-extrabold" id="support-queue-title">Cola global de tickets</h2><p className="mt-0.5 text-2xs text-muted">{numberFormatter.format(data?.meta.total ?? 0)} solicitudes encontradas</p></div>
+          {summary.totals.overdue > 0 ? <span className="flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-1 text-2xs font-extrabold text-danger"><AlertTriangle className="size-3" />{summary.totals.overdue} vencidos</span> : null}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[68rem] border-collapse text-left">
+            <thead className="bg-surface-subtle text-2xs font-bold text-muted"><tr><th className="px-4 py-2.5">Ticket</th><th className="px-3 py-2.5">Clínica / País</th><th className="px-3 py-2.5">Estado</th><th className="px-3 py-2.5">Prioridad</th><th className="px-3 py-2.5">Responsable</th><th className="px-3 py-2.5">SLA</th><th className="px-4 py-2.5 text-right">Acción</th></tr></thead>
+            <tbody className="divide-y divide-line">
+              {(data?.tickets ?? []).map((ticket) => (
+                <tr className="text-xs transition-colors hover:bg-accent-soft/30" key={ticket.id}>
+                  <th className="px-4 py-3" scope="row"><p className="font-mono text-2xs font-extrabold text-accent">#{ticket.ticketId}</p><p className="mt-1 max-w-xs truncate font-bold text-ink">{ticket.subject}</p></th>
+                  <td className="px-3 py-3"><p className="font-semibold text-ink">{ticket.clinic?.name ?? "Sin clínica"}</p><p className="mt-1 flex items-center gap-1 text-2xs text-muted"><CountryFlag countryCode={ticket.clinic?.countryCode ?? ""} />{ticket.clinic?.countryCode ?? "—"}</p></td>
+                  <td className="px-3 py-3"><TicketStatusBadge status={ticket.status} /></td>
+                  <td className="px-3 py-3 font-semibold text-ink">{PRIORITY_LABELS[ticket.priority]}</td>
+                  <td className="px-3 py-3 text-muted">{ticket.assignedTo?.name ?? "Sin asignar"}</td>
+                  <td className={`px-3 py-3 text-2xs font-semibold ${ticket.isOverdue ? "text-danger" : "text-muted"}`}>{ticket.isOverdue ? "Vencido · " : ""}{formatDate(ticket.dueAt)}</td>
+                  <td className="px-4 py-3 text-right"><button className="rounded-lg border border-line px-3 py-1.5 text-2xs font-extrabold text-accent hover:border-accent" type="button" onClick={() => setSelectedTicket(ticket)}>Gestionar</button></td>
+                </tr>
+              ))}
+              {!isLoading && (data?.tickets.length ?? 0) === 0 ? <tr><td className="px-4 py-10 text-center text-xs text-muted" colSpan={7}>No hay tickets para los filtros seleccionados.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-line px-4 py-3 text-2xs text-muted">
+          <span>Página {data?.meta.currentPage ?? 1} de {data?.meta.lastPage ?? 1}</span>
+          <div className="flex gap-1">
+            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página anterior" disabled={(data?.meta.currentPage ?? 1) <= 1 || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))}><ChevronLeft className="size-3.5" /></button>
+            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página siguiente" disabled={(data?.meta.currentPage ?? 1) >= (data?.meta.lastPage ?? 1) || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))}><ChevronRight className="size-3.5" /></button>
           </div>
-        ))}
+        </div>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-3" aria-label="Prioridad, SLA y categorías">
-        <DonutChart
-          title="Tickets por Prioridad"
-          centerValue={numberFormatter.format(1458)}
-          centerLabel="Total"
-          segments={priorityByLevel}
-          action={
-            <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle disabled:cursor-not-allowed" type="button" disabled title="Disponible al conectar las opciones del gráfico" aria-label="Más opciones">
-              <MoreHorizontal className="size-4" aria-hidden="true" />
-            </button>
-          }
-        />
-        <SlaGauge />
-        <IncidentCategoriesCard />
+      <section className="mt-4 grid gap-4 xl:grid-cols-3" aria-label="Análisis de soporte">
+        <DonutChart title="Tickets por Prioridad" centerValue={numberFormatter.format(summary.totals.tickets)} centerLabel="Total" segments={prioritySegments} />
+        <article className="rounded-xl border border-line bg-surface p-4"><h2 className="text-sm font-extrabold">Cobertura por país</h2><ul className="mt-3 divide-y divide-line">{summary.byCountry.map((country) => <li className="grid grid-cols-[1fr_auto_auto] items-center gap-3 py-2.5 text-xs" key={country.countryCode}><span className="flex items-center gap-2 font-bold"><CountryFlag countryCode={country.countryCode} />{country.countryCode}</span><span className="text-muted">{country.open} abiertos</span><span className={country.overdue > 0 ? "font-extrabold text-danger" : "font-bold text-success"}>{country.overdue} vencidos</span></li>)}{summary.byCountry.length === 0 ? <li className="py-8 text-center text-xs text-muted">Sin datos por país</li> : null}</ul></article>
+        <article className="rounded-xl border border-line bg-surface p-4"><h2 className="text-sm font-extrabold">Top categorías</h2><ol className="mt-3 divide-y divide-line">{summary.byCategory.map((category, index) => <li className="flex items-center gap-3 py-2.5" key={category.key}><span className="grid size-6 place-items-center rounded-md bg-accent-soft text-2xs font-extrabold text-accent">{index + 1}</span><span className="min-w-0 flex-1 truncate text-xs font-semibold">{CATEGORY_LABELS[category.key] ?? category.key}</span><span className="font-mono text-xs font-bold">{category.count}</span></li>)}</ol></article>
       </section>
 
-      <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]" aria-label="Rendimiento y escalaciones">
-        <TeamPerformanceCard />
-        <EscalationsCard />
+      <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.8fr)]">
+        <article className="overflow-hidden rounded-xl border border-line bg-surface"><div className="border-b border-line px-4 py-3"><h2 className="flex items-center gap-2 text-sm font-extrabold"><UsersRound className="size-4 text-accent" />Equipo Superadmin</h2></div><div className="overflow-x-auto"><table className="w-full min-w-lg text-left"><thead className="bg-surface-subtle text-2xs text-muted"><tr><th className="px-4 py-2">Responsable</th><th className="px-3 py-2">Activos</th><th className="px-3 py-2">Resueltos</th><th className="px-4 py-2">Asignados</th></tr></thead><tbody className="divide-y divide-line">{summary.agents.map((agent) => <tr className="text-xs" key={agent.id}><th className="px-4 py-3"><p className="font-bold">{agent.name}</p><p className="mt-0.5 text-2xs font-normal text-muted">{agent.email}</p></th><td className="px-3 py-3 font-mono">{agent.activeTickets}</td><td className="px-3 py-3 font-mono text-success">{agent.resolvedTickets}</td><td className="px-4 py-3 font-mono">{agent.assignedTickets}</td></tr>)}</tbody></table></div></article>
+        <article className="rounded-xl border border-line bg-surface p-4"><h2 className="flex items-center gap-2 text-sm font-extrabold"><Clock3 className="size-4 text-danger" />Escalaciones por SLA</h2><ul className="mt-3 space-y-2">{summary.escalations.map((ticket) => <li key={ticket.id}><button className="w-full rounded-lg border border-danger/20 bg-danger-soft/40 p-3 text-left" type="button" onClick={() => setSelectedTicket(ticket)}><p className="font-mono text-2xs font-extrabold text-danger">#{ticket.ticketId}</p><p className="mt-1 truncate text-xs font-bold">{ticket.subject}</p><p className="mt-1 text-2xs text-muted">{ticket.clinic?.name} · venció {formatDate(ticket.dueAt)}</p></button></li>)}{summary.escalations.length === 0 ? <li className="py-8 text-center text-xs text-success">No hay tickets vencidos.</li> : null}</ul></article>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-3" aria-label="Soporte por clínica y actividad">
-        <ClinicSupportCard title="Clínicas con Más Soporte - México" countryCode="MX" clinics={clinicsMexico} />
-        <ClinicSupportCard title="Clínicas con Más Soporte - Perú" countryCode="PE" clinics={clinicsPeru} />
-        <RecentActivityCard />
-      </section>
-
-      <footer className="mt-4 flex items-center gap-1.5 border-t border-line py-4 text-2xs text-muted">
-        <Info className="size-3" aria-hidden="true" />Los datos se actualizan cada 10 minutos. Última actualización: Hoy, 10:30 AM
-      </footer>
-
-      <CreateTicketModal isOpen={createTicketOpen} onClose={() => setCreateTicketOpen(false)} />
+      <SupportTicketModal key={createVersion} isOpen={createOpen} onClose={() => setCreateOpen(false)} clinics={data?.clinics ?? []} onCreate={handleCreated} />
+      <SupportTicketWorkflowModal key={selectedTicket?.id ?? "none"} isOpen={selectedTicket !== null} ticket={selectedTicket} agents={summary.agents} onClose={() => setSelectedTicket(null)} onUpdated={() => refresh()} />
     </div>
   );
 }

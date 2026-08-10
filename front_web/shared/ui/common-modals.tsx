@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileText, Filter, Mail, Send } from "lucide-react";
+import { Download, Filter, Send } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/shared/ui/modal";
 import {
@@ -220,73 +220,6 @@ export function SendNotificationModal({ isOpen, onClose }: { isOpen: boolean; on
         <div className="rounded-lg border border-warning/30 bg-warning-soft/60 p-3 text-2xs leading-5 text-muted">
           <p className="font-bold text-ink">Atención:</p>
           Esta notificación será enviada a múltiples usuarios. Revisa el contenido antes de enviar.
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-export function CreateTicketModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleCreate = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    onClose();
-  };
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="md"
-      title="Nuevo Ticket de Soporte"
-      description="Crear un ticket para una clínica"
-      footer={
-        <>
-          <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-          <ModalPrimaryButton onClick={handleCreate}>
-            <FileText className="size-3.5" strokeWidth={1.9} />
-            {isLoading ? "Creando..." : "Crear Ticket"}
-          </ModalPrimaryButton>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <ModalSelect
-          id="ticket-clinic"
-          label="Clínica"
-          options={["Clínica San José", "Clínica del Valle", "Clínica Bienestar", "Clínica San Pablo"]}
-          required
-        />
-
-        <ModalGrid cols={2}>
-          <ModalSelect
-            id="ticket-category"
-            label="Categoría"
-            options={["Técnico", "Facturación", "Funcionalidad", "Consulta General"]}
-            defaultValue="Técnico"
-            required
-          />
-          <ModalSelect id="ticket-priority" label="Prioridad" options={["Baja", "Normal", "Alta", "Urgente"]} defaultValue="Normal" required />
-        </ModalGrid>
-
-        <ModalField id="ticket-subject" label="Asunto" placeholder="Resumen breve del problema" required />
-        <ModalTextarea id="ticket-description" label="Descripción" placeholder="Describe el problema en detalle..." rows={6} required />
-
-        <ModalField id="ticket-contact" label="Email de contacto" type="email" placeholder="contacto@clinica.com" required />
-
-        <div className="space-y-2">
-          <label className="text-2xs font-bold text-muted">Opciones</label>
-          <label className="flex items-center gap-2 text-xs text-ink">
-            <input className="size-4 accent-accent" defaultChecked type="checkbox" />
-            Enviar notificación al crear el ticket
-          </label>
-          <label className="flex items-center gap-2 text-xs text-ink">
-            <input className="size-4 accent-accent" type="checkbox" />
-            Asignarme como responsable
-          </label>
         </div>
       </div>
     </Modal>

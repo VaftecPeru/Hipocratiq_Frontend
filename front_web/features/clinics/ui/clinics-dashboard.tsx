@@ -3,8 +3,6 @@
 import {
   ArrowUpRight,
   Building2,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -13,6 +11,7 @@ import {
   FilePlus2,
   MoreHorizontal,
   Pencil,
+  Plus,
   Search,
   SlidersHorizontal,
   TrendingUp,
@@ -20,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useReducer, useRef, useState, useTransition } from "react";
+import { useEffect, useReducer, useRef, useState, useTransition } from "react";
 import MexicoFlag from "country-flag-icons/react/3x2/MX";
 import PeruFlag from "country-flag-icons/react/3x2/PE";
 import UnitedStatesFlag from "country-flag-icons/react/3x2/US";
@@ -35,9 +34,12 @@ import type {
 } from "@/features/clinics/model/clinic.types";
 import {
   ClinicDetailModal,
+  CreateClinicModal,
   EditClinicModal,
   SuspendClinicDialog,
 } from "./clinic-modals";
+import { updateAdminClinic } from "@/features/clinics/api/browser-clinics";
+import { FilterSelect } from "@/shared/ui/filter-select";
 
 type ClinicsDashboardProps = {
   initialData: ClinicsDashboardPageData;
@@ -109,180 +111,6 @@ const STATUS_OPTIONS: Array<{ value: ClinicStatus | "all"; label: string }> = [
 ];
 
 const SEARCH_DEBOUNCE_MS = 350;
-
-// Dropdown propio: el `<select>` nativo no permite estilar las `<option>` en
-// Windows (el SO pinta la lista con su tema), así que usamos un listbox custom.
-// Se sigue el mismo patrón que `CountrySelect`: el teclado vive en el botón y el
-// foco permanece ahí (al cerrar no se pierde), la lista solo resalta visualmente.
-function FilterSelect<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (value: T) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const labelId = useId();
-  const listboxId = `${labelId}-options`;
-  const selectedIndex = options.findIndex((option) => option.value === value);
-  const selectedLabel = options[selectedIndex]?.label ?? "";
-
-  const close = useCallback(() => {
-    setIsOpen(false);
-    setFocusedIndex(-1);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        close();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, close]);
-
-  useEffect(() => {
-    if (isOpen && focusedIndex >= 0) {
-      const items = listRef.current?.querySelectorAll("[role=option]");
-      (items?.[focusedIndex] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
-    }
-  }, [isOpen, focusedIndex]);
-
-  function open() {
-    setIsOpen(true);
-    setFocusedIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }
-
-  function toggle() {
-    if (isOpen) {
-      close();
-    } else {
-      open();
-    }
-  }
-
-  function select(index: number) {
-    const option = options[index];
-
-    if (option) onChange(option.value);
-
-    close();
-  }
-
-  function handleKeyDown(event: React.KeyboardEvent) {
-    switch (event.key) {
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        if (isOpen && focusedIndex >= 0) {
-          select(focusedIndex);
-        } else {
-          toggle();
-        }
-        break;
-      case "ArrowDown":
-        event.preventDefault();
-        if (isOpen) {
-          setFocusedIndex((prev) => Math.min(prev + 1, options.length - 1));
-        } else {
-          open();
-        }
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        if (isOpen) setFocusedIndex((prev) => Math.max(prev - 1, 0));
-        break;
-      case "Home":
-        if (isOpen) {
-          event.preventDefault();
-          setFocusedIndex(0);
-        }
-        break;
-      case "End":
-        if (isOpen) {
-          event.preventDefault();
-          setFocusedIndex(options.length - 1);
-        }
-        break;
-      case "Escape":
-        event.preventDefault();
-        close();
-        break;
-      case "Tab":
-        close();
-        break;
-    }
-  }
-
-  return (
-    <div className="grid gap-1 text-2xs font-bold text-muted" ref={containerRef}>
-      <span id={labelId}>{label}</span>
-      <div className="relative">
-        <button
-          type="button"
-          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-line bg-surface pr-2.5 pl-2.5 text-xs font-medium text-ink outline-none transition-colors hover:border-accent/60 focus-visible:border-accent focus-visible:ring-3 focus-visible:ring-focus/40 md:h-8"
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-          aria-controls={listboxId}
-          aria-labelledby={labelId}
-          onClick={toggle}
-          onKeyDown={handleKeyDown}
-        >
-          <span className="truncate">{selectedLabel}</span>
-          <ChevronDown
-            className={`size-3.5 shrink-0 text-muted transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
-            strokeWidth={1.9}
-            aria-hidden="true"
-          />
-        </button>
-        {isOpen ? (
-          <ul
-            id={listboxId}
-            ref={listRef}
-            role="listbox"
-            aria-labelledby={labelId}
-            className="absolute top-[calc(100%+0.25rem)] left-0 z-20 max-h-64 w-full overflow-auto rounded-lg border border-line bg-surface p-1 shadow-[0_0.5rem_1.5rem_rgb(16_27_51/12%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)]"
-          >
-            {options.map((option, index) => {
-              const isSelected = option.value === value;
-              const isFocused = index === focusedIndex;
-
-              return (
-                <li
-                  role="option"
-                  aria-selected={isSelected}
-                  key={option.value}
-                  className={`flex min-h-8 cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors duration-75 ${
-                    isFocused ? "bg-surface-subtle" : ""
-                  } ${isSelected ? "font-bold text-accent" : "font-medium text-ink"}`}
-                  onClick={() => select(index)}
-                  onMouseEnter={() => setFocusedIndex(index)}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {isSelected ? (
-                    <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2.5} aria-hidden="true" />
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 
 const ACTIVITY_STYLES: Record<ClinicActivity["type"], { icon: typeof Building2; className: string }> = {
   clinic: { icon: Building2, className: "bg-success-soft text-success" },
@@ -408,11 +236,13 @@ function PlanDistributionCard({ data }: { data: ClinicsDashboardPageData["planDi
 
 function ClinicActions({
   clinicName,
+  clinicStatus,
   onViewDetail,
   onEdit,
   onSuspend,
 }: {
   clinicName: string;
+  clinicStatus: ClinicStatus;
   onViewDetail: () => void;
   onEdit: () => void;
   onSuspend: () => void;
@@ -438,7 +268,7 @@ function ClinicActions({
       <button
         className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
         type="button"
-        aria-label={`Más acciones para ${clinicName}`}
+        aria-label={`${clinicStatus === "active" ? "Suspender" : "Reactivar"} ${clinicName}`}
         onClick={onSuspend}
       >
         <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
@@ -471,9 +301,9 @@ function ClinicsTable({
   clinics: Clinic[];
   rowOffset: number;
   hasActiveFilters: boolean;
-  onViewDetail: (clinicName: string) => void;
-  onEdit: (clinicName: string) => void;
-  onSuspend: (clinicName: string) => void;
+  onViewDetail: (clinic: Clinic) => void;
+  onEdit: (clinic: Clinic) => void;
+  onSuspend: (clinic: Clinic) => void;
 }) {
   if (clinics.length === 0) {
     return (
@@ -534,9 +364,10 @@ function ClinicsTable({
                 <td className="px-2 py-1.5">
                   <ClinicActions
                     clinicName={clinic.name}
-                    onViewDetail={() => onViewDetail(clinic.name)}
-                    onEdit={() => onEdit(clinic.name)}
-                    onSuspend={() => onSuspend(clinic.name)}
+                    clinicStatus={clinic.status}
+                    onViewDetail={() => onViewDetail(clinic)}
+                    onEdit={() => onEdit(clinic)}
+                    onSuspend={() => onSuspend(clinic)}
                   />
                 </td>
               </tr>
@@ -560,7 +391,7 @@ function ClinicsTable({
               <div><dt className="text-muted">Usuarios</dt><dd className="mt-1 font-mono font-bold">{clinic.users}</dd></div>
               <div><dt className="text-muted">Pacientes</dt><dd className="mt-1 font-mono font-bold">{numberFormatter.format(clinic.patients)}</dd></div>
             </dl>
-            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} onViewDetail={() => onViewDetail(clinic.name)} onEdit={() => onEdit(clinic.name)} onSuspend={() => onSuspend(clinic.name)} /></div>
+            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} clinicStatus={clinic.status} onViewDetail={() => onViewDetail(clinic)} onEdit={() => onEdit(clinic)} onSuspend={() => onSuspend(clinic)} /></div>
           </article>
         ))}
       </div>
@@ -624,9 +455,10 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [detailClinicOpen, setDetailClinicOpen] = useState(false);
+  const [createClinicOpen, setCreateClinicOpen] = useState(false);
   const [editClinicOpen, setEditClinicOpen] = useState(false);
   const [suspendClinicOpen, setSuspendClinicOpen] = useState(false);
-  const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
 
   const currentPage = initialData.pagination.currentPage;
   const totalPages = initialData.pagination.lastPage;
@@ -685,10 +517,13 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
-      <div>
-        <p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Administración global</p>
-        <h1 className="mt-0.5 font-display text-[clamp(1.3rem,1.8vw,1.6rem)] italic tracking-[-0.02em]">Clínicas <span className="not-italic font-sans font-extrabold text-muted">/ Tenants</span></h1>
-        <p className="mt-0.5 text-xs text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Administración global</p>
+          <h1 className="mt-0.5 font-display text-[clamp(1.3rem,1.8vw,1.6rem)] italic tracking-[-0.02em]">Clínicas <span className="not-italic font-sans font-extrabold text-muted">/ Tenants</span></h1>
+          <p className="mt-0.5 text-xs text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p>
+        </div>
+        <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateClinicOpen(true)}><Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(11rem,0.8fr))_minmax(19rem,1.45fr)]" aria-label="Indicadores de clínicas">
@@ -730,16 +565,16 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
             clinics={initialData.clinics}
             rowOffset={rowOffset}
             hasActiveFilters={hasActiveFilters}
-            onViewDetail={(clinicName) => {
-              setSelectedClinic(clinicName);
+            onViewDetail={(clinic) => {
+              setSelectedClinic(clinic);
               setDetailClinicOpen(true);
             }}
-            onEdit={(clinicName) => {
-              setSelectedClinic(clinicName);
+            onEdit={(clinic) => {
+              setSelectedClinic(clinic);
               setEditClinicOpen(true);
             }}
-            onSuspend={(clinicName) => {
-              setSelectedClinic(clinicName);
+            onSuspend={(clinic) => {
+              setSelectedClinic(clinic);
               setSuspendClinicOpen(true);
             }}
           />
@@ -757,57 +592,35 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
         <SummaryPanel data={initialData} />
       </div>
 
+      <CreateClinicModal
+        key={createClinicOpen ? "create-open" : "create-closed"}
+        isOpen={createClinicOpen}
+        onClose={() => setCreateClinicOpen(false)}
+        onCreated={() => router.refresh()}
+      />
       <ClinicDetailModal
         isOpen={detailClinicOpen}
         onClose={() => setDetailClinicOpen(false)}
-        clinic={
-          selectedClinic
-            ? {
-                id: "clinic-001",
-                name: selectedClinic,
-                country: "MX" as const,
-                city: "Ciudad de México",
-                address: "Av. Insurgentes Sur 1234, Col. Del Valle",
-                phone: "+52 55 1234 5678",
-                email: "contacto@clinica.com",
-                plan: "professional" as const,
-                adminName: "Dr. Carlos Mendoza",
-                adminEmail: "admin@clinica.com",
-                status: "active" as const,
-                users: 15,
-                patients: 3200,
-                createdAt: "15 de marzo, 2024",
-              }
-            : null
-        }
+        clinic={selectedClinic}
       />
       <EditClinicModal
         isOpen={editClinicOpen}
         onClose={() => setEditClinicOpen(false)}
-        clinic={
-          selectedClinic
-            ? {
-                name: selectedClinic,
-                country: "MX" as const,
-                city: "Ciudad de México",
-                address: "Av. Insurgentes Sur 1234, Col. Del Valle",
-                phone: "+52 55 1234 5678",
-                email: "contacto@clinica.com",
-                plan: "professional" as const,
-                adminName: "Dr. Carlos Mendoza",
-                adminEmail: "admin@clinica.com",
-              }
-            : null
-        }
+        clinic={selectedClinic}
+        onUpdated={() => router.refresh()}
       />
       <SuspendClinicDialog
         isOpen={suspendClinicOpen}
         onClose={() => setSuspendClinicOpen(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
+          if (!selectedClinic) return;
+          await updateAdminClinic(selectedClinic.id, { status: selectedClinic.status === "active" ? "suspended" : "active" });
           setSuspendClinicOpen(false);
           setSelectedClinic(null);
+          router.refresh();
         }}
-        clinicName={selectedClinic ?? ""}
+        clinicName={selectedClinic?.name ?? ""}
+        nextStatus={selectedClinic?.status === "active" ? "suspended" : "active"}
       />
     </div>
   );

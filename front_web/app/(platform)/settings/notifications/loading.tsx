@@ -30,7 +30,7 @@ export default function NotificationsLoading() {
 
           <div className="mt-3 hidden space-y-3 sm:block">
             <div className="flex gap-4 border-b border-line pb-2">
-              {["4rem", "3rem", "4.5rem", "2.5rem", "2.5rem"].map((width) => <div className="h-2.5 rounded bg-line/40" key={width} style={{ width }} />)}
+              {["4rem", "3rem", "4.5rem", "2.5rem", "2.5rem"].map((width, index) => <div className="h-2.5 rounded bg-line/40" key={`${width}-${index}`} style={{ width }} />)}
             </div>
             {Array.from({ length: 6 }, (_, index) => (
               <div className="flex items-center gap-4" key={index}>
@@ -77,7 +77,7 @@ export default function NotificationsLoading() {
 
           <div className="mt-3 hidden space-y-3 lg:block">
             <div className="flex gap-3 border-b border-line pb-2">
-              {["6rem", "5rem", "4rem", "6rem", "4rem"].map((width) => <div className="h-2.5 rounded bg-line/40" key={width} style={{ width }} />)}
+              {["6rem", "5rem", "4rem", "6rem", "4rem"].map((width, index) => <div className="h-2.5 rounded bg-line/40" key={`${width}-${index}`} style={{ width }} />)}
             </div>
             {Array.from({ length: 5 }, (_, index) => (
               <div className="flex items-center gap-3" key={index}>

@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown } from "lucide-react";
 import { Info } from "lucide-react";
 import type { ReactNode } from "react";
+import { FilterSelect } from "@/shared/ui/filter-select";
 
 /**
  * Primitivas compartidas por las vistas de Configuración. Centralizan el
@@ -116,6 +116,7 @@ export function SettingsSelect({
   value,
   options,
   valueClassName = "",
+  onChange,
   children,
 }: {
   id: string;
@@ -123,38 +124,37 @@ export function SettingsSelect({
   value: string;
   options: string[];
   valueClassName?: string;
+  onChange?: (value: string) => void;
   children?: ReactNode;
 }) {
   return (
-    <div className="grid min-w-0 gap-1.5">
-      <label className="text-2xs font-bold text-muted" htmlFor={id}>{label}</label>
-      <div className="relative">
-        {children}
-        <select
-          className={`${CONTROL_BASE} appearance-none pr-8 ${children ? "pl-10" : ""} ${valueClassName}`}
-          defaultValue={value}
-          id={id}
-        >
-          {options.map((option) => <option key={option}>{option}</option>)}
-        </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" strokeWidth={1.9} aria-hidden="true" />
-      </div>
-    </div>
+    <FilterSelect
+      id={id}
+      label={label}
+      options={options.map((option) => ({ value: option, label: option }))}
+      value={onChange ? value : undefined}
+      defaultValue={value}
+      onChange={onChange}
+      leading={children}
+      density="compact"
+      surface="input"
+      buttonClassName={valueClassName}
+    />
   );
 }
 
 /** Campo de texto con la misma métrica que SettingsSelect. */
-export function SettingsInput({ id, label, value, type = "text" }: { id: string; label: string; value: string; type?: string }) {
+export function SettingsInput({ id, label, value, type = "text", onChange }: { id: string; label: string; value: string; type?: string; onChange?: (value: string) => void }) {
   return (
     <div className="grid min-w-0 gap-1.5">
       <label className="text-2xs font-bold text-muted" htmlFor={id}>{label}</label>
-      <input className={CONTROL_BASE} defaultValue={value} id={id} type={type} />
+      <input className={CONTROL_BASE} defaultValue={onChange ? undefined : value} id={id} onChange={onChange ? (event) => onChange(event.target.value) : undefined} type={type} value={onChange ? value : undefined} />
     </div>
   );
 }
 
 /** Interruptor accesible usado en todos los módulos. */
-export function SettingsToggle({ label, checked }: { label: string; checked: boolean }) {
+export function SettingsToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange?: (checked: boolean) => void }) {
   return (
     <button
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus ${checked ? "bg-accent" : "bg-line"}`}
@@ -162,6 +162,7 @@ export function SettingsToggle({ label, checked }: { label: string; checked: boo
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      onClick={onChange ? () => onChange(!checked) : undefined}
     >
       <span
         className={`absolute top-0.5 size-4 rounded-full bg-surface shadow-[0_0.0625rem_0.25rem_rgb(16_27_51/25%)] transition-all ${checked ? "left-4.5" : "left-0.5"}`}
