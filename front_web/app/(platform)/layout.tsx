@@ -9,7 +9,7 @@ export default async function PlatformLayout({ children }: Readonly<{ children: 
     redirect("/");
   }
 
-  if (session.actor_context === "clinic_admin") {
+  if (session.actor_context === "clinic_admin" || session.actor_context === "receptionist") {
     redirect("/clinic/dashboard");
   }
 

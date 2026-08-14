@@ -57,13 +57,13 @@ export function CreateUserModal({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [countryCode, setCountryCode] = useState<CountryCode>("MX");
-  const [role, setRole] = useState<"super_admin" | "clinic_admin">("clinic_admin");
+  const [role, setRole] = useState<"super_admin" | "clinic_admin" | "receptionist">("clinic_admin");
   const [clinicId, setClinicId] = useState<number | undefined>(activeClinics[0]?.id);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleCreate() {
-    if (isLoading || !name.trim() || !phone.trim() || (role === "clinic_admin" && clinicId === undefined)) return;
+    if (isLoading || !name.trim() || !phone.trim() || (role !== "super_admin" && clinicId === undefined)) return;
     setIsLoading(true);
     setError(null);
 
@@ -105,8 +105,8 @@ export function CreateUserModal({
           <ModalSelect id="create-user-country" label="País del teléfono" options={[{ value: "MX", label: "México" }, { value: "PE", label: "Perú" }, { value: "US", label: "Estados Unidos" }]} value={countryCode} onChange={(value) => setCountryCode(value as CountryCode)} required />
           <ModalField id="create-user-phone" label="Teléfono" placeholder={countryCode === "PE" ? "987 654 321" : "55 1234 5678"} value={phone} onChange={(event) => setPhone(event.target.value)} required />
         </ModalGrid>
-        <ModalSelect id="create-user-role" label="Rol inicial" options={[{ value: "clinic_admin", label: "Administrador de clínica" }, { value: "super_admin", label: "Superadministrador" }]} value={role} onChange={(value) => setRole(value as "super_admin" | "clinic_admin")} required />
-        {role === "clinic_admin" ? (
+        <ModalSelect id="create-user-role" label="Rol inicial" options={[{ value: "clinic_admin", label: "Administrador de clínica" }, { value: "receptionist", label: "Recepcionista" }, { value: "super_admin", label: "Superadministrador" }]} value={role} onChange={(value) => setRole(value as "super_admin" | "clinic_admin" | "receptionist")} required />
+        {role !== "super_admin" ? (
           <ModalSelect id="create-user-clinic" label="Clínica / Tenant" options={activeClinics.map((clinic) => ({ value: String(clinic.id), label: `${clinic.name} · ${clinic.countryCode}` }))} value={clinicId === undefined ? undefined : String(clinicId)} onChange={(value) => {
             const selectedId = Number(value);
             setClinicId(selectedId);

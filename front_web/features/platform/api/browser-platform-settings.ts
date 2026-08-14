@@ -3,6 +3,7 @@ import type {
   AiModel,
   LocaleCode,
   PlatformSettings,
+  PublicPlatformSettings,
   UpdatePlatformSettingsPayload,
 } from "@/features/platform/model/platform-settings.types";
 import type { CountryCode } from "@/shared/ui/country-flag";
@@ -19,6 +20,10 @@ type ApiPlatformSettings = {
 
 type ApiPlatformSettingsResponse = {
   data?: ApiPlatformSettings;
+};
+
+type ApiPublicPlatformSettingsResponse = {
+  data?: { default_country_code?: unknown };
 };
 
 const COUNTRY_CODES = ["MX", "PE", "US"] as const satisfies readonly CountryCode[];
@@ -79,6 +84,22 @@ function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
       dataSources: Array.isArray(settings.ai_capabilities?.data_sources) ? settings.ai_capabilities.data_sources.filter((item): item is string => typeof item === "string") : [],
     },
   };
+}
+
+function mapPublicSettings(payload: ApiPublicPlatformSettingsResponse): PublicPlatformSettings {
+  const defaultCountryCode = payload.data?.default_country_code;
+
+  if (!isCountryCode(defaultCountryCode)) {
+    throw new ApiError("El servidor devolvió una configuración regional incompleta.", 502);
+  }
+
+  return { defaultCountryCode };
+}
+
+export async function getPublicPlatformSettings(signal?: AbortSignal): Promise<PublicPlatformSettings> {
+  return mapPublicSettings(
+    await getFromApi<ApiPublicPlatformSettingsResponse>("/api/v1/auth/platform-settings", { signal }),
+  );
 }
 
 export async function getAdminPlatformSettings(signal?: AbortSignal): Promise<PlatformSettings> {

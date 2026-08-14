@@ -29,6 +29,7 @@ import { StatCard } from "@/shared/ui/stat-card";
 const ROLE_LABELS: Record<AdminUserRole, string> = {
   super_admin: "Superadministrador",
   clinic_admin: "Administrador de clínica",
+  receptionist: "Recepcionista",
   doctor: "Médico",
   patient: "Paciente",
   unassigned: "Sin rol",
@@ -37,6 +38,7 @@ const ROLE_LABELS: Record<AdminUserRole, string> = {
 const ROLE_TONES: Record<AdminUserRole, BadgeTone> = {
   super_admin: "dark",
   clinic_admin: "accent",
+  receptionist: "warning",
   doctor: "success",
   patient: "violet",
   unassigned: "neutral",

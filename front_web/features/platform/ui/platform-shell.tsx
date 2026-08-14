@@ -181,7 +181,10 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
     const refreshSettings = async () => {
       try {
         const settings = await getAdminPlatformSettings(controller.signal);
-        setHeaderCountryCodes(settings.headerCountryCodes);
+        setHeaderCountryCodes([
+          settings.defaultCountryCode,
+          ...settings.headerCountryCodes.filter((countryCode) => countryCode !== settings.defaultCountryCode),
+        ]);
       } catch {
         // México permanece como fallback cuando la configuración no está disponible.
       }

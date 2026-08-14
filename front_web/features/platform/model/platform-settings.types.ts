@@ -12,6 +12,10 @@ export type PlatformSettings = {
   aiCapabilities: { status: "configured" | "not_configured"; provider: string | null; predictionsAvailable: boolean; dataSources: string[] };
 };
 
+export type PublicPlatformSettings = {
+  defaultCountryCode: CountryCode;
+};
+
 export type LocaleCode = "es-MX" | "es-PE" | "en-US";
 export type AiModel = "respiratory" | "dengue" | "gastrointestinal" | "hospital_occupancy";
 export type AiConfiguration = {

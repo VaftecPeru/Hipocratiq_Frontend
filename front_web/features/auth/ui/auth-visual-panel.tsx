@@ -1,16 +1,21 @@
+"use client";
+
 import Image from "next/image";
 import { ShieldCheck } from "lucide-react";
-import PeruFlag from "country-flag-icons/react/3x2/PE";
+import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
+import { CountryFlag } from "@/shared/ui/country-flag";
 
 export function AuthVisualPanel() {
+  const { defaultCountryCode } = useAuthPlatformSettings();
+
   return (
     <aside
       className="relative hidden h-dvh min-h-0 overflow-hidden bg-[linear-gradient(155deg,#e4eefb_0%,#a8c9f2_45%,#3178d8_100%)] min-[900px]:block"
       aria-label="Vista previa de la plataforma"
     >
       <div className="absolute top-5 right-6 z-10 flex min-h-9 items-center gap-2 rounded-full border border-white/55 bg-white/80 px-3.5 text-2xs font-bold text-ink-secondary backdrop-blur-xl">
-        <PeruFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />
-        <span>PE</span>
+        <CountryFlag countryCode={defaultCountryCode} className="h-3 w-4.5 rounded-[2px]" />
+        <span>{defaultCountryCode}</span>
         <span className="h-3.5 w-px bg-line-strong" aria-hidden="true" />
         <span>ES</span>
       </div>

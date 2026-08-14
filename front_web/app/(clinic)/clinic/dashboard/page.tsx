@@ -17,6 +17,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
+import { getClinicDashboardServer } from "@/features/clinics/api/server-clinic-dashboard";
 
 type MetricTone = "accent" | "success" | "warning" | "violet";
 
@@ -91,41 +92,6 @@ const weeklyAgenda = [
   { day: "Sáb", fullDay: "Sábado", appointments: 29, occupancy: 58 },
   { day: "Dom", fullDay: "Domingo", appointments: 18, occupancy: 36 },
 ] satisfies readonly WeeklyDay[];
-
-const doctors = [
-  {
-    name: "Dr. Ricardo Gómez",
-    initials: "RG",
-    specialty: "Cardiología",
-    office: "B-102",
-    pendingAppointments: 4,
-    status: "Disponible",
-  },
-  {
-    name: "Dra. Marta Jiménez",
-    initials: "MJ",
-    specialty: "Pediatría",
-    office: "C-204",
-    pendingAppointments: 2,
-    status: "En consulta",
-  },
-  {
-    name: "Dr. Sergio Valdés",
-    initials: "SV",
-    specialty: "Traumatología",
-    office: "A-005",
-    pendingAppointments: 7,
-    status: "Descanso",
-  },
-  {
-    name: "Dra. Sofía Luna",
-    initials: "SL",
-    specialty: "Dermatología",
-    office: "B-108",
-    pendingAppointments: 0,
-    status: "Disponible",
-  },
-] satisfies readonly Doctor[];
 
 const metricToneClasses: Record<MetricTone, { icon: string; badge: string }> = {
   accent: {
@@ -329,7 +295,27 @@ function StatusBadge({ status }: { status: DoctorStatus }) {
 
 export default async function ClinicDashboardPage() {
   const session = await getAuthenticatedSession();
-  const clinicName = session?.user.clinic?.name ?? "Tu clínica";
+  const dashboard = await getClinicDashboardServer();
+  const clinicName = dashboard?.clinic.name ?? session?.user.clinic?.name ?? "Tu clínica";
+  const liveMetrics: readonly Metric[] = metrics.map((metric) => {
+    if (metric.label === "Citas programadas") return { ...metric, value: "—", helper: "Agenda aún no configurada", badge: "Sin datos" };
+    if (metric.label === "Facturación mensual") return { ...metric, value: "—", helper: "Facturación aún no configurada", badge: "Sin datos" };
+    if (!dashboard) return metric;
+    if (metric.label === "Médicos en turno") return { ...metric, value: String(dashboard.metrics.doctorsTotal), helper: "membresías activas" };
+    if (metric.label === "Pacientes atendidos") return { ...metric, value: String(dashboard.metrics.patientsTotal), helper: "perfiles registrados" };
+    return metric;
+  });
+  const liveDoctors: readonly Doctor[] = dashboard?.team
+    .filter((member) => member.role === "doctor")
+    .slice(0, 4)
+    .map((member) => ({
+      name: member.name,
+      initials: member.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase(),
+      specialty: member.specialty ?? "Medicina general",
+      office: "Sin asignar",
+      pendingAppointments: 0,
+      status: "Disponible",
+    })) ?? [];
 
   return (
     <main className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
@@ -369,7 +355,7 @@ export default async function ClinicDashboardPage() {
         className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Indicadores clave de la clínica"
       >
-        {metrics.map((metric, index) => (
+        {liveMetrics.map((metric, index) => (
           <MetricCard metric={metric} index={index} key={metric.label} />
         ))}
       </section>
@@ -554,7 +540,7 @@ export default async function ClinicDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {doctors.map((doctor, index) => (
+              {liveDoctors.map((doctor, index) => (
                 <tr
                   className="transition-colors hover:bg-surface-hover"
                   key={doctor.name}
@@ -605,10 +591,10 @@ export default async function ClinicDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-[0.62rem] font-semibold text-muted sm:px-5">
-          <span>4 médicos visibles en este bloque</span>
+          <span>{liveDoctors.length} médicos visibles en este bloque</span>
           <span className="inline-flex items-center gap-1.5">
             <ReceiptText className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-            17 citas pendientes en total
+            Agenda pendiente no disponible
           </span>
         </div>
       </section>

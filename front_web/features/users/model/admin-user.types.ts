@@ -1,8 +1,8 @@
 import type { CountryCode } from "@/shared/ui/country-flag";
 
-export type AdminUserRole = "super_admin" | "clinic_admin" | "doctor" | "patient" | "unassigned";
+export type AdminUserRole = "super_admin" | "clinic_admin" | "receptionist" | "doctor" | "patient" | "unassigned";
 export type AdminAssignableRole = Exclude<AdminUserRole, "unassigned">;
-export type AdminUserRoleLabel = "Superadministrador" | "Administrador de Clínica" | "Médico" | "Paciente" | "Sin rol";
+export type AdminUserRoleLabel = "Superadministrador" | "Administrador de Clínica" | "Recepcionista" | "Médico" | "Paciente" | "Sin rol";
 export type AdminUserStatus = "pending_verification" | "active" | "suspended" | "disabled";
 
 export type AdminUser = {
@@ -31,6 +31,7 @@ export type AdminUsersDashboardData = {
     users: number;
     activeUsers: number;
     administrators: number;
+    receptionists: number;
     doctors: number;
     patients: number;
   };

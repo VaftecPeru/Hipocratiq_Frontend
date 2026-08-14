@@ -4,12 +4,20 @@ import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
+import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
 import { ApiError } from "@/shared/api/http-client";
 
 type FieldName = "identifier" | "password" | "code";
 type FieldErrors = Partial<Record<FieldName, string>>;
+
+const LOGIN_ROLE_CONTEXTS = {
+  healthcare: "staff",
+  patient: "patient",
+  administrator: "staff",
+  support: "staff", // The API's staff context is the global Super Administrator login.
+} satisfies Record<LoginRole, LoginActorContext>;
 
 type FlowState = {
   step: AuthStep;
@@ -98,19 +106,22 @@ function flowReducer(state: FlowState, action: FlowAction): FlowState {
 
 export function LoginFlow() {
   const router = useRouter();
+  const { defaultCountryCode } = useAuthPlatformSettings();
   const challengeId = useRef("");
   const emailInput = useRef<HTMLInputElement>(null);
   const phoneInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [flow, dispatch] = useReducer(flowReducer, INITIAL_FLOW_STATE);
-  const [actorContext, setActorContext] = useState<LoginActorContext>("staff");
+  const [loginRole, setLoginRole] = useState<LoginRole>("healthcare");
   const [identifierType, setIdentifierType] = useState<LoginIdentifierType>("phone");
-  const [country, setCountry] = useState<CountryCode>("PE");
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode | null>(null);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isNavigating, setIsNavigating] = useState(false);
   const dashboardPath = useRef("/dashboard");
+  const country = selectedCountry ?? defaultCountryCode;
+  const actorContext = LOGIN_ROLE_CONTEXTS[loginRole];
 
   useEffect(() => {
     if (flow.step !== "otp") {
@@ -231,7 +242,7 @@ export function LoginFlow() {
     startTransition(async () => {
       try {
         const response = await verifyLoginOtp(challengeId.current, code);
-        const destination = response.data.actor_context === "clinic_admin"
+        const destination = response.data.actor_context === "clinic_admin" || response.data.actor_context === "receptionist"
           ? "/clinic/dashboard"
           : response.data.actor_context === "doctor"
             ? "/doctor/dashboard"
@@ -305,6 +316,7 @@ export function LoginFlow() {
 
   return (
     <CredentialsStep
+      loginRole={loginRole}
       actorContext={actorContext}
       identifierType={identifierType}
       country={country}
@@ -318,13 +330,13 @@ export function LoginFlow() {
       emailInput={emailInput}
       phoneInput={phoneInput}
       passwordInput={passwordInput}
-      onActorContextChange={(context) => {
-        setActorContext(context);
+      onLoginRoleChange={(role) => {
+        setLoginRole(role);
         setPassword("");
         dispatch({ type: "fieldCleared", field: "password" });
       }}
       onIdentifierTypeChange={(type) => { setIdentifierType(type); dispatch({ type: "fieldCleared", field: "identifier" }); }}
-      onCountryChange={(value) => { setCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }}
+      onCountryChange={(value) => { setSelectedCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onEmailChange={(value) => { setEmail(value); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onPhoneChange={(value) => { setPhone(value.replace(/\D/g, "").slice(0, COUNTRY_OPTIONS[country].nationalLength)); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onPasswordChange={(value) => { setPassword(value); dispatch({ type: "fieldCleared", field: "password" }); }}

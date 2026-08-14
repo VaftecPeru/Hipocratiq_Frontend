@@ -38,6 +38,7 @@ type ApiAdminUsersResponse = {
       users: number;
       active_users: number;
       administrators: number;
+      receptionists: number;
       doctors: number;
       patients: number;
     };
@@ -78,7 +79,7 @@ function formatDate(value: string | null, includeTime = false): string {
 }
 
 function mapUser(user: ApiUser): AdminUser {
-  const fallbackAssignableRoles: AdminAssignableRole[] = ["super_admin", "clinic_admin"];
+  const fallbackAssignableRoles: AdminAssignableRole[] = ["super_admin", "clinic_admin", "receptionist"];
   if (user.role === "doctor" || user.role === "patient") fallbackAssignableRoles.push(user.role);
 
   return {
@@ -109,7 +110,7 @@ export type CreateAdminUserPayload = {
   email: string | null;
   phoneNumber: string;
   countryCode: CountryCode;
-  role: "super_admin" | "clinic_admin";
+  role: "super_admin" | "clinic_admin" | "receptionist";
   clinicId: number | null;
 };
 
@@ -187,6 +188,7 @@ export async function getAdminUsers(
       users: payload.summary.totals.users,
       activeUsers: payload.summary.totals.active_users,
       administrators: payload.summary.totals.administrators,
+      receptionists: payload.summary.totals.receptionists,
       doctors: payload.summary.totals.doctors,
       patients: payload.summary.totals.patients,
     },

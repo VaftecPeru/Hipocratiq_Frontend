@@ -40,6 +40,7 @@ type PlatformUser = AdminUser;
 const ROLE_LABELS: Record<AdminUserRole, AdminUserRoleLabel> = {
   super_admin: "Superadministrador",
   clinic_admin: "Administrador de Clínica",
+  receptionist: "Recepcionista",
   doctor: "Médico",
   patient: "Paciente",
   unassigned: "Sin rol",
@@ -48,6 +49,7 @@ const ROLE_LABELS: Record<AdminUserRole, AdminUserRoleLabel> = {
 const ROLE_TONE: Record<AdminUserRole, BadgeTone> = {
   super_admin: "dark",
   clinic_admin: "accent",
+  receptionist: "warning",
   doctor: "success",
   patient: "violet",
   unassigned: "neutral",
@@ -77,6 +79,17 @@ const ROLE_OPTIONS: Array<{ value: AdminUserRole | "all"; label: string }> = [
   { value: "all", label: "Todos" },
   ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value: value as AdminUserRole, label })),
 ];
+
+const ROLE_COLORS: Record<AdminUserRole, string> = {
+  super_admin: "var(--plan-enterprise)",
+  clinic_admin: "var(--accent)",
+  receptionist: "var(--warning)",
+  doctor: "var(--success)",
+  patient: "var(--violet)",
+  unassigned: "var(--muted)",
+};
+
+const COUNTRY_COLORS: Record<string, string> = { MX: "var(--accent)", PE: "var(--focus)", US: "var(--warning)" };
 
 const COUNTRY_OPTIONS: Array<{ value: CountryCode | "all"; label: string }> = [
   { value: "all", label: "Todos" },
@@ -307,7 +320,7 @@ export default function UsersPage() {
     return () => controller.abort();
   }, [filters, refreshVersion]);
 
-  const totals = data?.totals ?? { users: 0, activeUsers: 0, administrators: 0, doctors: 0, patients: 0 };
+  const totals = data?.totals ?? { users: 0, activeUsers: 0, administrators: 0, receptionists: 0, doctors: 0, patients: 0 };
   const stats: Array<StatCardProps> = [
     { label: "Total de Usuarios", value: numberFormatter.format(totals.users), change: "Datos consolidados", direction: "up", icon: Users, tone: "accent" },
     { label: "Usuarios Activos", value: numberFormatter.format(totals.activeUsers), change: "Acceso habilitado", direction: "up", icon: UserCheck, tone: "violet" },
@@ -325,25 +338,17 @@ export default function UsersPage() {
     label: COUNTRY_LABELS[item.key as CountryCode] ?? item.key,
     value: numberFormatter.format(item.count),
   }));
-  const roleColors: Record<AdminUserRole, string> = {
-    super_admin: "var(--plan-enterprise)",
-    clinic_admin: "var(--accent)",
-    doctor: "var(--success)",
-    patient: "var(--violet)",
-    unassigned: "var(--muted)",
-  };
   const roleDistribution = (data?.roleDistribution ?? []).map((item) => ({
     label: ROLE_LABELS[item.key as AdminUserRole] ?? item.key,
     value: numberFormatter.format(item.count),
     percentage: item.percentage,
-    color: roleColors[item.key as AdminUserRole] ?? "var(--muted)",
+    color: ROLE_COLORS[item.key as AdminUserRole] ?? "var(--muted)",
   }));
-  const countryColors: Record<string, string> = { MX: "var(--accent)", PE: "var(--focus)", US: "var(--warning)" };
   const countryDistribution = (data?.countryDistribution ?? []).map((item) => ({
     label: COUNTRY_LABELS[item.key as CountryCode] ?? item.key,
     value: numberFormatter.format(item.count),
     percentage: item.percentage,
-    color: countryColors[item.key] ?? "var(--muted)",
+    color: COUNTRY_COLORS[item.key] ?? "var(--muted)",
   }));
   const clinicOptions: Array<{ value: number | "all"; label: string }> = [
     { value: "all", label: "Todas" },
