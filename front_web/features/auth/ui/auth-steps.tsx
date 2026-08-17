@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { useState, type FormEventHandler, type RefObject } from "react";
-import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
+import { ArrowLeft, Building2, Check, CircleAlert, Eye, EyeOff, Headphones, LockKeyhole, Mail, Smartphone, UserRound, UsersRound } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
-import type { CountryCode, LoginActorContext, LoginIdentifierType } from "@/features/auth/model/auth.types";
+import type { CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
@@ -43,6 +43,7 @@ function GlobalError({ message }: { message: string | null }) {
 }
 
 type CredentialsStepProps = {
+  loginRole: LoginRole;
   actorContext: LoginActorContext;
   identifierType: LoginIdentifierType;
   country: CountryCode;
@@ -56,7 +57,7 @@ type CredentialsStepProps = {
   emailInput: RefObject<HTMLInputElement | null>;
   phoneInput: RefObject<HTMLInputElement | null>;
   passwordInput: RefObject<HTMLInputElement | null>;
-  onActorContextChange: (context: LoginActorContext) => void;
+  onLoginRoleChange: (role: LoginRole) => void;
   onIdentifierTypeChange: (type: LoginIdentifierType) => void;
   onCountryChange: (country: CountryCode) => void;
   onEmailChange: (value: string) => void;
@@ -67,7 +68,15 @@ type CredentialsStepProps = {
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
+const LOGIN_ROLE_OPTIONS = [
+  { value: "healthcare", label: "Profesional de salud", description: "Médicos, enfermeros y personal clínico", icon: UserRound },
+  { value: "patient", label: "Paciente", description: "Accede a tu historial clínico", icon: UsersRound },
+  { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
+  { value: "support", label: "Soporte", description: "Soporte técnico y asistencia", icon: Headphones },
+] satisfies ReadonlyArray<{ value: LoginRole; label: string; description: string; icon: typeof UserRound }>;
+
 export function CredentialsStep({
+  loginRole,
   actorContext,
   identifierType,
   country,
@@ -81,7 +90,7 @@ export function CredentialsStep({
   emailInput,
   phoneInput,
   passwordInput,
-  onActorContextChange,
+  onLoginRoleChange,
   onIdentifierTypeChange,
   onCountryChange,
   onEmailChange,
@@ -95,26 +104,54 @@ export function CredentialsStep({
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   return (
-    <div className="w-full max-w-96">
-      <div className="mb-5">
-        <span className="grid size-12 place-items-center rounded-xl bg-accent">
-          <BrandLogo className="h-8 w-auto brightness-0 invert" priority />
-        </span>
-        <p className="mt-2.5 text-sm text-muted">Bienvenido a</p>
-        <Image className="mt-1.5 h-8 w-auto" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
+    <div className="w-full max-w-[30rem]">
+      <div className="mb-7 flex justify-end">
+        <CountrySelect id="login-locale-country" mode="locale" value={country} onChange={onCountryChange} />
       </div>
-      <p className="text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
-      <div className="mt-6">
-        <p className="mb-2 text-2xs font-bold text-ink">Tipo de cuenta</p>
-        <div className="grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Tipo de cuenta">
-          <button type="button" className={`flex min-h-8 items-center justify-center rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${actorContext === "staff" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onActorContextChange("staff")} aria-pressed={actorContext === "staff"}>
-            Personal de salud
-          </button>
-          <button type="button" className={`flex min-h-8 items-center justify-center rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${actorContext === "patient" ? "bg-white text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onActorContextChange("patient")} aria-pressed={actorContext === "patient"}>
-            Paciente
-          </button>
+      <div className="mb-6 flex items-center gap-4">
+        <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-accent shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)]">
+          <BrandLogo className="h-9 w-10 brightness-0 invert" priority />
+        </span>
+        <Image className="h-auto w-[12rem] max-w-full" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
+      </div>
+
+      <h1 className="text-[clamp(1.55rem,4vw,2rem)] leading-tight font-extrabold tracking-[-0.04em]">
+        Bienvenido a <span className="text-accent">HipocratiQ</span>
+      </h1>
+      <p className="mt-2 text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
+
+      <div className="mt-8">
+        <p className="mb-3 text-sm font-semibold text-ink">Iniciar sesión como</p>
+        <div className="grid grid-cols-2 gap-3 min-[520px]:grid-cols-4" role="group" aria-label="Tipo de cuenta">
+          {LOGIN_ROLE_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const isSelected = loginRole === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`group flex min-h-[10.75rem] flex-col items-center rounded-xl border px-2 py-4 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-white text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
+                onClick={() => onLoginRoleChange(option.value)}
+                aria-pressed={isSelected}
+                aria-label={option.value === "support" ? "Soporte, Super Administrador" : option.label}
+              >
+                <span className={`grid size-12 shrink-0 place-items-center rounded-full transition-colors ${isSelected ? "bg-white text-accent" : "bg-surface-subtle text-ink-secondary group-hover:text-accent"}`}>
+                  <Icon className="size-6" strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <span className="mt-3 text-xs font-semibold leading-4">{option.label}</span>
+                <span className="mt-1 text-[0.66rem] leading-4 text-muted">{option.description}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      <div className="mt-7 flex items-center gap-3 text-xs text-muted">
+        <span className="h-px flex-1 bg-line" aria-hidden="true" />
+        <span>o continúa con</span>
+        <span className="h-px flex-1 bg-line" aria-hidden="true" />
       </div>
 
       <div className="mt-4 grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label="Método de acceso">
@@ -140,7 +177,7 @@ export function CredentialsStep({
           <div className="grid gap-2">
             <label className="text-2xs font-bold text-ink" htmlFor="phone">Número de celular</label>
             <div className="flex items-center gap-0">
-              <CountrySelect value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
+              <CountrySelect id="login-phone-country" value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
               <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
                 <input ref={phoneInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent px-3 text-2xs text-ink outline-0 placeholder:text-placeholder" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
               </div>
@@ -177,7 +214,7 @@ export function CredentialsStep({
         <GlobalError message={globalError} />
 
         <button className={PRIMARY_BUTTON_CLASSES} type="submit" disabled={isPending}>
-          {isPending ? <><Spinner /> Enviando código…</> : "Enviar código de acceso"}
+          {isPending ? <><Spinner /> Enviando código…</> : "Iniciar sesión"}
         </button>
       </form>
 

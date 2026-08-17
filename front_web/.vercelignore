@@ -1,0 +1,11 @@
+node_modules
+.next
+dist
+build
+.agents
+.codebase-memory
+.cache
+.turbo
+test-results
+playwright-report
+*.log

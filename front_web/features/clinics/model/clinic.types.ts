@@ -63,6 +63,5 @@ export type ClinicsFilters = {
   country: ClinicCountryCode | "all";
   plan: ClinicPlan | "all";
   status: ClinicStatus | "all";
-  city: string;
   page: number;
 };

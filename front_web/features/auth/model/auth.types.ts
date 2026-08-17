@@ -1,4 +1,5 @@
 export type LoginIdentifierType = "email" | "phone";
+export type LoginRole = "healthcare" | "patient" | "administrator" | "support";
 export type LoginActorContext = "staff" | "patient";
 export type AuthStep = "credentials" | "otp" | "success";
 export type CountryCode = "PE" | "MX" | "US";
@@ -21,7 +22,7 @@ export type AuthenticatedUser = {
 export type AuthenticatedSession = {
   user: AuthenticatedUser;
   client_type: "web" | "mobile";
-  actor_context: "staff" | "patient" | "clinic_admin" | "doctor";
+  actor_context: "staff" | "patient" | "clinic_admin" | "receptionist" | "doctor";
 };
 
 export type SessionResponse = {

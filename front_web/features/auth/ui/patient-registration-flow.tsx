@@ -24,8 +24,6 @@ const initialDraft: PatientRegistrationDraft = {
   country_code: "PE",
   phone_number: "",
   clinic_id: null,
-  password: "",
-  password_confirmation: "",
   terms_accepted: false,
 };
 
@@ -35,8 +33,6 @@ function validateDraft(draft: PatientRegistrationDraft): RegistrationFieldErrors
   if (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) errors.email = "Ingresa un correo válido.";
   if (!draft.clinic_id) errors.clinic_id = "Selecciona una clínica.";
   try { toE164PhoneNumber(draft.phone_number, draft.country_code as CountryCode); } catch (caught) { errors.phone_number = caught instanceof Error ? caught.message : "Ingresa un número válido."; }
-  if (draft.password && (draft.password.length < 10 || !/[A-Z]/.test(draft.password) || !/[a-z]/.test(draft.password) || !/\d/.test(draft.password))) errors.password = "Usa al menos 10 caracteres, mayúsculas, minúsculas y números.";
-  if (draft.password && draft.password !== draft.password_confirmation) errors.password_confirmation = "Las contraseñas no coinciden.";
   if (!draft.terms_accepted) errors.terms_accepted = "Debes aceptar los términos para continuar.";
   return errors;
 }

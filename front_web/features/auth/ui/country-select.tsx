@@ -15,7 +15,7 @@ type CountrySelectProps = {
   onChange: (country: CountryCode) => void;
   hasError?: boolean;
   ariaDescribedBy?: string;
-  mode?: "dial-code" | "country";
+  mode?: "dial-code" | "country" | "locale";
 };
 
 const FLAGS = {
@@ -36,6 +36,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
   const selectedCountry = COUNTRY_OPTIONS[value];
   const listboxId = `${id ?? "phone-country"}-options`;
   const isCountryField = mode === "country";
+  const isLocaleField = mode === "locale";
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -118,19 +119,28 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
         id={id}
         name={name}
         type="button"
-        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
+        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : isLocaleField ? "h-9 min-w-24 justify-between rounded-lg bg-white px-3" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
         onClick={toggle}
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
-        aria-label={`País: ${selectedCountry.name} (+${selectedCountry.dialCode})`}
+        aria-label={isLocaleField ? `País e idioma: ${selectedCountry.name}` : `País: ${selectedCountry.name} (+${selectedCountry.dialCode})`}
         aria-describedby={ariaDescribedBy}
       >
         <span className="flex min-w-0 items-center gap-2.5">
           <Flag className="h-[1.15rem] w-[1.7rem] shrink-0 overflow-hidden rounded-[0.2rem] shadow-[0_0_0_1px_rgb(16_27_51/10%),0_1px_2px_rgb(16_27_51/6%)]" />
-          <span className="truncate text-2xs font-semibold text-ink">{isCountryField ? selectedCountry.name : `+${selectedCountry.dialCode}`}</span>
-          {isCountryField ? <span className="text-2xs text-muted">+{selectedCountry.dialCode}</span> : null}
+          {isLocaleField ? (
+            <>
+              <span className="text-2xs font-semibold text-ink">{value}</span>
+              <span className="text-2xs text-ink-secondary">ES</span>
+            </>
+          ) : (
+            <>
+              <span className="truncate text-2xs font-semibold text-ink">{isCountryField ? selectedCountry.name : `+${selectedCountry.dialCode}`}</span>
+              {isCountryField ? <span className="text-2xs text-muted">+{selectedCountry.dialCode}</span> : null}
+            </>
+          )}
         </span>
         <ChevronDown className={`size-3.5 shrink-0 text-muted/70 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} strokeWidth={2.2} aria-hidden="true" />
       </button>
@@ -151,7 +161,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
             return (
               <li
                 key={code}
-                id={`country-option-${code}`}
+                id={`${listboxId}-${code}`}
                 role="option"
                 aria-selected={isSelected}
                 className={`flex min-h-9 cursor-pointer items-center gap-3 px-3 py-2 text-2xs transition-colors duration-75 ${isFocused ? "bg-surface-focused" : "hover:bg-surface-subtle"} ${isSelected ? "font-bold text-accent" : "text-ink"}`}

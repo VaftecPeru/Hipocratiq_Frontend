@@ -21,7 +21,6 @@ type ClinicsPageSearchParams = {
   country?: SearchParam;
   plan?: SearchParam;
   status?: SearchParam;
-  city?: SearchParam;
   page?: SearchParam;
 };
 
@@ -57,7 +56,6 @@ export default async function ClinicsPage({
       ["all", "active", "suspended"],
       "all",
     ),
-    city: firstValue(params.city).slice(0, 255),
     page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
   };
   const result = await getClinicsDashboardData(filters);
@@ -85,12 +83,12 @@ export default async function ClinicsPage({
     );
   }
 
+  // `search` se excluye a propósito: la búsqueda no debe remontar el dashboard
+  // (perdería el foco del input mientras se escribe); se sincroniza vía props.
   const dashboardKey = [
-    filters.search,
     filters.country,
     filters.plan,
     filters.status,
-    filters.city,
     filters.page,
   ].join("|");
 

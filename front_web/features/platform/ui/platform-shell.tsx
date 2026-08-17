@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
-  Bell,
   Building2,
   ChevronDown,
   CircleAlert,
@@ -15,16 +14,20 @@ import {
   Monitor,
   Search,
   Settings,
+  ShieldCheck,
+  Siren,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import MexicoFlag from "country-flag-icons/react/3x2/MX";
-import PeruFlag from "country-flag-icons/react/3x2/PE";
+import { useEffect, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
+import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
+import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
+import { NotificationBell } from "@/features/platform/ui/notification-bell";
 import { BrandLogo } from "@/shared/ui/brand-logo";
+import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 
 type PlatformShellProps = {
   children: React.ReactNode;
@@ -41,16 +44,27 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, available: true },
   { label: "Clínicas", href: "/clinics", icon: Building2, available: true },
-  { label: "Usuarios", href: "/users", icon: Users },
-  { label: "Membresías", href: "/memberships", icon: CreditCard },
-  { label: "Facturación", href: "/billing", icon: FileText },
-  { label: "Reportes", href: "/reports", icon: BarChart3 },
-  { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor },
-  { label: "Auditoría global", href: "/audit", icon: CircleAlert },
-  { label: "Soporte", href: "/support", icon: MessageSquare },
+  { label: "Usuarios", href: "/users", icon: Users, available: true },
+  { label: "Roles y permisos", href: "/roles-permissions", icon: ShieldCheck, available: true },
+  { label: "Membresías", href: "/memberships", icon: CreditCard, available: true },
+  { label: "Facturación", href: "/billing", icon: FileText, available: true },
+  { label: "Reportes", href: "/reports", icon: BarChart3, available: true },
+  { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor, available: true },
+  { label: "Auditoría global", href: "/audit", icon: CircleAlert, available: true },
+  { label: "Emergencia", href: "/emergency", icon: Siren, available: true },
+  { label: "Soporte", href: "/support", icon: MessageSquare, available: true },
 ];
 
-const settingsItems = ["General", "Idiomas y región", "Integraciones", "IA epidemiológica", "Notificaciones", "Respaldos"];
+type SettingsItem = { label: string; href: string; available: boolean };
+
+const settingsItems: SettingsItem[] = [
+  { label: "General", href: "/settings/general", available: true },
+  { label: "Idiomas y región", href: "/settings/languages", available: true },
+  { label: "Integraciones", href: "/settings/integrations", available: true },
+  { label: "IA epidemiológica", href: "/settings/ai", available: true },
+  { label: "Notificaciones", href: "/settings/notifications", available: true },
+  { label: "Respaldos", href: "/settings/backups", available: true },
+];
 
 function getInitials(name: string) {
   return name
@@ -63,7 +77,7 @@ function getInitials(name: string) {
 
 function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
 
   return (
@@ -114,12 +128,29 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
             <ChevronDown className={`ml-auto size-3 text-muted transition-transform ${isSettingsOpen ? "rotate-180" : ""}`} strokeWidth={1.7} aria-hidden="true" />
           </button>
           {isSettingsOpen ? (
-            <ul className="mt-1 grid gap-0.5 border-l border-line pl-7" id={settingsId}>
-              {settingsItems.map((item) => (
-                <li className="px-2.5 py-1 text-2xs text-muted/80" key={item}>
-                  {item}
-                </li>
-              ))}
+            <ul className="mt-1 grid gap-0.5 border-l border-line pl-4" id={settingsId}>
+              {settingsItems.map((item) => {
+                const isActive = pathname === item.href;
+
+                return (
+                  <li key={item.label}>
+                    {item.available ? (
+                      <Link
+                        className={"flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                        href={item.href}
+                        onClick={onNavigate}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className="flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
+                        {item.label}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>
@@ -143,6 +174,30 @@ function Brand() {
 
 export function PlatformShell({ children, userName }: PlatformShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refreshSettings = async () => {
+      try {
+        const settings = await getAdminPlatformSettings(controller.signal);
+        setHeaderCountryCodes([
+          settings.defaultCountryCode,
+          ...settings.headerCountryCodes.filter((countryCode) => countryCode !== settings.defaultCountryCode),
+        ]);
+      } catch {
+        // México permanece como fallback cuando la configuración no está disponible.
+      }
+    };
+
+    void refreshSettings();
+    window.addEventListener(PLATFORM_SETTINGS_UPDATED_EVENT, refreshSettings);
+
+    return () => {
+      controller.abort();
+      window.removeEventListener(PLATFORM_SETTINGS_UPDATED_EVENT, refreshSettings);
+    };
+  }, []);
 
   return (
     <div className="min-h-svh bg-paper text-ink">
@@ -180,13 +235,14 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <div className="hidden items-center overflow-hidden rounded-lg border border-line text-2xs font-bold sm:flex" aria-label="Países administrados">
-            <span className="flex h-7 items-center gap-1.5 border-r border-line px-2.5"><MexicoFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />MX</span>
-            <span className="flex h-7 items-center gap-1.5 px-2.5"><PeruFlag className="h-3 w-4.5 rounded-[2px]" aria-hidden="true" />PE</span>
+            {headerCountryCodes.map((countryCode) => (
+              <span className="flex h-7 items-center gap-1.5 px-2.5 first:border-r first:border-line" key={countryCode}>
+                <CountryFlag countryCode={countryCode} className="h-3 w-4.5 rounded-[2px]" />
+                {countryCode}
+              </span>
+            ))}
           </div>
-          <button className="relative grid size-7 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ver notificaciones">
-            <Bell className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
-            <span className="absolute top-0 right-0 grid size-3.5 place-items-center rounded-full bg-danger text-2xs font-extrabold text-white">3</span>
-          </button>
+          <NotificationBell />
           <div className="hidden h-8 w-px bg-line sm:block" aria-hidden="true" />
           <div className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-full bg-accent text-2xs font-extrabold text-white" aria-hidden="true">{getInitials(userName)}</span>

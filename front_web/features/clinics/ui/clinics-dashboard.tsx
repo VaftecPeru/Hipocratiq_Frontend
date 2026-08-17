@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useReducer, useTransition } from "react";
+import { useEffect, useReducer, useRef, useState, useTransition } from "react";
 import MexicoFlag from "country-flag-icons/react/3x2/MX";
 import PeruFlag from "country-flag-icons/react/3x2/PE";
 import UnitedStatesFlag from "country-flag-icons/react/3x2/US";
@@ -32,6 +32,14 @@ import type {
   ClinicPlan,
   ClinicStatus,
 } from "@/features/clinics/model/clinic.types";
+import {
+  ClinicDetailModal,
+  CreateClinicModal,
+  EditClinicModal,
+  SuspendClinicDialog,
+} from "./clinic-modals";
+import { updateAdminClinic } from "@/features/clinics/api/browser-clinics";
+import { FilterSelect } from "@/shared/ui/filter-select";
 
 type ClinicsDashboardProps = {
   initialData: ClinicsDashboardPageData;
@@ -43,7 +51,6 @@ type FiltersAction =
   | { type: "country"; value: ClinicCountryCode | "all" }
   | { type: "plan"; value: ClinicPlan | "all" }
   | { type: "status"; value: ClinicStatus | "all" }
-  | { type: "city"; value: string }
   | { type: "page"; value: number }
   | { type: "previousPage" }
   | { type: "nextPage"; totalPages: number }
@@ -55,7 +62,6 @@ function filtersReducer(state: ClinicsFilters, action: FiltersAction): ClinicsFi
     case "country":
     case "plan":
     case "status":
-    case "city":
       return { ...state, [action.type]: action.value, page: 1 };
     case "page":
       return { ...state, page: action.value };
@@ -64,7 +70,7 @@ function filtersReducer(state: ClinicsFilters, action: FiltersAction): ClinicsFi
     case "nextPage":
       return { ...state, page: Math.min(action.totalPages, state.page + 1) };
     case "clear":
-      return { search: "", country: "all", plan: "all", status: "all", city: "", page: 1 };
+      return { search: "", country: "all", plan: "all", status: "all", page: 1 };
   }
 }
 
@@ -85,6 +91,26 @@ const PLAN_DOT_CLASSES: Record<ClinicPlan, string> = {
   professional: "bg-plan-professional",
   basic: "bg-plan-basic",
 };
+
+const COUNTRY_OPTIONS: Array<{ value: ClinicCountryCode | "all"; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "MX", label: "México" },
+  { value: "PE", label: "Perú" },
+  { value: "US", label: "Estados Unidos" },
+];
+
+const PLAN_OPTIONS: Array<{ value: ClinicPlan | "all"; label: string }> = [
+  { value: "all", label: "Todos" },
+  ...(Object.entries(PLAN_LABELS) as Array<[ClinicPlan, string]>).map(([value, label]) => ({ value, label })),
+];
+
+const STATUS_OPTIONS: Array<{ value: ClinicStatus | "all"; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "active", label: "Activas" },
+  { value: "suspended", label: "Suspendidas" },
+];
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 const ACTIVITY_STYLES: Record<ClinicActivity["type"], { icon: typeof Building2; className: string }> = {
   clinic: { icon: Building2, className: "bg-success-soft text-success" },
@@ -208,16 +234,43 @@ function PlanDistributionCard({ data }: { data: ClinicsDashboardPageData["planDi
   );
 }
 
-function ClinicActions({ clinicName }: { clinicName: string }) {
+function ClinicActions({
+  clinicName,
+  clinicStatus,
+  onViewDetail,
+  onEdit,
+  onSuspend,
+}: {
+  clinicName: string;
+  clinicStatus: ClinicStatus;
+  onViewDetail: () => void;
+  onEdit: () => void;
+  onSuspend: () => void;
+}) {
   return (
     <div className="flex justify-end gap-1">
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Ver ${clinicName}`} disabled title="Disponible al conectar el detalle de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Ver ${clinicName}`}
+        onClick={onViewDetail}
+      >
         <Eye className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Editar ${clinicName}`} disabled title="Disponible al conectar la edición de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`Editar ${clinicName}`}
+        onClick={onEdit}
+      >
         <Pencil className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
-      <button className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" aria-label={`Más acciones para ${clinicName}`} disabled title="Disponible al conectar acciones de clínicas">
+      <button
+        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        type="button"
+        aria-label={`${clinicStatus === "active" ? "Suspender" : "Reactivar"} ${clinicName}`}
+        onClick={onSuspend}
+      >
         <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
@@ -241,10 +294,16 @@ function ClinicsTable({
   clinics,
   rowOffset,
   hasActiveFilters,
+  onViewDetail,
+  onEdit,
+  onSuspend,
 }: {
   clinics: Clinic[];
   rowOffset: number;
   hasActiveFilters: boolean;
+  onViewDetail: (clinic: Clinic) => void;
+  onEdit: (clinic: Clinic) => void;
+  onSuspend: (clinic: Clinic) => void;
 }) {
   if (clinics.length === 0) {
     return (
@@ -302,7 +361,15 @@ function ClinicsTable({
                 <td className="px-3 py-2"><StatusBadge status={clinic.status} /></td>
                 <td className="px-3 py-2 text-right font-mono font-semibold">{currencyFormatter.format(clinic.monthlyBilling)}</td>
                 <td className="whitespace-nowrap px-3 py-2">{clinic.lastPayment ?? "—"}</td>
-                <td className="px-2 py-1.5"><ClinicActions clinicName={clinic.name} /></td>
+                <td className="px-2 py-1.5">
+                  <ClinicActions
+                    clinicName={clinic.name}
+                    clinicStatus={clinic.status}
+                    onViewDetail={() => onViewDetail(clinic)}
+                    onEdit={() => onEdit(clinic)}
+                    onSuspend={() => onSuspend(clinic)}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -324,7 +391,7 @@ function ClinicsTable({
               <div><dt className="text-muted">Usuarios</dt><dd className="mt-1 font-mono font-bold">{clinic.users}</dd></div>
               <div><dt className="text-muted">Pacientes</dt><dd className="mt-1 font-mono font-bold">{numberFormatter.format(clinic.patients)}</dd></div>
             </dl>
-            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} /></div>
+            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} clinicStatus={clinic.status} onViewDetail={() => onViewDetail(clinic)} onEdit={() => onEdit(clinic)} onSuspend={() => onSuspend(clinic)} /></div>
           </article>
         ))}
       </div>
@@ -381,10 +448,18 @@ function SummaryPanel({ data }: { data: ClinicsDashboardPageData }) {
 
 export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboardProps) {
   const [filters, dispatch] = useReducer(filtersReducer, initialFilters);
-  const { search, country, plan, status, city } = filters;
+  const { search, country, plan, status } = filters;
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [detailClinicOpen, setDetailClinicOpen] = useState(false);
+  const [createClinicOpen, setCreateClinicOpen] = useState(false);
+  const [editClinicOpen, setEditClinicOpen] = useState(false);
+  const [suspendClinicOpen, setSuspendClinicOpen] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+
   const currentPage = initialData.pagination.currentPage;
   const totalPages = initialData.pagination.lastPage;
   const rowOffset = (currentPage - 1) * initialData.pagination.perPage;
@@ -392,8 +467,11 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
     Boolean(search.trim()) ||
     country !== "all" ||
     plan !== "all" ||
-    status !== "all" ||
-    Boolean(city.trim());
+    status !== "all";
+
+  useEffect(() => () => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+  }, []);
 
   function navigate(next: ClinicsFilters) {
     const params = new URLSearchParams();
@@ -402,18 +480,35 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
     if (next.country !== "all") params.set("country", next.country);
     if (next.plan !== "all") params.set("plan", next.plan);
     if (next.status !== "all") params.set("status", next.status);
-    if (next.city.trim()) params.set("city", next.city.trim());
     if (next.page > 1) params.set("page", String(next.page));
 
     const query = params.toString();
     startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }));
   }
 
+  function cancelSearchDebounce() {
+    if (searchDebounce.current) {
+      clearTimeout(searchDebounce.current);
+      searchDebounce.current = null;
+    }
+  }
+
   function updateFilter(action: FiltersAction) {
+    cancelSearchDebounce();
     const next = filtersReducer(filters, action);
 
     dispatch(action);
     navigate(next);
+  }
+
+  // El input se actualiza al instante (foco intacto); la navegación se difiere
+  // para no refetchear en cada tecla ni remontar el dashboard mientras se escribe.
+  function updateSearch(value: string) {
+    const next = filtersReducer(filters, { type: "search", value });
+
+    dispatch({ type: "search", value });
+    cancelSearchDebounce();
+    searchDebounce.current = setTimeout(() => navigate(next), SEARCH_DEBOUNCE_MS);
   }
 
   function clearFilters() {
@@ -422,9 +517,13 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div><p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Administración global</p><h1 className="mt-0.5 font-display text-[clamp(1.3rem,1.8vw,1.6rem)] italic tracking-[-0.02em]">Clínicas <span className="not-italic font-sans font-extrabold text-muted">/ Tenants</span></h1><p className="mt-0.5 text-xs text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p></div>
-        <button className="flex min-h-8 items-center justify-center gap-1 rounded-lg bg-accent px-3 text-xs font-bold text-white shadow-[0_0.3rem_0.8rem_rgb(8_98_221/16%)] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" disabled title="Disponible al habilitar el endpoint de creación"><Plus className="size-3" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Administración global</p>
+          <h1 className="mt-0.5 font-display text-[clamp(1.3rem,1.8vw,1.6rem)] italic tracking-[-0.02em]">Clínicas <span className="not-italic font-sans font-extrabold text-muted">/ Tenants</span></h1>
+          <p className="mt-0.5 text-xs text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p>
+        </div>
+        <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateClinicOpen(true)}><Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(11rem,0.8fr))_minmax(19rem,1.45fr)]" aria-label="Indicadores de clínicas">
@@ -435,12 +534,26 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-3.5 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-label="Filtros de clínicas">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(8rem,1fr))_minmax(15rem,1.35fr)_auto]">
-          <label className="grid gap-1 text-2xs font-bold text-muted">País<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={country} onChange={(event) => updateFilter({ type: "country", value: event.target.value as ClinicCountryCode | "all" })}><option value="all">Todos</option><option value="MX">México</option><option value="PE">Perú</option><option value="US">Estados Unidos</option></select></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Plan<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={plan} onChange={(event) => updateFilter({ type: "plan", value: event.target.value as ClinicPlan | "all" })}><option value="all">Todos</option>{Object.entries(PLAN_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Estado<select className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" value={status} onChange={(event) => updateFilter({ type: "status", value: event.target.value as ClinicStatus | "all" })}><option value="all">Todos</option><option value="active">Activas</option><option value="suspended">Suspendidas</option></select></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Ciudad<input className="h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={city} placeholder="Ej. Lima" onChange={(event) => updateFilter({ type: "city", value: event.target.value })} /></label>
-          <label className="grid gap-1 text-2xs font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre, país o ciudad..." onChange={(event) => updateFilter({ type: "search", value: event.target.value })} /></span></label>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(8rem,1fr))_minmax(15rem,1.6fr)_auto]">
+          <FilterSelect
+            label="País"
+            value={country}
+            options={COUNTRY_OPTIONS}
+            onChange={(value) => updateFilter({ type: "country", value })}
+          />
+          <FilterSelect
+            label="Plan"
+            value={plan}
+            options={PLAN_OPTIONS}
+            onChange={(value) => updateFilter({ type: "plan", value })}
+          />
+          <FilterSelect
+            label="Estado"
+            value={status}
+            options={STATUS_OPTIONS}
+            onChange={(value) => updateFilter({ type: "status", value })}
+          />
+          <label className="grid gap-1 text-2xs font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre de la clínica..." onChange={(event) => updateSearch(event.target.value)} /></span></label>
           <button className={`mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-8 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-accent-soft-hover" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
         </div>
       </section>
@@ -448,7 +561,23 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
       <div className="mt-4 grid items-start gap-4 min-[1440px]:grid-cols-[minmax(0,1fr)_17.5rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="clinics-results-title" aria-busy={isPending}>
           <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="clinics-results-title">{hasActiveFilters ? `${numberFormatter.format(initialData.pagination.total)} coincidencias` : `${numberFormatter.format(initialData.totals.clinics)} clínicas encontradas`}</h2>{isPending ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-2xs text-muted sm:block">Datos operativos consolidados</span>}</div>
-          <ClinicsTable clinics={initialData.clinics} rowOffset={rowOffset} hasActiveFilters={hasActiveFilters} />
+          <ClinicsTable
+            clinics={initialData.clinics}
+            rowOffset={rowOffset}
+            hasActiveFilters={hasActiveFilters}
+            onViewDetail={(clinic) => {
+              setSelectedClinic(clinic);
+              setDetailClinicOpen(true);
+            }}
+            onEdit={(clinic) => {
+              setSelectedClinic(clinic);
+              setEditClinicOpen(true);
+            }}
+            onSuspend={(clinic) => {
+              setSelectedClinic(clinic);
+              setSuspendClinicOpen(true);
+            }}
+          />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando {initialData.pagination.from ?? 0} a {initialData.pagination.to ?? 0} de {initialData.pagination.total} clínicas</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
@@ -462,6 +591,37 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
         </section>
         <SummaryPanel data={initialData} />
       </div>
+
+      <CreateClinicModal
+        key={createClinicOpen ? "create-open" : "create-closed"}
+        isOpen={createClinicOpen}
+        onClose={() => setCreateClinicOpen(false)}
+        onCreated={() => router.refresh()}
+      />
+      <ClinicDetailModal
+        isOpen={detailClinicOpen}
+        onClose={() => setDetailClinicOpen(false)}
+        clinic={selectedClinic}
+      />
+      <EditClinicModal
+        isOpen={editClinicOpen}
+        onClose={() => setEditClinicOpen(false)}
+        clinic={selectedClinic}
+        onUpdated={() => router.refresh()}
+      />
+      <SuspendClinicDialog
+        isOpen={suspendClinicOpen}
+        onClose={() => setSuspendClinicOpen(false)}
+        onConfirm={async () => {
+          if (!selectedClinic) return;
+          await updateAdminClinic(selectedClinic.id, { status: selectedClinic.status === "active" ? "suspended" : "active" });
+          setSuspendClinicOpen(false);
+          setSelectedClinic(null);
+          router.refresh();
+        }}
+        clinicName={selectedClinic?.name ?? ""}
+        nextStatus={selectedClinic?.status === "active" ? "suspended" : "active"}
+      />
     </div>
   );
 }

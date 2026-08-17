@@ -15,7 +15,6 @@ type AdminClinicsQuery = {
   country?: ClinicCountryCode | "all";
   plan?: ClinicPlan | "all";
   status?: ClinicStatus | "all";
-  city?: string;
 };
 
 type ApiClinic = {
@@ -112,7 +111,6 @@ export async function getClinicsDashboardData(
   if (query.country && query.country !== "all") search.set("country_code", query.country);
   if (query.plan && query.plan !== "all") search.set("plan", query.plan);
   if (query.status && query.status !== "all") search.set("status", query.status);
-  if (query.city?.trim()) search.set("city", query.city.trim());
 
   try {
     const response = await fetch(

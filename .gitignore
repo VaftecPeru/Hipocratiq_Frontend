@@ -2,6 +2,7 @@
 /back_api/
 /documentacion/
 /.github/
+/.claude/
 
 # Operating system and editor artifacts.
 .DS_Store
