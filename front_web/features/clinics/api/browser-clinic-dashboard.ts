@@ -1,6 +1,9 @@
 import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
 import type {
   ClinicAdminInfo,
+  ClinicAppointment,
+  ClinicAppointmentStatus,
+  ClinicAppointmentSummary,
   ClinicDashboardData,
   ClinicMemberRole,
   ClinicPatient,
@@ -46,14 +49,48 @@ type ApiDashboardResponse = {
     clinic: ApiClinic;
     subscription: { plan: string | null; status: string | null; billing_cycle: string | null };
     metrics: { staff_total: number; doctors_total: number; receptionists_total: number; patients_total: number };
+    appointment_summary: ApiAppointmentSummary;
+    today_appointments: ApiAppointment[];
     team: ApiMember[];
     recent_patients: ApiPatient[];
   };
 };
 
+type ApiAppointmentSummary = {
+  today_total: number;
+  confirmed: number;
+  pending: number;
+  waiting: number;
+  in_consultation: number;
+  no_show: number;
+  canceled: number;
+};
+
+type ApiAppointment = {
+  id: number;
+  scheduled_at: string;
+  scheduled_date: string;
+  time: string;
+  appointment_type: string;
+  status: ClinicAppointmentStatus;
+  status_label: string;
+  patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
+  doctor: { id: number; name: string; specialty: string | null } | null;
+};
+
 type ApiPatientsResponse = {
   data: ApiPatient[];
   meta: { current_page: number; last_page: number; per_page: number; total: number };
+};
+
+type ApiAppointmentsResponse = {
+  data: ApiAppointment[];
+  meta: {
+    from: string;
+    to: string;
+    total: number;
+    summary: ApiAppointmentSummary;
+  };
 };
 
 type ApiClinicResponse = { data: { clinic: ApiClinic } };
@@ -96,6 +133,37 @@ function mapPatient(patient: ApiPatient): ClinicPatient {
   };
 }
 
+function mapAppointment(appointment: ApiAppointment): ClinicAppointment {
+  return {
+    id: appointment.id,
+    scheduledAt: appointment.scheduled_at,
+    scheduledDate: appointment.scheduled_date,
+    time: appointment.time,
+    appointmentType: appointment.appointment_type,
+    status: appointment.status,
+    statusLabel: appointment.status_label,
+    patient: {
+      id: appointment.patient.id,
+      patientCode: appointment.patient.patient_code,
+      name: appointment.patient.name,
+      phoneNumber: appointment.patient.phone_number,
+    },
+    doctor: appointment.doctor,
+  };
+}
+
+function mapAppointmentSummary(summary: ApiAppointmentSummary): ClinicAppointmentSummary {
+  return {
+    todayTotal: summary.today_total,
+    confirmed: summary.confirmed,
+    pending: summary.pending,
+    waiting: summary.waiting,
+    inConsultation: summary.in_consultation,
+    noShow: summary.no_show,
+    canceled: summary.canceled,
+  };
+}
+
 function assertDashboardPayload(payload: ApiDashboardResponse): ApiDashboardResponse["data"] {
   if (!payload.data || !payload.data.clinic || !Array.isArray(payload.data.team) || !Array.isArray(payload.data.recent_patients)) {
     throw new ApiError("El servidor devolvió un panel clínico incompleto.", 502);
@@ -120,8 +188,28 @@ export async function getClinicDashboard(signal?: AbortSignal): Promise<ClinicDa
       receptionistsTotal: payload.metrics.receptionists_total,
       patientsTotal: payload.metrics.patients_total,
     },
+    appointmentSummary: mapAppointmentSummary(payload.appointment_summary),
+    todayAppointments: payload.today_appointments.map(mapAppointment),
     team: payload.team.map(mapMember),
     recentPatients: payload.recent_patients.map(mapPatient),
+  };
+}
+
+export async function getClinicAppointments(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<{ appointments: ClinicAppointment[]; summary: ClinicAppointmentSummary }> {
+  const query = new URLSearchParams({ from, to });
+  const payload = await getFromApi<ApiAppointmentsResponse>(`/api/v1/auth/clinic/appointments?${query.toString()}`, { signal });
+
+  if (!Array.isArray(payload.data) || !payload.meta?.summary) {
+    throw new ApiError("El servidor devolvió una agenda incompleta.", 502);
+  }
+
+  return {
+    appointments: payload.data.map(mapAppointment),
+    summary: mapAppointmentSummary(payload.meta.summary),
   };
 }
 
@@ -171,6 +259,25 @@ export async function getClinicPatients(
       total: payload.meta.total,
     },
   };
+}
+
+export type CreateClinicPatientPayload = {
+  name: string;
+  email: string | null;
+  phoneNumber: string;
+  countryCode: CountryCode;
+};
+
+export async function createClinicPatient(payload: CreateClinicPatientPayload): Promise<ClinicPatient> {
+  const response = await postToApi<{ data: ApiPatient }>('/api/v1/auth/clinic/patients', {
+    name: payload.name,
+    email: payload.email,
+    phone_number: payload.phoneNumber,
+    country_code: payload.countryCode,
+  });
+
+  if (!response.data) throw new ApiError('El servidor no devolvió el paciente registrado.', 502);
+  return mapPatient(response.data);
 }
 
 export async function getClinicSettings(signal?: AbortSignal): Promise<ClinicAdminInfo> {

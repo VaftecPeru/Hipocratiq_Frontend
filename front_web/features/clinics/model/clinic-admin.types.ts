@@ -34,6 +34,46 @@ export type ClinicPatient = {
   createdAt: string | null;
 };
 
+export type ClinicAppointmentStatus =
+  | "pending"
+  | "confirmed"
+  | "waiting"
+  | "in_consultation"
+  | "completed"
+  | "canceled"
+  | "no_show";
+
+export type ClinicAppointment = {
+  id: number;
+  scheduledAt: string;
+  scheduledDate: string;
+  time: string;
+  appointmentType: string;
+  status: ClinicAppointmentStatus;
+  statusLabel: string;
+  patient: {
+    id: number;
+    patientCode: string;
+    name: string | null;
+    phoneNumber: string | null;
+  };
+  doctor: {
+    id: number;
+    name: string;
+    specialty: string | null;
+  } | null;
+};
+
+export type ClinicAppointmentSummary = {
+  todayTotal: number;
+  confirmed: number;
+  pending: number;
+  waiting: number;
+  inConsultation: number;
+  noShow: number;
+  canceled: number;
+};
+
 export type ClinicDashboardData = {
   clinic: ClinicAdminInfo;
   subscription: {
@@ -47,6 +87,8 @@ export type ClinicDashboardData = {
     receptionistsTotal: number;
     patientsTotal: number;
   };
+  appointmentSummary: ClinicAppointmentSummary;
+  todayAppointments: ClinicAppointment[];
   team: ClinicTeamMember[];
   recentPatients: ClinicPatient[];
 };
@@ -60,4 +102,3 @@ export type ClinicPatientsPage = {
     total: number;
   };
 };
-

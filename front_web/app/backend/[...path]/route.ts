@@ -7,10 +7,13 @@ type RouteContext = {
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 
-function rewriteSetCookieForProxy(cookie: string): string {
-  return cookie
+function rewriteSetCookieForProxy(cookie: string, isSecureRequest: boolean): string {
+  const sameSite = isSecureRequest ? "SameSite=None; Secure" : "SameSite=Lax";
+
+  return `${cookie
     .replace(/;\s*[Dd]omain=[^;]*/g, "")
-    .replace(/;\s*[Ss]ameSite=[^;]*/gi, "; SameSite=None; Secure");
+    .replace(/;\s*[Ss]ameSite=[^;]*/gi, "")
+    .replace(/;\s*[Ss]ecure/gi, "")}; ${sameSite}`;
 }
 
 const EXCLUDED_RESPONSE_HEADERS = new Set([
@@ -28,6 +31,7 @@ const EXCLUDED_RESPONSE_HEADERS = new Set([
 async function forwardRequest(request: NextRequest, context: RouteContext): Promise<Response> {
   const { path } = await context.params;
   const targetUrl = new URL(`/${path.join("/")}`, serverEnv.backendUrl);
+  const isSecureRequest = request.nextUrl.protocol === "https:";
   targetUrl.search = request.nextUrl.search;
 
   const headers = new Headers(request.headers);
@@ -68,7 +72,7 @@ async function forwardRequest(request: NextRequest, context: RouteContext): Prom
     const setCookies = responseHeaders.getSetCookie?.() ?? [];
 
     for (const cookie of setCookies) {
-      response.headers.append("set-cookie", rewriteSetCookieForProxy(cookie));
+      response.headers.append("set-cookie", rewriteSetCookieForProxy(cookie, isSecureRequest));
     }
 
     return response;

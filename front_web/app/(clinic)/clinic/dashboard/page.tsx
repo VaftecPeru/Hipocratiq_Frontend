@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { getClinicDashboardServer } from "@/features/clinics/api/server-clinic-dashboard";
+import { ReceptionistDashboard } from "@/features/clinics/ui/receptionist-dashboard";
 
 type MetricTone = "accent" | "success" | "warning" | "violet";
 
@@ -296,6 +297,15 @@ function StatusBadge({ status }: { status: DoctorStatus }) {
 export default async function ClinicDashboardPage() {
   const session = await getAuthenticatedSession();
   const dashboard = await getClinicDashboardServer();
+  if (session?.actor_context === "receptionist") {
+    return (
+      <ReceptionistDashboard
+        dashboard={dashboard}
+        clinicName={dashboard?.clinic.name ?? session.user.clinic?.name ?? "Tu clínica"}
+        userName={session.user.name}
+      />
+    );
+  }
   const clinicName = dashboard?.clinic.name ?? session?.user.clinic?.name ?? "Tu clínica";
   const liveMetrics: readonly Metric[] = metrics.map((metric) => {
     if (metric.label === "Citas programadas") return { ...metric, value: "—", helper: "Agenda aún no configurada", badge: "Sin datos" };

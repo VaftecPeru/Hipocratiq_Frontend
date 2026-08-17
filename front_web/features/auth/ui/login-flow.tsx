@@ -253,7 +253,6 @@ export function LoginFlow() {
         setPassword("");
         dashboardPath.current = destination;
         dispatch({ type: "verified" });
-        router.prefetch(destination);
       } catch (caughtError) {
         handleError(caughtError);
       } finally {
