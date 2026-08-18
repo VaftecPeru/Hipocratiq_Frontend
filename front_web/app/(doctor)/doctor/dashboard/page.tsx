@@ -2,112 +2,84 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   ArrowUpRight,
-  Bell,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   Clock3,
-  FileText,
+  FlaskConical,
+  HeartPulse,
+  Pill,
   Sparkles,
-  Stethoscope,
   Users,
   Video,
 } from "lucide-react";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
+import {
+  DoctorAvatar,
+  DoctorCard,
+  LegendDot,
+  MetricCard,
+  SectionHeading,
+  StatusBadge,
+} from "@/features/doctors/ui/doctor-primitives";
 
-type Metric = {
-  label: string;
-  value: string;
+type DashboardTone = "blue" | "green" | "orange" | "red" | "violet" | "slate";
+
+type ActivityItem = {
+  title: string;
   detail: string;
+  time: string;
   icon: LucideIcon;
-  tone: string;
+  tone: DashboardTone;
 };
 
-const metrics: readonly Metric[] = [
-  {
-    label: "Consultas hoy",
-    value: "8",
-    detail: "6 completadas",
-    icon: CalendarDays,
-    tone: "bg-accent-soft text-accent",
-  },
-  {
-    label: "Pacientes atendidos",
-    value: "64",
-    detail: "Este mes",
-    icon: Users,
-    tone: "bg-success-soft text-success",
-  },
-  {
-    label: "Recetas emitidas",
-    value: "41",
-    detail: "+12% mensual",
-    icon: FileText,
-    tone: "bg-violet-soft text-violet",
-  },
-  {
-    label: "Resultados pendientes",
-    value: "3",
-    detail: "Por revisar",
-    icon: ClipboardCheck,
-    tone: "bg-warning-soft text-warning",
-  },
-  {
-    label: "Teleconsultas",
-    value: "5",
-    detail: "2 por iniciar",
-    icon: Video,
-    tone: "bg-accent-soft text-accent",
-  },
-];
+const metrics = [
+  { label: "Consultas hoy", value: "12", trend: "↑ 20%", icon: CalendarDays, tone: "blue" as const },
+  { label: "Pacientes atendidos", value: "18", trend: "↑ 15%", icon: Users, tone: "green" as const },
+  { label: "Recetas emitidas", value: "7", trend: "↑ 12%", icon: Pill, tone: "red" as const },
+  { label: "Resultados pendientes", value: "5", icon: Clock3, tone: "orange" as const },
+  { label: "Teleconsultas hoy", value: "3", icon: Video, tone: "violet" as const },
+] as const;
 
 const appointments = [
-  { time: "09:00", name: "Laura Méndez", reason: "Control de hipertensión", status: "Completada", tone: "text-success" },
-  { time: "10:30", name: "Marcos Ríos", reason: "Primera consulta", status: "En curso", tone: "text-accent" },
-  { time: "12:00", name: "Ana Torres", reason: "Teleconsulta · seguimiento", status: "Próxima", tone: "text-violet" },
-  { time: "15:30", name: "Julia Vega", reason: "Revisión de resultados", status: "Confirmada", tone: "text-muted" },
+  { time: "09:00", name: "Juan Pérez", reason: "Consulta nueva", status: "Completada", tone: "green" as const },
+  { time: "10:30", name: "María López", reason: "Control cardiológico", status: "En curso", tone: "orange" as const },
+  { time: "12:00", name: "Pedro García", reason: "Seguimiento post operatorio", status: "Programada", tone: "blue" as const },
+  { time: "14:30", name: "Ana Torres", reason: "Teleconsulta", status: "Programada", tone: "violet" as const },
+  { time: "16:00", name: "Carlos Méndez", reason: "Revisión de exámenes", status: "Pendiente", tone: "slate" as const },
 ] as const;
 
-const recentActivity = [
-  { title: "Receta electrónica emitida", detail: "Para Roberto Silva", time: "Hace 18 min", icon: FileText, tone: "bg-violet-soft text-violet" },
-  { title: "Resultado de laboratorio recibido", detail: "Perfil lipídico · Ana Torres", time: "Hace 42 min", icon: ClipboardCheck, tone: "bg-warning-soft text-warning" },
-  { title: "Consulta finalizada", detail: "Laura Méndez · 38 min", time: "09:41", icon: CheckCircle2, tone: "bg-success-soft text-success" },
-  { title: "Nota clínica actualizada", detail: "Expediente de Diego Luna", time: "Ayer", icon: Stethoscope, tone: "bg-accent-soft text-accent" },
-] as const;
+const recentActivity: readonly ActivityItem[] = [
+  { title: "Consulta realizada", detail: "Juan Pérez · Checkup general", time: "Hoy 09:15 AM", icon: CalendarDays, tone: "blue" },
+  { title: "Receta emitida", detail: "María López · Metformina 850mg", time: "Hoy 10:45 AM", icon: Pill, tone: "red" },
+  { title: "Resultado de laboratorio", detail: "Pedro García · Hemograma", time: "Hoy 11:20 AM", icon: FlaskConical, tone: "blue" },
+  { title: "Estudio de imagen", detail: "Ana Torres · Ecocardiograma", time: "Ayer 04:30 PM", icon: Activity, tone: "green" },
+];
 
 const frequentPatients = [
-  { initials: "LM", name: "Laura Méndez", detail: "Hipertensión", visits: "7 consultas", tone: "bg-accent-soft text-accent" },
-  { initials: "RS", name: "Roberto Silva", detail: "Diabetes tipo 2", visits: "5 consultas", tone: "bg-success-soft text-success" },
-  { initials: "AT", name: "Ana Torres", detail: "Seguimiento general", visits: "4 consultas", tone: "bg-violet-soft text-violet" },
+  { initials: "ML", name: "María López", detail: "Control cardiológico", visits: "2 citas", tone: "orange" as const },
+  { initials: "JP", name: "Juan Pérez", detail: "Seguimiento hipertensión", visits: "3 citas", tone: "blue" as const },
+  { initials: "PG", name: "Pedro García", detail: "Post operatorio", visits: "1 cita", tone: "slate" as const },
+  { initials: "AT", name: "Ana Torres", detail: "Control prenatal", visits: "2 citas", tone: "violet" as const },
 ] as const;
-
-const cardClass = "rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]";
 
 function MonthlyIndicatorsChart() {
   return (
-    <figure className="mt-5" aria-labelledby="monthly-chart-title monthly-chart-description">
-      <figcaption id="monthly-chart-description" className="sr-only">
-        Evolución de consultas, pacientes y recetas de febrero a julio.
-      </figcaption>
-      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-2xs font-bold text-muted" aria-hidden="true">
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-accent" />Consultas</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-success" />Pacientes</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-violet" />Recetas</span>
+    <figure className="mt-4" aria-labelledby="monthly-chart-title monthly-chart-description">
+      <figcaption id="monthly-chart-description" className="sr-only">Evolución mensual de consultas, pacientes y recetas.</figcaption>
+      <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-[0.62rem] font-bold text-muted" aria-hidden="true">
+        <span className="inline-flex items-center gap-1.5"><LegendDot tone="blue" />Consultas</span>
+        <span className="inline-flex items-center gap-1.5"><LegendDot tone="green" />Pacientes</span>
+        <span className="inline-flex items-center gap-1.5"><LegendDot tone="orange" />Recetas</span>
       </div>
-      <svg className="h-auto w-full overflow-visible" viewBox="0 0 340 180" role="img" aria-labelledby="monthly-chart-title monthly-chart-description">
-        <title id="monthly-chart-title">Indicadores clínicos de los últimos seis meses</title>
-        {[30, 60, 90, 120, 150].map((y) => (
-          <line key={y} x1="30" y1={y} x2="326" y2={y} className="stroke-line" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        ))}
-        <polyline points="34,124 91,108 148,94 205,73 262,66 319,42" className="fill-none stroke-accent" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        <polyline points="34,139 91,126 148,115 205,101 262,89 319,72" className="fill-none stroke-success" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        <polyline points="34,148 91,139 148,125 205,116 262,99 319,87" className="fill-none stroke-violet" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        {[
-          [34, 124], [91, 108], [148, 94], [205, 73], [262, 66], [319, 42],
-        ].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="3" className="fill-surface stroke-accent" strokeWidth="2" />)}
-        {[
-          ["Feb", 34], ["Mar", 91], ["Abr", 148], ["May", 205], ["Jun", 262], ["Jul", 319],
-        ].map(([label, x]) => <text key={label} x={x} y="172" textAnchor="middle" className="fill-muted text-[9px]">{label}</text>)}
+      <svg className="h-auto w-full overflow-visible" viewBox="0 0 360 175" role="img" aria-labelledby="monthly-chart-title monthly-chart-description">
+        <title id="monthly-chart-title">Indicadores del mes</title>
+        {[25, 55, 85, 115, 145].map((y) => <line key={y} x1="36" y1={y} x2="348" y2={y} className="stroke-line" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+        {["40", "30", "20", "10", "0"].map((label, index) => <text key={label} x="2" y={29 + index * 30} className="fill-ink-secondary text-[9px]">{label}</text>)}
+        <polyline points="38,114 75,91 112,92 149,72 186,77 223,58 260,58 297,49 334,59 348,51" className="fill-none stroke-accent" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <polyline points="38,136 75,122 112,119 149,106 186,112 223,96 260,96 297,86 334,96 348,91" className="fill-none stroke-success" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <polyline points="38,152 75,144 112,139 149,146 186,151 223,127 260,137 297,119 334,130 348,121" className="fill-none stroke-warning" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {["1 May", "8 May", "16 May", "24 May", "31 May"].map((label, index) => <text key={label} x={[38, 112, 186, 260, 334][index]} y="173" textAnchor="middle" className="fill-ink-secondary text-[9px]">{label}</text>)}
       </svg>
     </figure>
   );
@@ -115,181 +87,147 @@ function MonthlyIndicatorsChart() {
 
 function ConsultationDistribution() {
   return (
-    <figure className="mt-5" aria-labelledby="distribution-title distribution-description">
-      <figcaption id="distribution-description" className="sr-only">
-        58 por ciento de consultas presenciales, 27 por ciento teleconsultas y 15 por ciento urgencias.
-      </figcaption>
-      <div className="mx-auto grid max-w-60 place-items-center">
-        <svg className="col-start-1 row-start-1 size-40 -rotate-90" viewBox="0 0 120 120" role="img" aria-labelledby="distribution-title distribution-description">
-          <title id="distribution-title">Distribución de consultas</title>
-          <circle cx="60" cy="60" r="44" className="fill-none stroke-surface-subtle" strokeWidth="13" />
-          <circle cx="60" cy="60" r="44" pathLength="100" className="fill-none stroke-accent" strokeWidth="13" strokeDasharray="58 42" />
-          <circle cx="60" cy="60" r="44" pathLength="100" className="fill-none stroke-success" strokeWidth="13" strokeDasharray="27 73" strokeDashoffset="-58" />
-          <circle cx="60" cy="60" r="44" pathLength="100" className="fill-none stroke-violet" strokeWidth="13" strokeDasharray="15 85" strokeDashoffset="-85" />
-        </svg>
-        <div className="col-start-1 row-start-1 text-center" aria-hidden="true">
-          <strong className="block font-mono text-2xl tracking-[-0.06em]">78</strong>
-          <span className="text-2xs font-bold text-muted">consultas</span>
+    <figure className="mt-2" aria-labelledby="distribution-title distribution-description">
+      <figcaption id="distribution-description" className="sr-only">Distribución de consultas por especialidad.</figcaption>
+      <div className="grid grid-cols-[minmax(132px,1fr)_1fr] items-center gap-3">
+        <div className="relative grid place-items-center">
+          <svg className="col-start-1 row-start-1 size-36 -rotate-90" viewBox="0 0 120 120" role="img" aria-labelledby="distribution-title distribution-description">
+            <title id="distribution-title">Distribución de consultas</title>
+            <circle cx="60" cy="60" r="43" className="fill-none stroke-surface-subtle" strokeWidth="13" />
+            <circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-accent" strokeWidth="13" strokeDasharray="60 40" />
+            <circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-success" strokeWidth="13" strokeDasharray="25 75" strokeDashoffset="-60" />
+            <circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-warning" strokeWidth="13" strokeDasharray="10 90" strokeDashoffset="-85" />
+            <circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-violet" strokeWidth="13" strokeDasharray="5 95" strokeDashoffset="-95" />
+          </svg>
+          <div className="col-start-1 row-start-1 text-center" aria-hidden="true">
+            <strong className="block font-mono text-2xl tracking-[-0.07em]">48</strong>
+            <span className="text-[0.58rem] font-bold text-muted">Total</span>
+          </div>
         </div>
+        <ul className="grid gap-3 text-[0.62rem]">
+          <li className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-muted"><LegendDot tone="blue" />Cardiología</span><strong>60%</strong></li>
+          <li className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-muted"><LegendDot tone="green" />Control</span><strong>25%</strong></li>
+          <li className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-muted"><LegendDot tone="orange" />Seguimiento</span><strong>10%</strong></li>
+          <li className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-muted"><LegendDot tone="violet" />Otros</span><strong>5%</strong></li>
+        </ul>
       </div>
-      <ul className="mt-5 grid gap-2.5 text-xs">
-        <li className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-muted"><span className="size-2 rounded-full bg-accent" />Presenciales</span><strong>58%</strong></li>
-        <li className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-muted"><span className="size-2 rounded-full bg-success" />Teleconsultas</span><strong>27%</strong></li>
-        <li className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-muted"><span className="size-2 rounded-full bg-violet" />Urgencias</span><strong>15%</strong></li>
-      </ul>
     </figure>
   );
 }
 
 export default async function DoctorDashboardPage() {
   const session = await getAuthenticatedSession();
-  const doctor = session?.user.doctor;
   const fullName = session?.user.name?.trim() || "Doctor";
   const firstName = fullName.split(/\s+/)[0];
-  const specialty = doctor?.specialty || "Medicina general";
-  const practice = doctor?.practice_type === "clinic"
-    ? doctor.clinic?.name || "Médico afiliado"
-    : `Práctica independiente${doctor?.plan ? ` · Plan ${doctor.plan}` : ""}`;
 
   return (
-    <div className="mx-auto w-full max-w-360 px-4 py-5 sm:px-6 lg:px-7 lg:py-6">
-      <header className="relative overflow-hidden rounded-xl border border-line bg-surface px-5 py-5 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)] sm:px-6">
-        <span className="absolute inset-y-0 left-0 w-1 bg-accent" aria-hidden="true" />
-        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <p className="font-mono text-2xs font-semibold tracking-[0.15em] text-accent uppercase">Espacio profesional</p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2 py-1 text-[0.6rem] font-extrabold text-success">
-                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />Verificado
-              </span>
-            </div>
-            <h1 className="mt-2 font-display text-[clamp(1.75rem,3vw,2.5rem)] italic leading-none tracking-[-0.03em]">Panel <span className="font-sans not-italic font-extrabold">Médico</span></h1>
-            <p className="mt-3 text-sm font-extrabold">Buenos días, <span className="text-accent">{firstName}.</span></p>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Tienes 8 consultas programadas y 3 resultados clínicos que requieren atención hoy.</p>
-          </div>
-
-          <dl className="grid shrink-0 gap-2 text-xs sm:grid-cols-2 md:max-w-md">
-            <div className="rounded-lg bg-surface-subtle px-3 py-2.5">
-              <dt className="text-2xs font-bold text-muted">Especialidad</dt>
-              <dd className="mt-0.5 truncate font-extrabold">{specialty}</dd>
-            </div>
-            <div className="rounded-lg bg-surface-subtle px-3 py-2.5">
-              <dt className="text-2xs font-bold text-muted">Modalidad</dt>
-              <dd className="mt-0.5 max-w-52 truncate font-extrabold" title={practice}>{practice}</dd>
-            </div>
-            {doctor?.medical_license ? (
-              <div className="rounded-lg bg-accent-soft px-3 py-2.5 sm:col-span-2">
-                <dt className="text-2xs font-bold text-accent">Licencia médica</dt>
-                <dd className="mt-0.5 font-mono font-bold text-ink">{doctor.medical_license}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </div>
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
+      <header className="mb-4">
+        <h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Panel Médico</h1>
+        <p className="mt-1 text-[0.76rem] font-extrabold text-ink-secondary">¡Buenos días, Dr. {firstName}! <span aria-hidden="true">👋</span></p>
+        <p className="mt-1 text-[0.65rem] font-bold text-ink-secondary">Resumen de su actividad médica hoy</p>
       </header>
 
-      <section className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Resumen clínico de hoy">
-        {metrics.map(({ label, value, detail, icon: Icon, tone }, index) => (
-          <article className={`${cardClass} min-w-0 p-3.5 motion-safe:animate-[fade-up-in_400ms_ease-out_both]`} key={label} style={{ animationDelay: `${index * 60}ms` }}>
-            <div className="flex items-start justify-between gap-2">
-              <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone}`}><Icon className="size-4" strokeWidth={1.8} aria-hidden="true" /></span>
-              <strong className="font-mono text-xl tracking-[-0.06em]">{value}</strong>
-            </div>
-            <h2 className="mt-3 truncate text-xs font-extrabold" title={label}>{label}</h2>
-            <p className="mt-0.5 text-2xs text-muted">{detail}</p>
-          </article>
-        ))}
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Resumen de actividad">
+        {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </section>
 
-      <section className="mt-4 grid gap-4 xl:grid-cols-[1.25fr_0.95fr_0.8fr]" aria-label="Operación clínica del día">
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5`}>
-          <div className="flex items-start justify-between gap-3">
-            <div><h2 className="text-sm font-extrabold">Agenda del día</h2><p className="mt-1 text-2xs text-muted">Miércoles, 30 de julio · 8 citas</p></div>
-            <span className="rounded-md bg-accent-soft px-2 py-1 text-2xs font-bold text-accent">75% completada</span>
-          </div>
-          <ol className="mt-4 divide-y divide-line">
+      <section className="mt-4 grid gap-4 xl:grid-cols-[1.25fr_1fr_0.95fr]" aria-label="Actividad clínica">
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <SectionHeading title="Agenda del día" action="Ver agenda completa" />
+          <ol className="mt-3 divide-y divide-line">
             {appointments.map((appointment) => (
-              <li key={`${appointment.time}-${appointment.name}`}>
-                <details className="group py-1">
-                  <summary className="flex min-h-13 list-none items-center gap-3 rounded-lg px-2 outline-none transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
-                    <time className="w-10 shrink-0 font-mono text-2xs font-bold text-muted" dateTime={`2026-07-30T${appointment.time}`}>{appointment.time}</time>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-extrabold">{appointment.name}</span><span className="mt-0.5 block truncate text-2xs text-muted">{appointment.reason}</span></span>
-                    <span className={`shrink-0 text-[0.6rem] font-extrabold ${appointment.tone}`}>{appointment.status}</span>
-                  </summary>
-                  <div className="ml-15 border-l-2 border-accent-soft px-3 py-2 text-2xs leading-5 text-muted">Expediente preparado y datos de contacto verificados.</div>
-                </details>
+              <li className="relative flex min-h-[49px] items-center gap-2.5 py-2" key={`${appointment.time}-${appointment.name}`}>
+                <span className={`relative z-10 grid size-3 shrink-0 place-items-center rounded-full ${appointment.tone === "green" ? "bg-success" : appointment.tone === "orange" ? "bg-warning" : appointment.tone === "violet" ? "bg-violet" : appointment.tone === "blue" ? "bg-accent" : "bg-muted"}`} aria-hidden="true" />
+                <time className="w-11 shrink-0 font-mono text-[0.68rem] font-extrabold" dateTime={`2024-05-16T${appointment.time}`}>{appointment.time}</time>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.68rem] font-extrabold">{appointment.name}</p>
+                  <p className="truncate text-[0.59rem] font-bold text-ink-secondary">{appointment.reason}</p>
+                </div>
+                <StatusBadge tone={appointment.tone}>{appointment.status}</StatusBadge>
+                <span className={`grid size-5 shrink-0 place-items-center rounded-full ${toneClass(appointment.tone)}`} aria-hidden="true"><CheckCircle2 className="size-3" strokeWidth={2} /></span>
               </li>
             ))}
           </ol>
-        </article>
+        </DoctorCard>
 
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5`}>
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-extrabold">Actividad reciente</h2><p className="mt-1 text-2xs text-muted">Últimos movimientos del consultorio</p></div><Activity className="size-4 text-accent" aria-hidden="true" /></div>
-          <ol className="mt-4 grid gap-1">
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <SectionHeading title="Actividad reciente" action="Ver todos" />
+          <ol className="mt-3 divide-y divide-line">
             {recentActivity.map(({ title, detail, time, icon: Icon, tone }) => (
-              <li className="flex gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-subtle" key={`${title}-${time}`}>
-                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone}`}><Icon className="size-3.5" strokeWidth={1.8} aria-hidden="true" /></span>
-                <div className="min-w-0 flex-1"><p className="truncate text-xs font-extrabold">{title}</p><p className="mt-0.5 truncate text-2xs text-muted">{detail}</p></div>
-                <time className="shrink-0 text-[0.58rem] text-muted">{time}</time>
+              <li className="flex min-w-0 items-center gap-2.5 py-2.5" key={`${title}-${time}`}>
+                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${toneClass(tone)}`}><Icon className="size-4" strokeWidth={1.8} aria-hidden="true" /></span>
+                <div className="min-w-0 flex-1"><p className="truncate text-[0.68rem] font-extrabold">{title}</p><p className="mt-0.5 truncate text-[0.59rem] font-bold text-ink-secondary">{detail}</p></div>
+                <time className="shrink-0 text-[0.55rem] font-bold text-ink-secondary">{time}</time>
               </li>
             ))}
           </ol>
-        </article>
+        </DoctorCard>
 
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5`}>
-          <div><h2 className="text-sm font-extrabold">Pacientes frecuentes</h2><p className="mt-1 text-2xs text-muted">Mayor recurrencia en 90 días</p></div>
-          <ul className="mt-4 grid gap-2">
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <SectionHeading title="Pacientes frecuentes" action="Ver todos" />
+          <ul className="mt-3 divide-y divide-line">
             {frequentPatients.map((patient) => (
               <li key={patient.name}>
-                <button className="group flex min-h-14 w-full items-center gap-3 rounded-lg px-2 text-left transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={`Ver resumen de ${patient.name}`}>
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-full text-2xs font-extrabold ${patient.tone}`}>{patient.initials}</span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-extrabold">{patient.name}</span><span className="mt-0.5 block truncate text-2xs text-muted">{patient.detail}</span></span>
-                  <span className="text-right text-[0.58rem] font-bold text-muted group-hover:text-accent">{patient.visits}</span>
+                <button className="flex min-h-[48px] w-full items-center gap-2.5 py-1 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={`Abrir ${patient.name}`}>
+                  <DoctorAvatar initials={patient.initials} tone={patient.tone} size="md" />
+                  <span className="min-w-0 flex-1"><span className="block truncate text-[0.67rem] font-extrabold">{patient.name}</span><span className="mt-0.5 block truncate text-[0.58rem] font-bold text-ink-secondary">{patient.detail}</span></span>
+                  <span className={`shrink-0 rounded-md border px-2 py-1 text-[0.6rem] font-extrabold ${patient.tone === "orange" ? "border-danger/20 text-danger" : "border-accent/15 text-accent"}`}>{patient.visits}</span>
                 </button>
               </li>
             ))}
           </ul>
-        </article>
+        </DoctorCard>
       </section>
 
-      <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-12" aria-label="Análisis y seguimiento clínico">
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5 xl:col-span-5`}>
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-extrabold">Indicadores del mes</h2><p className="mt-1 text-2xs text-muted">Actividad clínica acumulada</p></div><span className="font-mono text-2xs font-bold text-success">+14.2%</span></div>
+      <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.35fr_0.95fr_1fr_0.95fr]" aria-label="Indicadores y alertas">
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.86rem] font-extrabold">Indicadores del mes</h2><p className="mt-1 text-[0.6rem] font-bold text-ink-secondary">Consultas, pacientes y recetas</p></div><button className="rounded-md border border-line px-2.5 py-1.5 text-[0.58rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button">Este mes⌄</button></div>
           <MonthlyIndicatorsChart />
-        </article>
+        </DoctorCard>
 
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5 xl:col-span-3`}>
-          <div><h2 className="text-sm font-extrabold">Distribución de consultas</h2><p className="mt-1 text-2xs text-muted">Por modalidad · julio</p></div>
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <div><h2 className="text-[0.86rem] font-extrabold">Distribución de consultas</h2><p className="mt-1 text-[0.6rem] font-bold text-ink-secondary">Por especialidad</p></div>
           <ConsultationDistribution />
-        </article>
+        </DoctorCard>
 
-        <article className={`${cardClass} min-w-0 p-4 sm:p-5 xl:col-span-2`}>
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-extrabold">Alertas y recordatorios</h2><p className="mt-1 text-2xs text-muted">2 acciones prioritarias</p></div><Bell className="size-4 text-warning" aria-hidden="true" /></div>
-          <ul className="mt-4 grid gap-3">
-            <li className="rounded-lg border border-warning/20 bg-warning-soft p-3">
-              <p className="text-xs font-extrabold text-warning">Resultados pendientes</p>
-              <p className="mt-1 text-2xs leading-4 text-muted">3 estudios requieren validación antes de las 16:00.</p>
-              <button className="mt-3 inline-flex min-h-8 items-center gap-1 text-2xs font-extrabold text-warning focus-visible:outline-3 focus-visible:outline-focus" type="button">Revisar ahora <ArrowUpRight className="size-3" aria-hidden="true" /></button>
-            </li>
-            <li className="rounded-lg border border-line bg-surface-subtle p-3">
-              <p className="text-xs font-extrabold">Seguimiento clínico</p>
-              <p className="mt-1 text-2xs leading-4 text-muted">Contactar a Roberto Silva esta semana.</p>
-              <div className="mt-3 flex items-center gap-1.5 text-2xs font-bold text-muted"><Clock3 className="size-3" aria-hidden="true" />Viernes, 10:00</div>
-            </li>
+        <DoctorCard className="min-w-0 p-4 sm:p-4">
+          <SectionHeading title="Alertas y recordatorios" action="Ver todos" />
+          <ul className="mt-3 grid gap-2">
+            <li className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-2"><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-warning-soft text-warning"><ClipboardCheck className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><b className="block truncate text-[0.62rem]">3 resultados pendientes</b><small className="block truncate text-[0.56rem] font-bold text-ink-secondary">Laboratorio</small></span></li>
+            <li className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-2"><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-warning-soft text-warning"><Pill className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><b className="block truncate text-[0.62rem]">2 recetas por renovar</b><small className="block truncate text-[0.56rem] font-bold text-ink-secondary">Pacientes frecuentes</small></span></li>
+            <li className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-2"><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-violet-soft text-violet"><Sparkles className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><b className="block truncate text-[0.62rem]">Capacitación disponible</b><small className="block truncate text-[0.56rem] font-bold text-ink-secondary">Webinar · Cardiología</small></span></li>
+            <li className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-2"><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-success-soft text-success"><CalendarDays className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><b className="block truncate text-[0.62rem]">Recordatorio</b><small className="block truncate text-[0.56rem] font-bold text-ink-secondary">Reunión clínica hoy 6:00 PM</small></span></li>
           </ul>
-        </article>
+        </DoctorCard>
 
-        <article className={`${cardClass} relative min-w-0 overflow-hidden p-4 sm:p-5 xl:col-span-2`}>
-          <span className="absolute top-0 right-0 grid size-16 translate-x-4 -translate-y-4 place-items-end rounded-full bg-accent-soft p-3 text-accent" aria-hidden="true"><Sparkles className="size-4" /></span>
-          <div className="relative"><p className="font-mono text-[0.58rem] font-bold tracking-[0.12em] text-accent uppercase">Vigilancia activa</p><h2 className="mt-2 text-sm font-extrabold">IA Epidemiológica</h2><p className="mt-1 text-2xs leading-4 text-muted">Señales clínicas de tu zona de atención.</p></div>
-          <div className="relative mt-5 rounded-lg border border-accent/20 bg-accent-soft p-3">
-            <div className="flex items-center gap-2 text-accent"><span className="size-2 rounded-full bg-accent" aria-hidden="true" /><strong className="text-2xs">Riesgo moderado</strong></div>
-            <p className="mt-2 text-xs font-extrabold leading-5">Aumento estacional de cuadros respiratorios</p>
-            <p className="mt-1 text-2xs leading-4 text-muted">18% más consultas compatibles durante los últimos 7 días.</p>
+        <DoctorCard className="relative min-w-0 overflow-hidden p-4 sm:p-4">
+          <span className="absolute right-3 top-3 grid size-8 place-items-center rounded-lg bg-violet-soft text-violet"><BrainIcon /></span>
+          <SectionHeading title="IA Epidemiológica" action="Ver informe" />
+          <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
+            <p className="text-[0.58rem] font-bold text-ink-secondary">Riesgo actual</p>
+            <div className="mt-1 flex items-center justify-between"><strong className="text-lg font-extrabold text-success">Bajo</strong><span className="text-[0.62rem] font-bold text-ink-secondary">›</span></div>
+            <p className="mt-0.5 text-[0.56rem] font-bold text-ink-secondary">Tendencia estable</p>
           </div>
-          <button className="relative mt-4 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-2xs font-extrabold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver análisis <ArrowUpRight className="size-3" aria-hidden="true" /></button>
-          <p className="relative mt-3 text-center text-[0.56rem] text-muted">Actualizado hoy, 10:30</p>
-        </article>
+          <div className="mt-2 rounded-lg border border-line bg-surface-subtle p-3"><p className="text-[0.58rem] font-bold text-ink-secondary">Última actualización</p><p className="mt-1 text-[0.62rem] font-extrabold">Hoy, 10:30 AM</p><p className="mt-0.5 text-[0.55rem] font-bold text-ink-secondary">Datos de la última hora</p></div>
+          <button className="mt-3 inline-flex w-full items-center justify-center gap-1 text-[0.6rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver IA Epidemiológica <ArrowUpRight className="size-3" aria-hidden="true" /></button>
+        </DoctorCard>
       </section>
     </div>
   );
+}
+
+function toneClass(tone: DashboardTone) {
+  switch (tone) {
+    case "green": return "bg-success-soft text-success";
+    case "orange": return "bg-warning-soft text-warning";
+    case "red": return "bg-danger-soft text-danger";
+    case "violet": return "bg-violet-soft text-violet";
+    case "slate": return "bg-surface-subtle text-muted";
+    default: return "bg-accent-soft text-accent";
+  }
+}
+
+function BrainIcon() {
+  return <HeartPulse className="size-4" strokeWidth={1.8} aria-hidden="true" />;
 }
