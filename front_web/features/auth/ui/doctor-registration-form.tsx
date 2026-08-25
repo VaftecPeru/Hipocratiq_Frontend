@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { Building2, CreditCard, LockKeyhole, Stethoscope, UserRound } from "lucide-react";
-import type { DoctorRegistrationDraft, RegistrationClinic } from "@/features/auth/api/doctor-registration";
+import type { DoctorRegistrationDraft, RegistrationClinic, RegistrationSpecialty } from "@/features/auth/api/doctor-registration";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { CountrySelect } from "@/features/auth/ui/country-select";
@@ -20,6 +20,8 @@ import { Spinner } from "@/shared/ui/spinner";
 type Props = {
   draft: DoctorRegistrationDraft;
   clinics: RegistrationClinic[];
+  specialties: RegistrationSpecialty[];
+  catalogStatus: "loading" | "available" | "unavailable";
   errors: RegistrationFieldErrors;
   pending: boolean;
   globalError: string | null;
@@ -29,13 +31,14 @@ type Props = {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
-export function DoctorRegistrationForm({ draft, clinics, errors, pending, globalError, onChange, onClearError, onBack, onSubmit }: Props) {
+export function DoctorRegistrationForm({ draft, clinics, specialties, catalogStatus, errors, pending, globalError, onChange, onClearError, onBack, onSubmit }: Props) {
   const country = draft.country_code as CountryCode;
   const countryOption = COUNTRY_OPTIONS[country];
   const update = <Key extends keyof DoctorRegistrationDraft>(key: Key, value: DoctorRegistrationDraft[Key]) => {
     onChange({ ...draft, [key]: value });
     onClearError(key);
   };
+  const selectedSpecialty = specialties.find((specialty) => specialty.id === draft.specialty_id);
 
   return (
     <div className="w-full max-w-152 py-2">
@@ -77,7 +80,7 @@ export function DoctorRegistrationForm({ draft, clinics, errors, pending, global
             <RegistrationField label="Nombre completo" name="doctor_name" value={draft.doctor_name} error={errors.doctor_name} placeholder="Dra. Elena Ruiz" onChange={(value) => update("doctor_name", value)} autoComplete="name" />
             <RegistrationField label="Correo profesional" name="doctor_email" value={draft.doctor_email} error={errors.doctor_email} placeholder="medico@correo.com" onChange={(value) => update("doctor_email", value)} type="email" inputMode="email" autoComplete="email" />
             <RegistrationField label="Licencia / colegiatura" name="medical_license" value={draft.medical_license} error={errors.medical_license} placeholder="Ej. CMP-123456" onChange={(value) => update("medical_license", value)} autoComplete="off" maxLength={80} />
-            <RegistrationField label="Especialidad" name="specialty" value={draft.specialty} error={errors.specialty} placeholder="Ej. Cardiología" onChange={(value) => update("specialty", value)} maxLength={120} />
+            {catalogStatus === "unavailable" ? <RegistrationField label="Especialidad" name="specialty" value={draft.specialty} error={errors.specialty} hint="El catálogo no está disponible. Verificaremos tu especialidad antes de activarla." placeholder="Ej. Cardiología" onChange={(value) => update("specialty", value)} maxLength={120} /> : <><RegistrationSelect label="Especialidad" name="specialty_id" value={draft.specialty_id ?? ""} error={errors.specialty_id} placeholder={catalogStatus === "loading" ? "Cargando especialidades…" : "Selecciona una especialidad"} disabled={catalogStatus === "loading"} onChange={(value) => { onChange({ ...draft, specialty_id: value ? Number(value) : null, subspecialty_id: null, specialty: "" }); onClearError("specialty_id"); onClearError("subspecialty_id"); }} options={specialties.map((specialty) => ({ value: String(specialty.id), label: specialty.name }))} /><RegistrationSelect label="Subespecialidad (opcional)" name="subspecialty_id" value={draft.subspecialty_id ?? ""} error={errors.subspecialty_id} placeholder={selectedSpecialty ? "Selecciona una subespecialidad" : "Primero selecciona una especialidad"} disabled={!selectedSpecialty} onChange={(value) => update("subspecialty_id", value ? Number(value) : null)} options={(selectedSpecialty?.subspecialties ?? []).map((subspecialty) => ({ value: String(subspecialty.id), label: subspecialty.name }))} /></>}
             <div className="grid gap-2"><label className="text-2xs font-bold text-ink" htmlFor="doctor_country_code">País / Región</label><CountrySelect id="doctor_country_code" name="country_code" mode="country" value={country} onChange={(value) => { onChange({ ...draft, country_code: value, doctor_phone_number: "" }); onClearError("doctor_phone_number"); }} /></div>
             <RegistrationField label={countryOption.accessPhoneLabel} name="doctor_phone_number" value={draft.doctor_phone_number} error={errors.doctor_phone_number} hint="Aquí recibirás el código OTP por SMS." placeholder={countryOption.placeholder} onChange={(value) => update("doctor_phone_number", value.replace(/\D/g, "").slice(0, countryOption.nationalLength))} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />
           </div>

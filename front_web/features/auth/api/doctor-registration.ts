@@ -10,6 +10,13 @@ export type RegistrationClinic = {
   address: string;
 };
 
+export type RegistrationSpecialty = {
+  id: number;
+  code: string;
+  name: string;
+  subspecialties: Array<{ id: number; code: string; name: string }>;
+};
+
 export type DoctorRegistrationDraft = {
   doctor_name: string;
   doctor_email: string;
@@ -17,6 +24,8 @@ export type DoctorRegistrationDraft = {
   doctor_phone_number: string;
   medical_license: string;
   specialty: string;
+  specialty_id: number | null;
+  subspecialty_id: number | null;
   practice_type: DoctorPracticeType;
   clinic_id: number | null;
   password: string;
@@ -28,10 +37,15 @@ type ChallengeData = { challenge_id: string; expires_in: number; resend_after: n
 type DraftResponse = { data: ChallengeData | { next_step: "select_plan" } };
 type ChallengeResponse = { data: ChallengeData };
 type ClinicsResponse = { data: RegistrationClinic[] };
+type SpecialtiesResponse = { data: RegistrationSpecialty[] };
 type PlansResponse = { data: ClinicPlan[] };
 
 export function getDoctorRegistrationClinics(): Promise<ClinicsResponse> {
   return getFromApi<ClinicsResponse>("/api/v1/auth/register/doctor/clinics");
+}
+
+export function getDoctorRegistrationSpecialties(): Promise<SpecialtiesResponse> {
+  return getFromApi<SpecialtiesResponse>("/api/v1/auth/register/doctor/specialties");
 }
 
 export function getDoctorPlans(): Promise<PlansResponse> {

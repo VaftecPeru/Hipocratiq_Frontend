@@ -7,6 +7,7 @@ import type {
   ClinicDashboardData,
   ClinicMemberRole,
   ClinicPatient,
+  ClinicPatientTriagePriority,
   ClinicPatientsPage,
   ClinicTeamMember,
 } from "@/features/clinics/model/clinic-admin.types";
@@ -42,6 +43,20 @@ type ApiPatient = {
   phone_number: string | null;
   status: ClinicPatient["status"];
   created_at: string | null;
+  triage: ApiPatientTriage | null;
+};
+
+type ApiPatientTriage = {
+  temperature_c: number | null;
+  systolic_bp: number | null;
+  diastolic_bp: number | null;
+  heart_rate: number | null;
+  respiratory_rate: number | null;
+  oxygen_saturation: number | null;
+  priority: ClinicPatientTriagePriority | null;
+  notes: string | null;
+  recorded_at: string | null;
+  registrar_name: string | null;
 };
 
 type ApiDashboardResponse = {
@@ -130,6 +145,18 @@ function mapPatient(patient: ApiPatient): ClinicPatient {
     phoneNumber: patient.phone_number,
     status: patient.status,
     createdAt: patient.created_at,
+    triage: patient.triage === null ? null : {
+      temperatureC: patient.triage.temperature_c,
+      systolicBp: patient.triage.systolic_bp,
+      diastolicBp: patient.triage.diastolic_bp,
+      heartRate: patient.triage.heart_rate,
+      respiratoryRate: patient.triage.respiratory_rate,
+      oxygenSaturation: patient.triage.oxygen_saturation,
+      priority: patient.triage.priority,
+      notes: patient.triage.notes,
+      recordedAt: patient.triage.recorded_at,
+      registrarName: patient.triage.registrar_name,
+    },
   };
 }
 
@@ -266,6 +293,26 @@ export type CreateClinicPatientPayload = {
   email: string | null;
   phoneNumber: string;
   countryCode: CountryCode;
+  documentType: string | null;
+  documentNumber: string | null;
+  dateOfBirth: string | null;
+  sex: string | null;
+  address: string | null;
+  emergencyContact: string | null;
+  requestedDoctorUserId: number | null;
+  specialtyId: number | null;
+  subspecialtyId: number | null;
+  reasonCategory: string | null;
+  objective: string;
+  observations: string | null;
+  temperatureC: number | null;
+  systolicBp: number | null;
+  diastolicBp: number | null;
+  heartRate: number | null;
+  respiratoryRate: number | null;
+  oxygenSaturation: number | null;
+  triagePriority: ClinicPatientTriagePriority | null;
+  triageNotes: string | null;
 };
 
 export async function createClinicPatient(payload: CreateClinicPatientPayload): Promise<ClinicPatient> {
@@ -274,6 +321,26 @@ export async function createClinicPatient(payload: CreateClinicPatientPayload): 
     email: payload.email,
     phone_number: payload.phoneNumber,
     country_code: payload.countryCode,
+    document_type: payload.documentType,
+    document_number: payload.documentNumber,
+    date_of_birth: payload.dateOfBirth,
+    sex: payload.sex,
+    address: payload.address,
+    emergency_contact: payload.emergencyContact,
+    requested_doctor_user_id: payload.requestedDoctorUserId,
+    specialty_id: payload.specialtyId,
+    subspecialty_id: payload.subspecialtyId,
+    reason_category: payload.reasonCategory,
+    objective: payload.objective,
+    observations: payload.observations,
+    temperature_c: payload.temperatureC,
+    systolic_bp: payload.systolicBp,
+    diastolic_bp: payload.diastolicBp,
+    heart_rate: payload.heartRate,
+    respiratory_rate: payload.respiratoryRate,
+    oxygen_saturation: payload.oxygenSaturation,
+    triage_priority: payload.triagePriority,
+    triage_notes: payload.triageNotes,
   });
 
   if (!response.data) throw new ApiError('El servidor no devolvió el paciente registrado.', 502);

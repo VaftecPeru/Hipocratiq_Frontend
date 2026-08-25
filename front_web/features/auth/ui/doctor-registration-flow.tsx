@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   getDoctorPlans,
   getDoctorRegistrationClinics,
+  getDoctorRegistrationSpecialties,
   resendDoctorRegistrationOtp,
   selectDoctorPlan,
   startDoctorRegistration,
   verifyDoctorRegistration,
   type DoctorRegistrationDraft,
   type RegistrationClinic,
+  type RegistrationSpecialty,
 } from "@/features/auth/api/doctor-registration";
 import type { ClinicPlan } from "@/features/auth/api/clinic-registration";
 import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
@@ -21,17 +23,19 @@ import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/
 import { ApiError } from "@/shared/api/http-client";
 
 const initialDraft: DoctorRegistrationDraft = {
-  doctor_name: "", doctor_email: "", country_code: "PE", doctor_phone_number: "", medical_license: "", specialty: "", practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
+  doctor_name: "", doctor_email: "", country_code: "PE", doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
 };
 
 type DoctorStep = "details" | "plan" | "otp" | "success";
 
-function validateDraft(draft: DoctorRegistrationDraft): RegistrationFieldErrors {
+function validateDraft(draft: DoctorRegistrationDraft, catalogStatus: "loading" | "available" | "unavailable"): RegistrationFieldErrors {
   const errors: RegistrationFieldErrors = {};
   if (draft.doctor_name.trim().length < 2) errors.doctor_name = "Ingresa tu nombre completo.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.doctor_email.trim())) errors.doctor_email = "Ingresa un correo válido.";
   if (draft.medical_license.trim().length < 3) errors.medical_license = "Ingresa tu licencia o número de colegiatura.";
-  if (draft.specialty.trim().length < 2) errors.specialty = "Ingresa tu especialidad.";
+  if (!draft.specialty_id && draft.specialty.trim().length < 2) {
+    errors[catalogStatus === "unavailable" ? "specialty" : "specialty_id"] = catalogStatus === "unavailable" ? "Ingresa tu especialidad." : "Selecciona una especialidad.";
+  }
   if (draft.practice_type === "clinic" && !draft.clinic_id) errors.clinic_id = "Selecciona la clínica donde trabajas.";
   try { toE164PhoneNumber(draft.doctor_phone_number, draft.country_code as CountryCode); } catch (caught) { errors.doctor_phone_number = caught instanceof Error ? caught.message : "Ingresa un número válido."; }
   if (draft.password.length < 10 || !/[A-Z]/.test(draft.password) || !/[a-z]/.test(draft.password) || !/\d/.test(draft.password)) errors.password = "Usa al menos 10 caracteres, mayúsculas, minúsculas y números.";
@@ -46,6 +50,8 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<DoctorStep>("details");
   const [draft, setDraft] = useState(initialDraft);
   const [clinics, setClinics] = useState<RegistrationClinic[]>([]);
+  const [specialties, setSpecialties] = useState<RegistrationSpecialty[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState<"loading" | "available" | "unavailable">("loading");
   const [plans, setPlans] = useState<ClinicPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
@@ -58,7 +64,8 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegistrationFieldErrors>({});
 
-  useEffect(() => { getDoctorRegistrationClinics().then((response) => setClinics(response.data)).catch(handleError); }, []);
+  useEffect(() => { getDoctorRegistrationClinics().then((response) => setClinics(response.data)).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "No pudimos completar el registro médico.")); }, []);
+  useEffect(() => { getDoctorRegistrationSpecialties().then((response) => { setSpecialties(response.data); setCatalogStatus("available"); }).catch(() => setCatalogStatus("unavailable")); }, []);
   useEffect(() => { document.getElementById("registration-scroll-region")?.scrollTo({ top: 0 }); }, [step]);
   useEffect(() => {
     if (step !== "otp") return;
@@ -69,7 +76,8 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   function handleError(caught: unknown) {
     if (caught instanceof ApiError && caught.errors) {
       const nextErrors = Object.entries(caught.errors).reduce<RegistrationFieldErrors>((result, [field, messages]) => {
-        if (field in initialDraft && messages[0]) result[field as RegistrationFieldName] = messages[0];
+        const errorField = catalogStatus === "unavailable" && field === "specialty_id" ? "specialty" : field;
+        if (errorField in initialDraft && messages[0]) result[errorField as RegistrationFieldName] = messages[0];
         return result;
       }, {});
       if (Object.keys(nextErrors).length > 0) { setFieldErrors(nextErrors); setError(null); return; }
@@ -83,7 +91,7 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
 
   async function submitDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const errors = validateDraft(draft); setFieldErrors(errors); setError(null);
+    const errors = validateDraft(draft, catalogStatus); setFieldErrors(errors); setError(null);
     if (Object.keys(errors).length > 0) { window.requestAnimationFrame(() => document.getElementById(Object.keys(errors)[0])?.focus()); return; }
     setPending(true);
     try {
@@ -119,7 +127,7 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
     setFieldErrors((current) => { if (!current[field]) return current; const next = { ...current }; delete next[field]; return next; });
   }
 
-  if (step === "details") return <DoctorRegistrationForm draft={draft} clinics={clinics} errors={fieldErrors} pending={pending} globalError={error} onChange={setDraft} onClearError={clearFieldError} onBack={onBack} onSubmit={submitDraft} />;
+  if (step === "details") return <DoctorRegistrationForm draft={draft} clinics={clinics} specialties={specialties} catalogStatus={catalogStatus} errors={fieldErrors} pending={pending} globalError={error} onChange={setDraft} onClearError={clearFieldError} onBack={onBack} onSubmit={submitDraft} />;
   if (step === "plan") return <PlanStep plans={plans} selected={selectedPlan} cycle={cycle} pending={pending} error={error} subject="doctor" onSelect={choosePlan} onCycleChange={setCycle} onBack={() => setStep("details")} />;
   if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} resendsRemaining={resendsRemaining} code={code} setCode={setCode} pending={pending} error={error} recipientDescription="móvil del médico" onVerify={verify} onResend={resend} onBack={() => setStep(draft.practice_type === "independent" ? "plan" : "details")} />;
   return <RegistrationSuccessStep title="Cuenta médica activada" description="Tu identidad fue verificada y ya puedes entrar a tu panel profesional." buttonLabel="Entrar al panel médico" onContinue={() => router.replace("/doctor/dashboard")} />;

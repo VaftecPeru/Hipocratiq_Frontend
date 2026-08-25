@@ -14,7 +14,6 @@ import {
   Mail,
   MessageCircle,
   PenLine,
-  Phone,
   ShieldCheck,
   Stethoscope,
   Upload,
@@ -23,6 +22,7 @@ import {
   Video,
 } from "lucide-react";
 import { DoctorCard, Toggle } from "@/features/doctors/ui/doctor-primitives";
+import { DoctorProfileSettings } from "@/features/doctors/ui/doctor-profile-settings";
 
 function SettingsRow({
   icon: Icon,
@@ -62,7 +62,7 @@ export default function DoctorSettingsPage() {
     <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
       <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Configuración</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Preferencias personales, agenda médica y herramientas clínicas.</p></div><div className="flex gap-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><Upload className="size-3.5" aria-hidden="true" />Exportar configuración</button><button className="flex min-h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-left focus-visible:outline-3 focus-visible:outline-focus" type="button"><span className="grid size-7 place-items-center rounded-full bg-ink text-[0.55rem] font-extrabold text-white">CR</span><span><b className="block text-[0.58rem] font-extrabold">Cambiar foto</b><small className="block text-[0.5rem] font-bold text-ink-secondary">JPG, PNG, WEBP</small></span></button></div></header>
 
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4" aria-label="Preferencias principales"><DoctorCard className="p-4"><div className="flex items-center gap-2 border-b border-line pb-3"><span className="grid size-7 place-items-center rounded-lg bg-accent-soft text-accent"><UserRound className="size-4" /></span><h2 className="text-[0.82rem] font-extrabold">Perfil profesional</h2></div><div className="mt-1"><SettingsRow icon={UserRound} label="Nombre" value="Dr. Carlos Ruiz" /><SettingsRow icon={Stethoscope} label="Especialidad" value="Cardiología" /><SettingsRow icon={FileText} label="Cédula" value="CRM 12345" /><SettingsRow icon={Mail} label="Correo" value="dr.carlos.ruiz@mediq.mx" /><SettingsRow icon={Phone} label="Teléfono" value="+52 55 2345 6789" /></div><button className="mt-3 inline-flex min-h-8 items-center gap-2 rounded-lg border border-accent/20 px-3 text-[0.59rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button"><PenLine className="size-3.5" />Editar perfil</button></DoctorCard>
+      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4" aria-label="Preferencias principales"><DoctorProfileSettings />
 
         <DoctorCard className="p-4"><div className="flex items-center gap-2 border-b border-line pb-3"><span className="grid size-7 place-items-center rounded-lg bg-accent-soft text-accent"><CalendarDays className="size-4" /></span><h2 className="text-[0.82rem] font-extrabold">Disponibilidad y agenda</h2></div><div className="mt-1"><SettingsRow icon={Clock3} label="Horario actual" value="Lun-Vie 08:00 AM - 06:00 PM" /><SettingsRow icon={Stethoscope} label="Duración por consulta" value="30 min" /><SettingsToggleRow icon={Stethoscope} label="Teleconsultas habilitadas" /><SettingsToggleRow icon={Clock3} label="Bloques personales" /><SettingsToggleRow icon={CheckCircle2} label="Confirmación automática" /></div></DoctorCard>
 

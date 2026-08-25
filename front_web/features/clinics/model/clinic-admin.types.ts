@@ -24,6 +24,21 @@ export type ClinicTeamMember = {
   lastLoginAt: string | null;
 };
 
+export type ClinicPatientTriagePriority = "routine" | "urgent" | "emergency";
+
+export type ClinicPatientTriage = {
+  temperatureC: number | null;
+  systolicBp: number | null;
+  diastolicBp: number | null;
+  heartRate: number | null;
+  respiratoryRate: number | null;
+  oxygenSaturation: number | null;
+  priority: ClinicPatientTriagePriority | null;
+  notes: string | null;
+  recordedAt: string | null;
+  registrarName: string | null;
+};
+
 export type ClinicPatient = {
   id: number;
   patientCode: string;
@@ -32,6 +47,7 @@ export type ClinicPatient = {
   phoneNumber: string | null;
   status: "pending_verification" | "active" | "suspended" | "disabled" | null;
   createdAt: string | null;
+  triage?: ClinicPatientTriage | null;
 };
 
 export type ClinicAppointmentStatus =
