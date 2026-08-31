@@ -67,6 +67,7 @@ export type ClinicAppointment = {
   appointmentType: string;
   status: ClinicAppointmentStatus;
   statusLabel: string;
+  notes: string | null;
   patient: {
     id: number;
     patientCode: string;

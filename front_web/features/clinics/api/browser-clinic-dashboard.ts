@@ -89,8 +89,11 @@ type ApiAppointment = {
   appointment_type: string;
   status: ClinicAppointmentStatus;
   status_label: string;
-  patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
-  doctor: { id: number; name: string; specialty: string | null } | null;
+  notes: string | null;
+
+  patient: {id: number; patient_code: string; name: string | null; phone_number: string | null};
+
+  doctor: {id: number; name: string; specialty: string | null  } | null;
 };
 
 type ApiPatientsResponse = {
@@ -169,12 +172,15 @@ function mapAppointment(appointment: ApiAppointment): ClinicAppointment {
     appointmentType: appointment.appointment_type,
     status: appointment.status,
     statusLabel: appointment.status_label,
+    notes: appointment.notes ?? null,
+
     patient: {
       id: appointment.patient.id,
       patientCode: appointment.patient.patient_code,
       name: appointment.patient.name,
       phoneNumber: appointment.patient.phone_number,
     },
+
     doctor: appointment.doctor,
   };
 }
@@ -238,6 +244,38 @@ export async function getClinicAppointments(
     appointments: payload.data.map(mapAppointment),
     summary: mapAppointmentSummary(payload.meta.summary),
   };
+}
+
+export type CreateClinicAppointmentPayload = {
+  patientProfileId: number;
+  doctorUserId: number | null;
+  scheduledAt: string;
+  appointmentType: "consultation" | "control";
+  notes: string | null;
+};
+
+export async function createClinicAppointment(
+  payload: CreateClinicAppointmentPayload,
+): Promise<ClinicAppointment> {
+  const response = await postToApi<{ data: ApiAppointment }>(
+    "/api/v1/auth/clinic/appointments",
+    {
+      patient_profile_id: payload.patientProfileId,
+      doctor_user_id: payload.doctorUserId,
+      scheduled_at: payload.scheduledAt,
+      appointment_type: payload.appointmentType,
+      notes: payload.notes,
+    },
+  );
+
+  if (!response.data) {
+    throw new ApiError(
+      "El servidor no devolvió la cita registrada.",
+      502,
+    );
+  }
+
+  return mapAppointment(response.data);
 }
 
 export async function getClinicMembers(signal?: AbortSignal): Promise<ClinicTeamMember[]> {
