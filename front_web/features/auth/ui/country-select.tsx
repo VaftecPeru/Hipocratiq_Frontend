@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import PeruFlag from "country-flag-icons/react/3x2/PE";
 import MexicoFlag from "country-flag-icons/react/3x2/MX";
@@ -15,7 +15,7 @@ type CountrySelectProps = {
   onChange: (country: CountryCode) => void;
   hasError?: boolean;
   ariaDescribedBy?: string;
-  mode?: "dial-code" | "country" | "locale";
+  mode?: "dial-code" | "country";
 };
 
 const FLAGS = {
@@ -31,12 +31,14 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const generatedId = useId();
 
   const Flag = FLAGS[value];
   const selectedCountry = COUNTRY_OPTIONS[value];
-  const listboxId = `${id ?? "phone-country"}-options`;
+  const controlId = id ?? `phone-country-${generatedId}`;
+  const listboxId = `${controlId}-options`;
   const isCountryField = mode === "country";
-  const isLocaleField = mode === "locale";
+  const countryLabel = `País: ${selectedCountry.name} (+${selectedCountry.dialCode})`;
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -63,13 +65,18 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
     }
   }, [isOpen, focusedIndex]);
 
+  function open() {
+    setFocusedIndex(COUNTRY_CODES.indexOf(value));
+    setIsOpen(true);
+  }
+
   function toggle() {
     if (isOpen) {
       close();
-    } else {
-      setIsOpen(true);
-      setFocusedIndex(COUNTRY_CODES.indexOf(value));
+      return;
     }
+
+    open();
   }
 
   function select(code: CountryCode) {
@@ -77,7 +84,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
     close();
   }
 
-  function handleKeyDown(event: React.KeyboardEvent) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
     switch (event.key) {
       case "Enter":
       case " ":
@@ -85,22 +92,35 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
         if (isOpen && focusedIndex >= 0) {
           select(COUNTRY_CODES[focusedIndex]);
         } else {
-          toggle();
+          open();
         }
         break;
       case "ArrowDown":
         event.preventDefault();
         if (!isOpen) {
-          setIsOpen(true);
-          setFocusedIndex(COUNTRY_CODES.indexOf(value));
+          open();
         } else {
           setFocusedIndex((prev) => Math.min(prev + 1, COUNTRY_CODES.length - 1));
         }
         break;
       case "ArrowUp":
         event.preventDefault();
-        if (isOpen) {
+        if (!isOpen) {
+          open();
+        } else {
           setFocusedIndex((prev) => Math.max(prev - 1, 0));
+        }
+        break;
+      case "Home":
+        if (isOpen) {
+          event.preventDefault();
+          setFocusedIndex(0);
+        }
+        break;
+      case "End":
+        if (isOpen) {
+          event.preventDefault();
+          setFocusedIndex(COUNTRY_CODES.length - 1);
         }
         break;
       case "Escape":
@@ -116,31 +136,27 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
   return (
     <div ref={containerRef} className="relative shrink-0">
       <button
-        id={id}
+        id={controlId}
         name={name}
         type="button"
-        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : isLocaleField ? "h-9 min-w-24 justify-between rounded-lg bg-white px-3" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
+        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
         onClick={toggle}
         onKeyDown={handleKeyDown}
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
-        aria-label={isLocaleField ? `País e idioma: ${selectedCountry.name}` : `País: ${selectedCountry.name} (+${selectedCountry.dialCode})`}
+        aria-activedescendant={isOpen && focusedIndex >= 0 ? `${listboxId}-${COUNTRY_CODES[focusedIndex]}` : undefined}
+        aria-label={countryLabel}
+        aria-invalid={hasError ? true : undefined}
         aria-describedby={ariaDescribedBy}
       >
         <span className="flex min-w-0 items-center gap-2.5">
           <Flag className="h-[1.15rem] w-[1.7rem] shrink-0 overflow-hidden rounded-[0.2rem] shadow-[0_0_0_1px_rgb(16_27_51/10%),0_1px_2px_rgb(16_27_51/6%)]" />
-          {isLocaleField ? (
-            <>
-              <span className="text-2xs font-semibold text-ink">{value}</span>
-              <span className="text-2xs text-ink-secondary">ES</span>
-            </>
-          ) : (
-            <>
-              <span className="truncate text-2xs font-semibold text-ink">{isCountryField ? selectedCountry.name : `+${selectedCountry.dialCode}`}</span>
-              {isCountryField ? <span className="text-2xs text-muted">+{selectedCountry.dialCode}</span> : null}
-            </>
-          )}
+          <>
+            <span className="truncate text-2xs font-semibold text-ink">{isCountryField ? selectedCountry.name : `+${selectedCountry.dialCode}`}</span>
+            {isCountryField ? <span className="text-2xs text-muted">+{selectedCountry.dialCode}</span> : null}
+          </>
         </span>
         <ChevronDown className={`size-3.5 shrink-0 text-muted/70 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} strokeWidth={2.2} aria-hidden="true" />
       </button>
@@ -150,6 +166,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
           id={listboxId}
           ref={listRef}
           role="listbox"
+          aria-label={countryLabel}
           className={`absolute top-[calc(100%+0.4rem)] left-0 z-50 max-h-64 overflow-y-auto rounded-xl border border-line bg-white py-1.5 shadow-[0_10px_32px_rgb(16_27_51/14%),0_2px_8px_rgb(16_27_51/8%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)] ${isCountryField ? "w-full min-w-60" : "w-60"}`}
         >
           {COUNTRY_CODES.map((code, index) => {

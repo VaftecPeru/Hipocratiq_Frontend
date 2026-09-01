@@ -20,8 +20,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
@@ -75,7 +75,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: () => void }) {
+function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: () => void; onPrefetch: (href: string) => void }) {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
@@ -94,6 +94,9 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
                   <Link
                     className={"flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                     href={item.href}
+                    prefetch={false}
+                    onMouseEnter={() => onPrefetch(item.href)}
+                    onFocus={() => onPrefetch(item.href)}
                     onClick={onNavigate}
                     aria-current={isActive ? "page" : undefined}
                   >
@@ -138,6 +141,9 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
                       <Link
                         className={"flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                         href={item.href}
+                        prefetch={false}
+                        onMouseEnter={() => onPrefetch(item.href)}
+                        onFocus={() => onPrefetch(item.href)}
                         onClick={onNavigate}
                         aria-current={isActive ? "page" : undefined}
                       >
@@ -165,7 +171,7 @@ function Navigation({ idPrefix, onNavigate }: { idPrefix: string; onNavigate?: (
 
 function Brand() {
   return (
-    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard">
+    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false}>
       <BrandLogo className="h-8 w-9" priority />
       <span className="text-sm font-extrabold tracking-[0.07em] text-ink">HIPOCRATIQ</span>
     </Link>
@@ -173,8 +179,16 @@ function Brand() {
 }
 
 export function PlatformShell({ children, userName }: PlatformShellProps) {
+  const router = useRouter();
+  const prefetchedHrefs = useRef(new Set<string>());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
+  const prefetchOnIntent = useCallback((href: string) => {
+    if (prefetchedHrefs.current.has(href)) return;
+
+    prefetchedHrefs.current.add(href);
+    router.prefetch(href);
+  }, [router]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,7 +217,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
     <div className="min-h-svh bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 hidden w-52 border-r border-line bg-surface lg:flex lg:flex-col">
         <Brand />
-        <Navigation idPrefix="desktop" />
+        <Navigation idPrefix="desktop" onPrefetch={prefetchOnIntent} />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-13 items-center gap-2.5 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-52 lg:px-5">
@@ -259,7 +273,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
           <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
           <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
             <div className="border-b border-line"><Brand /></div>
-            <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} />
+            <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} onPrefetch={prefetchOnIntent} />
           </aside>
         </>
       ) : null}

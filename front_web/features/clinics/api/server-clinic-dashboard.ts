@@ -1,10 +1,18 @@
 import { cookies } from "next/headers";
-import type { ClinicDashboardData } from "@/features/clinics/model/clinic-admin.types";
+import type { ClinicDashboardData, ClinicPreferences } from "@/features/clinics/model/clinic-admin.types";
 import { serverEnv } from "@/shared/config/server-env";
+
+const DASHBOARD_REQUEST_TIMEOUT_MS = 5_000;
+const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
+  maintenance: false,
+  audit: true,
+  signatures: true,
+  backups: true,
+};
 
 type ApiDashboard = {
   data: {
-    clinic: { id: number; name: string; country_code: "MX" | "PE" | "US"; contact_phone: string; address: string; status: "active" | "suspended" };
+    clinic: { id: number; name: string; country_code: "MX" | "PE" | "US"; contact_phone: string; address: string; status: "active" | "suspended"; preferences?: Partial<ClinicPreferences> | null };
     subscription: { plan: string | null; status: string | null; billing_cycle: string | null };
     metrics: { staff_total: number; doctors_total: number; receptionists_total: number; patients_total: number };
     appointment_summary: {
@@ -28,7 +36,7 @@ type ApiDashboard = {
       doctor: { id: number; name: string; specialty: string | null } | null;
     }>;
     team: Array<{ id: number; name: string; email: string | null; phone_number: string; status: "pending_verification" | "active" | "suspended" | "disabled"; role: "clinic_admin" | "receptionist" | "doctor"; role_name: string; specialty: string | null; medical_license: string | null; last_login_at: string | null }>;
-    recent_patients: Array<{ id: number; patient_code: string; name: string | null; email: string | null; phone_number: string | null; status: "pending_verification" | "active" | "suspended" | "disabled" | null; created_at: string | null }>;
+    recent_patients: Array<{ id: number; patient_code: string; name: string | null; email: string | null; phone_number: string | null; status: "pending_verification" | "active" | "suspended" | "disabled" | null; created_at: string | null; age: number | null; insurance?: string | null; is_returning_patient?: boolean; whatsapp_consent?: boolean }>;
   };
 };
 
@@ -41,6 +49,7 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         Cookie: (await cookies()).toString(),
         Origin: serverEnv.appUrl,
       },
+      signal: AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) return null;
@@ -56,6 +65,10 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         contactPhone: data.clinic.contact_phone,
         address: data.clinic.address,
         status: data.clinic.status,
+        preferences: {
+          ...DEFAULT_CLINIC_PREFERENCES,
+          ...(data.clinic.preferences ?? {}),
+        },
       },
       subscription: {
         plan: data.subscription.plan,
@@ -113,6 +126,12 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         phoneNumber: patient.phone_number,
         status: patient.status,
         createdAt: patient.created_at,
+        age: patient.age ?? null,
+        insurance: patient.insurance ?? null,
+        isReturningPatient: patient.is_returning_patient ?? false,
+        whatsappConsent: patient.whatsapp_consent ?? false,
+        lastAppointment: null,
+        nextAppointment: null,
       })),
     };
   } catch {

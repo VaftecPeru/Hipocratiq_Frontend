@@ -4,10 +4,10 @@ import { useEffect } from "react";
 
 export default function GlobalError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     console.error("Global error boundary caught:", error);
@@ -43,12 +43,12 @@ export default function GlobalError({
               margin: "12px 0 24px",
             }}
           >
-            El servicio tardó en responder. Vuelve a intentarlo; suele
-            resolverse de inmediato.
+            Ocurrió un problema mientras se cargaba la aplicación. Inténtalo de
+            nuevo.
           </p>
           <button
             type="button"
-            onClick={reset}
+            onClick={() => unstable_retry()}
             style={{
               border: "none",
               borderRadius: 8,
@@ -61,6 +61,22 @@ export default function GlobalError({
             }}
           >
             Reintentar
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.assign("/")}
+            style={{
+              marginLeft: 12,
+              border: "none",
+              background: "transparent",
+              color: "#0f172a",
+              fontSize: 14,
+              fontWeight: 500,
+              padding: "8px 0",
+              cursor: "pointer",
+            }}
+          >
+            Ir al inicio de sesión
           </button>
         </div>
       </body>

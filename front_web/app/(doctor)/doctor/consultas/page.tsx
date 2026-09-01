@@ -108,6 +108,11 @@ export default function DoctorConsultationsPage() {
   }
 
   function startEdit(consultation: Consultation): void {
+    if (consultation.status === "signed") {
+      setError("Una consulta firmada no se puede modificar.");
+      setSuccess(null);
+      return;
+    }
     setMode("edit");
     setEditingId(consultation.id);
     setSelectedPatientId(String(consultation.patient?.id ?? ""));

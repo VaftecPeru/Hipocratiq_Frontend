@@ -4,7 +4,7 @@ import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
+import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
 import { ApiError } from "@/shared/api/http-client";
@@ -12,12 +12,13 @@ import { ApiError } from "@/shared/api/http-client";
 type FieldName = "identifier" | "password" | "code";
 type FieldErrors = Partial<Record<FieldName, string>>;
 
-const LOGIN_ROLE_CONTEXTS = {
-  healthcare: "staff",
-  patient: "patient",
-  administrator: "staff",
-  support: "staff", // The API's staff context is the global Super Administrator login.
-} satisfies Record<LoginRole, LoginActorContext>;
+const LOGIN_ROLE_REQUESTS = {
+  healthcare: { actorContext: "staff", requestedRole: "doctor" },
+  receptionist: { actorContext: "staff", requestedRole: "receptionist" },
+  patient: { actorContext: "patient", requestedRole: "patient" },
+  administrator: { actorContext: "staff", requestedRole: "clinic_admin" },
+  support: { actorContext: "staff", requestedRole: "super_admin" },
+} satisfies Record<LoginRole, { actorContext: LoginActorContext; requestedRole: LoginRequestedRole }>;
 
 type FlowState = {
   step: AuthStep;
@@ -121,7 +122,7 @@ export function LoginFlow() {
   const [isNavigating, setIsNavigating] = useState(false);
   const dashboardPath = useRef("/dashboard");
   const country = selectedCountry ?? defaultCountryCode;
-  const actorContext = LOGIN_ROLE_CONTEXTS[loginRole];
+  const { actorContext, requestedRole } = LOGIN_ROLE_REQUESTS[loginRole];
 
   useEffect(() => {
     if (flow.step !== "otp") {
@@ -201,8 +202,8 @@ export function LoginFlow() {
       ? email.trim().toLowerCase()
       : toE164PhoneNumber(phone, country);
     const response = await requestLoginOtp(actorContext === "staff"
-      ? { identifier, actorContext, password }
-      : { identifier, actorContext });
+      ? { identifier, actorContext, requestedRole, password }
+      : { identifier, actorContext, requestedRole });
     challengeId.current = response.data.challenge_id;
     dispatch({
       type: "otpIssued",

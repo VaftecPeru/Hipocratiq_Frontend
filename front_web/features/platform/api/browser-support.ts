@@ -1,4 +1,5 @@
 import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type {
   CreateSupportTicketPayload,
   SupportAgent,
@@ -135,7 +136,9 @@ function mapTicket(ticket: ApiTicket): SupportTicket {
     isOverdue: ticket.is_overdue,
     createdAt: ticket.created_at,
     updatedAt: ticket.updated_at,
-    activities: ticket.activities?.map(mapActivity),
+    activities: ticket.activities === undefined
+      ? undefined
+      : parseApiList<ApiTicketActivity>(ticket.activities, "support.ticket.activities").map(mapActivity),
   };
 }
 
@@ -166,17 +169,17 @@ function mapSummary(summary: ApiSummary): SupportDashboardSummary {
       targetPercentage: summary.sla.target_percentage,
       evaluatedTickets: summary.sla.evaluated_tickets,
     },
-    byPriority: summary.by_priority,
-    byCategory: summary.by_category,
-    byCountry: summary.by_country.map((item) => ({
+    byPriority: parseApiList<typeof summary.by_priority[number]>(summary.by_priority, "support.summary.by_priority"),
+    byCategory: parseApiList<typeof summary.by_category[number]>(summary.by_category, "support.summary.by_category"),
+    byCountry: parseApiList<typeof summary.by_country[number]>(summary.by_country, "support.summary.by_country").map((item) => ({
       countryCode: item.country_code,
       total: item.total,
       open: item.open,
       overdue: item.overdue,
     })),
-    agents: summary.agents.map(mapAgent),
-    escalations: summary.escalations.map(mapTicket),
-    recentActivity: summary.recent_activity.map(mapActivity),
+    agents: parseApiList<ApiAgent>(summary.agents, "support.summary.agents").map(mapAgent),
+    escalations: parseApiList<ApiTicket>(summary.escalations, "support.summary.escalations").map(mapTicket),
+    recentActivity: parseApiList<ApiTicketActivity>(summary.recent_activity, "support.summary.recent_activity").map(mapActivity),
     generatedAt: summary.generated_at,
   };
 }
@@ -218,15 +221,15 @@ export async function getAdminSupportTickets(
     { signal },
   );
 
-  if (!Array.isArray(payload.data) || !payload.meta || !payload.summary || !payload.filter_options) {
+  if (!payload.meta || !payload.summary || !payload.filter_options) {
     throw new ApiError("El servidor devolvió una respuesta de soporte incompleta.", 502);
   }
 
   return {
-    tickets: payload.data.map(mapTicket),
-    clinics: payload.filter_options.clinics.map(mapClinic).filter((clinic): clinic is SupportClinicOption => clinic !== null),
-    agents: payload.summary.agents.map(mapAgent),
-    countries: payload.filter_options.countries,
+    tickets: parseApiList<ApiTicket>(payload.data, "support.data").map(mapTicket),
+    clinics: parseApiList<ApiClinic>(payload.filter_options.clinics, "support.filter_options.clinics").map(mapClinic).filter((clinic): clinic is SupportClinicOption => clinic !== null),
+    agents: parseApiList<ApiAgent>(payload.summary.agents, "support.summary.agents").map(mapAgent),
+    countries: parseApiList<string>(payload.filter_options.countries, "support.filter_options.countries"),
     summary: mapSummary(payload.summary),
     meta: {
       currentPage: payload.meta.current_page,

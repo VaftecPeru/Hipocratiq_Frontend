@@ -69,7 +69,8 @@ type CredentialsStepProps = {
 };
 
 const LOGIN_ROLE_OPTIONS = [
-  { value: "healthcare", label: "Profesional de salud", description: "Médicos, enfermeros y personal clínico", icon: UserRound },
+  { value: "healthcare", label: "Profesional de salud", description: "Médicos con acceso clínico", icon: UserRound },
+  { value: "receptionist", label: "Recepción", description: "Agenda y atención de clínica", icon: Building2 },
   { value: "patient", label: "Paciente", description: "Accede a tu historial clínico", icon: UsersRound },
   { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
   { value: "support", label: "Soporte", description: "Soporte técnico y asistencia", icon: Headphones },
@@ -104,14 +105,10 @@ export function CredentialsStep({
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   return (
-    <div className="w-full max-w-[30rem]">
-      <div className="mb-7 flex justify-end">
-        <CountrySelect id="login-locale-country" mode="locale" value={country} onChange={onCountryChange} />
-      </div>
-
+    <div className="w-full max-w-[38rem]">
       <div className="mb-6 flex items-center gap-4">
         <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-accent shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)]">
-          <BrandLogo className="h-9 w-10 brightness-0 invert" priority />
+          <BrandLogo className="h-9 w-10 brightness-0 invert" />
         </span>
         <Image className="h-auto w-[12rem] max-w-full" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
       </div>
@@ -123,7 +120,7 @@ export function CredentialsStep({
 
       <div className="mt-8">
         <p className="mb-3 text-sm font-semibold text-ink">Iniciar sesión como</p>
-        <div className="grid grid-cols-2 gap-3 min-[520px]:grid-cols-4" role="group" aria-label="Tipo de cuenta">
+        <div className="grid grid-cols-2 gap-3 min-[520px]:grid-cols-4 min-[1280px]:grid-cols-5" role="group" aria-label="Tipo de cuenta">
           {LOGIN_ROLE_OPTIONS.map((option) => {
             const Icon = option.icon;
             const isSelected = loginRole === option.value;
@@ -132,7 +129,7 @@ export function CredentialsStep({
               <button
                 key={option.value}
                 type="button"
-                className={`group flex min-h-[10.75rem] flex-col items-center rounded-xl border px-2 py-4 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-white text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
+                className={`group flex min-h-[10.75rem] flex-col items-center rounded-xl border px-2 py-4 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 min-[1280px]:px-1.5 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-white text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
                 onClick={() => onLoginRoleChange(option.value)}
                 aria-pressed={isSelected}
                 aria-label={option.value === "support" ? "Soporte, Super Administrador" : option.label}
@@ -177,7 +174,7 @@ export function CredentialsStep({
           <div className="grid gap-2">
             <label className="text-2xs font-bold text-ink" htmlFor="phone">Número de celular</label>
             <div className="flex items-center gap-0">
-              <CountrySelect id="login-phone-country" value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
+              <CountrySelect id="login-phone-country" value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} ariaDescribedBy={identifierError ? "identifier-error" : undefined} />
               <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
                 <input ref={phoneInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent px-3 text-2xs text-ink outline-0 placeholder:text-placeholder" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
               </div>

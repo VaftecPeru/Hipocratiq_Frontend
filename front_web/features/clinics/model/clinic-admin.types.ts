@@ -2,6 +2,13 @@ import type { CountryCode } from "@/shared/ui/country-flag";
 
 export type ClinicMemberRole = "clinic_admin" | "receptionist" | "doctor";
 
+export type ClinicPreferences = {
+  maintenance: boolean;
+  audit: boolean;
+  signatures: boolean;
+  backups: boolean;
+};
+
 export type ClinicAdminInfo = {
   id: number;
   name: string;
@@ -9,6 +16,7 @@ export type ClinicAdminInfo = {
   contactPhone: string;
   address: string;
   status: "active" | "suspended";
+  preferences: ClinicPreferences;
 };
 
 export type ClinicTeamMember = {
@@ -39,15 +47,67 @@ export type ClinicPatientTriage = {
   registrarName: string | null;
 };
 
+export type ClinicPatientAppointment = {
+  id: number;
+  scheduledAt: string;
+  appointmentType: string;
+  status: ClinicAppointmentStatus;
+  statusLabel: string;
+  doctor: { id: number; name: string; specialty: string | null } | null;
+};
+
 export type ClinicPatient = {
   id: number;
   patientCode: string;
   name: string | null;
   email: string | null;
   phoneNumber: string | null;
+  insurance: string | null;
+  isReturningPatient: boolean;
+  whatsappConsent: boolean;
   status: "pending_verification" | "active" | "suspended" | "disabled" | null;
   createdAt: string | null;
+  age: number | null;
+  lastAppointment: ClinicPatientAppointment | null;
+  nextAppointment: ClinicPatientAppointment | null;
   triage?: ClinicPatientTriage | null;
+};
+
+export type ClinicPatientProfile = {
+  documentType: string | null;
+  documentNumber: string | null;
+  dateOfBirth: string | null;
+  sex: string | null;
+  address: string | null;
+  emergencyContact: string | null;
+  insurance: string | null;
+  isReturningPatient: boolean;
+  whatsappConsent: boolean;
+  countryCode: string | null;
+};
+
+export type ClinicPatientIntakeSummary = {
+  reasonCategory: string | null;
+  requestedDoctor: { id: number; name: string; specialty: string | null } | null;
+  specialty: string | null;
+  triage: {
+    temperatureC: number | null;
+    systolicBp: number | null;
+    diastolicBp: number | null;
+    heartRate: number | null;
+    respiratoryRate: number | null;
+    oxygenSaturation: number | null;
+    priority: ClinicPatientTriagePriority | null;
+    recordedAt: string | null;
+  } | null;
+};
+
+export type ClinicPatientDetail = {
+  patient: ClinicPatient;
+  profile: ClinicPatientProfile;
+  intake: ClinicPatientIntakeSummary | null;
+  recentAppointments: ClinicPatientAppointment[];
+  nextAppointment: ClinicPatientAppointment | null;
 };
 
 export type ClinicAppointmentStatus =

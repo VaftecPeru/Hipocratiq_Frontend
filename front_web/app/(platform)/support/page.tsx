@@ -32,6 +32,19 @@ import { CountryFlag } from "@/shared/ui/country-flag";
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
+
+const EMPTY_SUMMARY: SupportDashboardSummary = {
+  totals: { tickets: 0, open: 0, inProgress: 0, waitingOnCustomer: 0, resolvedToday: 0, overdue: 0, unassigned: 0 },
+  sla: { compliancePercentage: 100, targetPercentage: 90, evaluatedTickets: 0 },
+  byPriority: [],
+  byCategory: [],
+  byCountry: [],
+  agents: [],
+  escalations: [],
+  recentActivity: [],
+  generatedAt: "",
+};
 
 const STATUS_LABELS: Record<SupportTicketStatus, string> = {
   open: "Abierto",
@@ -60,18 +73,6 @@ const PRIORITY_COLORS: Record<SupportTicketPriority, string> = {
   high: "var(--warning)",
   normal: "var(--accent)",
   low: "var(--success)",
-};
-
-const EMPTY_SUMMARY: SupportDashboardSummary = {
-  totals: { tickets: 0, open: 0, inProgress: 0, waitingOnCustomer: 0, resolvedToday: 0, overdue: 0, unassigned: 0 },
-  sla: { compliancePercentage: 100, targetPercentage: 90, evaluatedTickets: 0 },
-  byPriority: [],
-  byCategory: [],
-  byCountry: [],
-  agents: [],
-  escalations: [],
-  recentActivity: [],
-  generatedAt: "",
 };
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
@@ -168,6 +169,15 @@ export default function SupportPage() {
     { label: "Resueltos Hoy", value: numberFormatter.format(summary.totals.resolvedToday), change: "Cierres operativos", direction: "up", icon: CheckCircle2, tone: "success" },
     { label: "SLA Cumplido", value: `${summary.sla.compliancePercentage}%`, change: `Meta ${summary.sla.targetPercentage}%`, direction: summary.sla.compliancePercentage >= summary.sla.targetPercentage ? "up" : "down", icon: ShieldCheck, tone: "violet" },
   ], [summary]);
+
+  if (!data) {
+    if (error) {
+      return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
+    }
+
+    return <PlatformModuleLoading label="Cargando soporte" />;
+  }
+
   const prioritySegments = summary.byPriority.map((item) => ({
     label: PRIORITY_LABELS[item.key],
     value: numberFormatter.format(item.count),

@@ -155,7 +155,6 @@ export function RegistrationField({ label, name, value, onChange, error, type = 
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={showPassword}
-            tabIndex={-1}
           >
             {showPassword
               ? <EyeOff className="size-4" strokeWidth={1.7} aria-hidden="true" />

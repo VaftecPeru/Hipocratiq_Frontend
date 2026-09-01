@@ -44,8 +44,8 @@ export function getDoctorRegistrationClinics(): Promise<ClinicsResponse> {
   return getFromApi<ClinicsResponse>("/api/v1/auth/register/doctor/clinics");
 }
 
-export function getDoctorRegistrationSpecialties(): Promise<SpecialtiesResponse> {
-  return getFromApi<SpecialtiesResponse>("/api/v1/auth/register/doctor/specialties");
+export function getDoctorRegistrationSpecialties(signal?: AbortSignal): Promise<SpecialtiesResponse> {
+  return getFromApi<SpecialtiesResponse>("/api/v1/auth/register/doctor/specialties", { signal });
 }
 
 export function getDoctorPlans(): Promise<PlansResponse> {

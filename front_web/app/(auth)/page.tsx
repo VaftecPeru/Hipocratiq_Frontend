@@ -14,9 +14,9 @@ export default async function Home() {
 
   return (
     <AuthPlatformSettingsProvider>
-      <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-[minmax(34rem,38%)_1fr]">
+      <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-2">
         <section className="grid h-dvh min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" aria-label="Inicio de sesión">
-          <div className="grid min-h-0 place-items-center overflow-y-auto overscroll-contain px-[clamp(1.25rem,6vw,4.5rem)] py-[clamp(1.5rem,4vh,3rem)] scrollbar-none max-sm:items-start max-sm:pt-8 [&::-webkit-scrollbar]:hidden">
+          <div className="grid min-h-0 place-items-center overflow-y-auto overscroll-contain px-[clamp(1.25rem,5vw,4.5rem)] py-[clamp(1.5rem,4vh,3rem)] scrollbar-none max-sm:items-start max-sm:pt-8 [&::-webkit-scrollbar]:hidden">
             <LoginFlow />
           </div>
 

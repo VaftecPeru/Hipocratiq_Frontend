@@ -7,6 +7,8 @@ type ApiErrorPayload = {
   errors?: ValidationErrors;
 };
 
+type MutationMethod = "POST" | "PATCH" | "DELETE";
+
 async function readJson<T>(response: Response): Promise<T | null> {
   return response.json().catch(() => null) as Promise<T | null>;
 }
@@ -91,7 +93,14 @@ function getCookie(name: string): string | null {
   return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
 }
 
-async function getCsrfToken(): Promise<string> {
+let csrfToken: string | null = null;
+let csrfRequest: Promise<string> | null = null;
+
+function invalidateCsrfToken(): void {
+  csrfToken = null;
+}
+
+async function refreshCsrfToken(): Promise<string> {
   const response = await fetch(`${API_PREFIX}/sanctum/csrf-cookie`, {
     credentials: "include",
     headers: { Accept: "application/json" },
@@ -110,79 +119,102 @@ async function getCsrfToken(): Promise<string> {
     throw new ApiError("No pudimos validar la sesión del navegador.", 419);
   }
 
+  csrfToken = token;
   return token;
+}
+
+async function getCsrfToken(forceRefresh = false): Promise<string> {
+  if (csrfRequest) {
+    return csrfRequest;
+  }
+
+  const cookieToken = getCookie("XSRF-TOKEN");
+
+  if (!forceRefresh && csrfToken && csrfToken === cookieToken) {
+    return csrfToken;
+  }
+
+  if (!forceRefresh && cookieToken) {
+    csrfToken = cookieToken;
+    return csrfToken;
+  }
+
+  csrfRequest = refreshCsrfToken().finally(() => {
+    csrfRequest = null;
+  });
+
+  return csrfRequest;
+}
+
+async function sendMutation(
+  method: MutationMethod,
+  path: string,
+  payload?: Record<string, unknown>,
+): Promise<Response> {
+  const sendRequest = async (token: string): Promise<Response> => fetch(`${API_PREFIX}${path}`, {
+    method,
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-XSRF-TOKEN": token,
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  let response = await sendRequest(await getCsrfToken());
+
+  if (response.status === 419) {
+    invalidateCsrfToken();
+    response = await sendRequest(await getCsrfToken(true));
+  }
+
+  return response;
+}
+
+async function requestMutation<T>(
+  method: MutationMethod,
+  path: string,
+  payload?: Record<string, unknown>,
+): Promise<T> {
+  const response = await sendMutation(method, path, payload);
+
+  if (!response.ok) {
+    const errorData = await readJson<ApiErrorPayload>(response);
+    const firstValidationError = errorData?.errors
+      ? Object.values(errorData.errors).flat()[0]
+      : null;
+
+    throw new ApiError(
+      localizedErrorMessage(
+        response.status,
+        firstValidationError ?? errorData?.message ?? null,
+        response.headers.get("retry-after"),
+      ),
+      response.status,
+      errorData?.errors,
+    );
+  }
+
+  return (await readJson<T>(response)) as T;
 }
 
 export async function postToApi<T>(
   path: string,
   payload?: Record<string, unknown>,
 ): Promise<T> {
-  const csrfToken = await getCsrfToken();
-  const response = await fetch(`${API_PREFIX}${path}`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-XSRF-TOKEN": csrfToken,
-    },
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-
-  if (!response.ok) {
-    const errorData = await readJson<ApiErrorPayload>(response);
-    const firstValidationError = errorData?.errors
-      ? Object.values(errorData.errors).flat()[0]
-      : null;
-
-    throw new ApiError(
-      localizedErrorMessage(
-        response.status,
-        firstValidationError ?? errorData?.message ?? null,
-        response.headers.get("retry-after"),
-      ),
-      response.status,
-      errorData?.errors,
-    );
-  }
-
-  return (await readJson<T>(response)) as T;
+  return requestMutation("POST", path, payload);
 }
 
 export async function patchToApi<T>(
   path: string,
   payload?: Record<string, unknown>,
 ): Promise<T> {
-  const csrfToken = await getCsrfToken();
-  const response = await fetch(`${API_PREFIX}${path}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-XSRF-TOKEN": csrfToken,
-    },
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
+  return requestMutation("PATCH", path, payload);
+}
 
-  if (!response.ok) {
-    const errorData = await readJson<ApiErrorPayload>(response);
-    const firstValidationError = errorData?.errors
-      ? Object.values(errorData.errors).flat()[0]
-      : null;
-
-    throw new ApiError(
-      localizedErrorMessage(
-        response.status,
-        firstValidationError ?? errorData?.message ?? null,
-        response.headers.get("retry-after"),
-      ),
-      response.status,
-      errorData?.errors,
-    );
-  }
-
-  return (await readJson<T>(response)) as T;
+export async function deleteFromApi(path: string): Promise<void> {
+  await requestMutation<unknown>("DELETE", path);
 }
 
 export async function getFromApi<T>(
