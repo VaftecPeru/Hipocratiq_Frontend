@@ -1,13 +1,14 @@
 import type {
   LoginActorContext,
+  LoginRequestedRole,
   OtpChallengeResponse,
   WebLoginVerificationResponse,
 } from "@/features/auth/model/auth.types";
 import { ApiError, postToApi } from "@/shared/api/http-client";
 
 type RequestLoginOtpInput =
-  | { identifier: string; actorContext: "staff"; password: string }
-  | { identifier: string; actorContext: "patient"; password?: never };
+  | { identifier: string; actorContext: "staff"; requestedRole: Exclude<LoginRequestedRole, "patient">; password: string }
+  | { identifier: string; actorContext: "patient"; requestedRole: "patient"; password?: never };
 
 function clearLegacyBrowserToken(): void {
   if (typeof window === "undefined") return;
@@ -23,6 +24,7 @@ export function requestLoginOtp(input: RequestLoginOtpInput): Promise<OtpChallen
     purpose: "login",
     client_type: "web",
     actor_context: input.actorContext,
+    requested_role: input.requestedRole,
     identifier: input.identifier,
   };
 

@@ -1,4 +1,5 @@
 import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type {
   AdminUser,
   AdminAssignableRole,
@@ -171,19 +172,15 @@ export async function getAdminUsers(
   );
 
   if (
-    !Array.isArray(payload.data) ||
     !payload.meta ||
     !payload.summary ||
-    !Array.isArray(payload.summary.role_distribution) ||
-    !Array.isArray(payload.summary.country_distribution) ||
-    !Array.isArray(payload.summary.recent_activity) ||
-    !Array.isArray(payload.filter_options?.clinics)
+    !payload.filter_options
   ) {
     throw new ApiError("El servidor devolvió una respuesta de usuarios incompleta.", 502);
   }
 
   return {
-    users: payload.data.map(mapUser),
+    users: parseApiList<ApiUser>(payload.data, "users.data").map(mapUser),
     totals: {
       users: payload.summary.totals.users,
       activeUsers: payload.summary.totals.active_users,
@@ -192,24 +189,24 @@ export async function getAdminUsers(
       doctors: payload.summary.totals.doctors,
       patients: payload.summary.totals.patients,
     },
-    roleDistribution: payload.summary.role_distribution.map((item) => ({
+    roleDistribution: parseApiList<typeof payload.summary.role_distribution[number]>(payload.summary.role_distribution, "users.summary.role_distribution").map((item) => ({
       key: item.role,
       count: item.count,
       percentage: item.percentage,
     })),
-    countryDistribution: payload.summary.country_distribution.map((item) => ({
+    countryDistribution: parseApiList<typeof payload.summary.country_distribution[number]>(payload.summary.country_distribution, "users.summary.country_distribution").map((item) => ({
       key: item.country_code,
       count: item.count,
       percentage: item.percentage,
     })),
-    recentActivity: payload.summary.recent_activity.map((item) => ({
+    recentActivity: parseApiList<typeof payload.summary.recent_activity[number]>(payload.summary.recent_activity, "users.summary.recent_activity").map((item) => ({
       id: item.id,
       title: item.title,
       detail: item.detail,
       role: item.role,
       occurredAt: formatDate(item.occurred_at, true),
     })),
-    clinics: payload.filter_options.clinics.map((clinic) => ({
+    clinics: parseApiList<typeof payload.filter_options.clinics[number]>(payload.filter_options.clinics, "users.filter_options.clinics").map((clinic) => ({
       id: clinic.id,
       name: clinic.name,
       countryCode: clinic.country_code,

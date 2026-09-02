@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import {
   Activity,
   ArrowRight,
@@ -9,7 +10,6 @@ import {
   CircleDollarSign,
   Clock3,
   Eye,
-  ReceiptText,
   ShieldAlert,
   Stethoscope,
   TrendingUp,
@@ -19,6 +19,7 @@ import {
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { getClinicDashboardServer } from "@/features/clinics/api/server-clinic-dashboard";
 import { ReceptionistDashboard } from "@/features/clinics/ui/receptionist-dashboard";
+import { DashboardUnavailable } from "@/shared/ui/dashboard-unavailable";
 
 type MetricTone = "accent" | "success" | "warning" | "violet";
 
@@ -297,25 +298,28 @@ function StatusBadge({ status }: { status: DoctorStatus }) {
 export default async function ClinicDashboardPage() {
   const session = await getAuthenticatedSession();
   const dashboard = await getClinicDashboardServer();
+  if (!dashboard) {
+    return <DashboardUnavailable description="No pudimos cargar los datos operativos desde el servidor." retryHref="/clinic/dashboard" title="No se pudo cargar el panel operativo" />;
+  }
+
   if (session?.actor_context === "receptionist") {
     return (
       <ReceptionistDashboard
         dashboard={dashboard}
-        clinicName={dashboard?.clinic.name ?? session.user.clinic?.name ?? "Tu clínica"}
+        clinicName={dashboard.clinic.name ?? session.user.clinic?.name ?? "Tu clínica"}
         userName={session.user.name}
       />
     );
   }
-  const clinicName = dashboard?.clinic.name ?? session?.user.clinic?.name ?? "Tu clínica";
+  const clinicName = dashboard.clinic.name ?? session?.user.clinic?.name ?? "Tu clínica";
   const liveMetrics: readonly Metric[] = metrics.map((metric) => {
     if (metric.label === "Citas programadas") return { ...metric, value: "—", helper: "Agenda aún no configurada", badge: "Sin datos" };
     if (metric.label === "Facturación mensual") return { ...metric, value: "—", helper: "Facturación aún no configurada", badge: "Sin datos" };
-    if (!dashboard) return metric;
     if (metric.label === "Médicos en turno") return { ...metric, value: String(dashboard.metrics.doctorsTotal), helper: "membresías activas" };
     if (metric.label === "Pacientes atendidos") return { ...metric, value: String(dashboard.metrics.patientsTotal), helper: "perfiles registrados" };
     return metric;
   });
-  const liveDoctors: readonly Doctor[] = dashboard?.team
+  const liveDoctors: readonly Doctor[] = dashboard.team
     .filter((member) => member.role === "doctor")
     .slice(0, 4)
     .map((member) => ({
@@ -325,7 +329,7 @@ export default async function ClinicDashboardPage() {
       office: "Sin asignar",
       pendingAppointments: 0,
       status: "Disponible",
-    })) ?? [];
+    }));
 
   return (
     <main className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
@@ -344,20 +348,20 @@ export default async function ClinicDashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-          <button
+          <Link
+            href="/clinic/agenda"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-3.5 text-xs font-extrabold text-ink shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-4"
-            type="button"
           >
             <CalendarPlus className="size-4" strokeWidth={1.8} aria-hidden="true" />
             Agendar Cita
-          </button>
-          <button
+          </Link>
+          <Link
+            href="/clinic/registro-pacientes"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-3.5 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-4"
-            type="button"
           >
             <UserPlus className="size-4" strokeWidth={1.8} aria-hidden="true" />
             Nuevo Paciente
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -488,13 +492,13 @@ export default async function ClinicDashboardPage() {
               <Clock3 className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
               Actualizado hoy, 10:32 AM
             </p>
-            <button
+            <Link
+              href="/clinic/reportes"
               className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-              type="button"
             >
               Ver análisis completo
               <ArrowUpRight className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-            </button>
+            </Link>
           </div>
         </article>
       </section>
@@ -522,13 +526,13 @@ export default async function ClinicDashboardPage() {
               Disponibilidad y carga pendiente del equipo clínico
             </p>
           </div>
-          <button
+          <Link
+            href="/clinic/pacientes"
             className="inline-flex min-h-9 w-fit items-center gap-2 rounded-xl px-3 text-xs font-extrabold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            type="button"
           >
             Ver directorio
             <ArrowRight className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-          </button>
+          </Link>
         </div>
 
         <div className="overflow-x-auto">
@@ -585,14 +589,14 @@ export default async function ClinicDashboardPage() {
                     <StatusBadge status={doctor.status} />
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <button
+                    <Link
+                      href="/clinic/agenda"
                       className="inline-flex min-h-8 items-center gap-2 rounded-lg px-2.5 text-xs font-extrabold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                      type="button"
                       aria-label={`Ver agenda de ${doctor.name}`}
                     >
                       <Eye className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
                       Ver agenda
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -602,10 +606,13 @@ export default async function ClinicDashboardPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-[0.62rem] font-semibold text-muted sm:px-5">
           <span>{liveDoctors.length} médicos visibles en este bloque</span>
-          <span className="inline-flex items-center gap-1.5">
-            <ReceiptText className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-            Agenda pendiente no disponible
-          </span>
+          <Link
+            className="inline-flex items-center gap-1.5 rounded-md text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            href="/clinic/agenda"
+          >
+            <CalendarDays className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
+            Ver agenda clínica
+          </Link>
         </div>
       </section>
     </main>

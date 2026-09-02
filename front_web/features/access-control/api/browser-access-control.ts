@@ -1,4 +1,5 @@
 import { ApiError, getFromApi, patchToApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type {
   AccessControlData,
   AccessClinic,
@@ -12,7 +13,7 @@ import type { CountryCode } from "@/shared/ui/country-flag";
 type ApiAccessControlResponse = {
   data: {
     actor_user_id: number;
-    enforcement: "actor_context";
+    enforcement: "catalog_gate";
     roles: Array<{
       key: AdminAssignableRole;
       name: string;
@@ -67,15 +68,12 @@ export async function getAccessControl(signal?: AbortSignal): Promise<AccessCont
 
   if (
     !payload.data ||
-    !Array.isArray(payload.data.roles) ||
-    !Array.isArray(payload.data.permissions) ||
-    !Array.isArray(payload.data.clinics) ||
-    !Array.isArray(payload.data.recent_changes)
+    !payload.data.summary
   ) {
     throw new ApiError("El servidor devolvió una configuración de acceso incompleta.", 502);
   }
 
-  const roles: AccessRoleDefinition[] = payload.data.roles.map((role) => ({
+  const roles: AccessRoleDefinition[] = parseApiList<typeof payload.data.roles[number]>(payload.data.roles, "access_control.roles").map((role) => ({
     key: role.key,
     name: role.name,
     scope: role.scope,
@@ -83,7 +81,7 @@ export async function getAccessControl(signal?: AbortSignal): Promise<AccessCont
     permissions: role.permissions,
     userCount: role.user_count,
   }));
-  const clinics: AccessClinic[] = payload.data.clinics.map((clinic) => ({
+  const clinics: AccessClinic[] = parseApiList<typeof payload.data.clinics[number]>(payload.data.clinics, "access_control.clinics").map((clinic) => ({
     id: clinic.id,
     name: clinic.name,
     countryCode: clinic.country_code,
@@ -94,14 +92,14 @@ export async function getAccessControl(signal?: AbortSignal): Promise<AccessCont
     actorUserId: payload.data.actor_user_id,
     enforcement: payload.data.enforcement,
     roles,
-    permissions: payload.data.permissions,
+    permissions: parseApiList<AccessPermission>(payload.data.permissions, "access_control.permissions"),
     clinics,
     summary: {
       totalUsers: payload.data.summary.total_users,
       activeClinics: payload.data.summary.active_clinics,
       unassignedUsers: payload.data.summary.unassigned_users,
     },
-    recentChanges: payload.data.recent_changes.map((change) => ({
+    recentChanges: parseApiList<typeof payload.data.recent_changes[number]>(payload.data.recent_changes, "access_control.recent_changes").map((change) => ({
       id: change.id,
       actorName: change.actor_name,
       resourceId: change.resource_id ? Number(change.resource_id) : null,

@@ -24,6 +24,8 @@ export function ModalField({
   min,
   max,
   step,
+  describedBy,
+  error,
 }: {
   id: string;
   label: string;
@@ -37,15 +39,37 @@ export function ModalField({
   min?: number;
   max?: number;
   step?: number;
+  describedBy?: string;
+  error?: string;
 }) {
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedByIds = [describedBy, hintId, errorId].filter(Boolean).join(" ") || undefined;
+
   return (
     <div className="grid min-w-0 gap-1.5">
       <label className="text-2xs font-bold text-muted" htmlFor={id}>
         {label}
         {required ? <span className="ml-0.5 text-danger">*</span> : null}
       </label>
-      <input className={FIELD_BASE} defaultValue={defaultValue} id={id} max={max} min={min} onChange={onChange} placeholder={placeholder} step={step} type={type} value={value} />
-      {hint ? <p className="text-2xs text-muted">{hint}</p> : null}
+      <input
+        aria-describedby={describedByIds}
+        aria-invalid={error ? true : undefined}
+        aria-required={required || undefined}
+        className={FIELD_BASE}
+        defaultValue={defaultValue}
+        id={id}
+        max={max}
+        min={min}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        step={step}
+        type={type}
+        value={value}
+      />
+      {hint ? <p className="text-2xs text-muted" id={hintId}>{hint}</p> : null}
+      {error ? <p className="text-2xs font-semibold text-danger" id={errorId} role="alert">{error}</p> : null}
     </div>
   );
 }
@@ -58,16 +82,24 @@ export function ModalSelect({
   options,
   defaultValue,
   required = false,
+  disabled = false,
+  placeholder,
+  hint,
   value,
   onChange,
+  error,
 }: {
   id: string;
   label: string;
   options: ModalSelectOption[];
   defaultValue?: string;
   required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  hint?: string;
   value?: string;
   onChange?: (value: string) => void;
+  error?: string;
 }) {
   const normalizedOptions = options.map((option) =>
     typeof option === "string" ? { value: option, label: option } : option,
@@ -82,6 +114,10 @@ export function ModalSelect({
       defaultValue={defaultValue ?? normalizedOptions[0]?.value}
       onChange={onChange}
       required={required}
+      disabled={disabled}
+      placeholder={placeholder}
+      hint={hint}
+      error={error}
       density="form"
       surface="input"
     />
@@ -147,12 +183,14 @@ export function ModalPrimaryButton({
   tone = "accent",
   type = "button",
   disabled = false,
+  form,
 }: {
   children: ReactNode;
   onClick?: () => void;
   tone?: "accent" | "danger";
   type?: "button" | "submit";
   disabled?: boolean;
+  form?: string;
 }) {
   return (
     <button
@@ -160,6 +198,7 @@ export function ModalPrimaryButton({
         tone === "danger" ? "bg-danger hover:bg-danger/90" : "bg-accent hover:bg-accent-hover"
       }`}
       disabled={disabled}
+      form={form}
       onClick={onClick}
       type={type}
     >
@@ -168,10 +207,11 @@ export function ModalPrimaryButton({
   );
 }
 
-export function ModalSecondaryButton({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+export function ModalSecondaryButton({ children, onClick, disabled = false }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
-      className="flex min-h-9 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus sm:flex-initial sm:px-5"
+      className="flex min-h-9 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5"
+      disabled={disabled}
       onClick={onClick}
       type="button"
     >

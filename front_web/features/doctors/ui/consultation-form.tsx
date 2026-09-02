@@ -3,13 +3,14 @@
 import { FileText, Save, X } from "lucide-react";
 import { useState } from "react";
 import { DoctorCard } from "@/features/doctors/ui/doctor-primitives";
+import type { DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
 import { Spinner } from "@/shared/ui/spinner";
 import { CLINICAL_SECTIONS, emptyClinicalValues, type ClinicalInput } from "@/features/doctors/ui/clinical-sections";
 
 export type ConsultationFormValues = {
   chiefComplaint: string;
   objective: string;
-  status: string;
+  status: DoctorConsultationStatus;
   sections: Record<string, Record<string, string>>;
 };
 
@@ -103,11 +104,12 @@ export function ConsultationForm({
 }: ConsultationFormProps) {
   const [chiefComplaint, setChiefComplaint] = useState(initialValues.chiefComplaint ?? "");
   const [objective, setObjective] = useState(initialValues.objective ?? "");
-  const [status, setStatus] = useState(initialValues.status ?? "in_progress");
+  const [status, setStatus] = useState<DoctorConsultationStatus>(initialValues.status ?? "in_progress");
   const [sections, setSections] = useState<Record<string, Record<string, string>>>(
     initialValues.sections ?? emptyClinicalValues(),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const canSign = mode === "edit" && initialValues.status === "completed";
 
   function setSectionValue(sectionKey: string, inputKey: string, value: string): void {
     setSections((current) => ({
@@ -212,13 +214,13 @@ export function ConsultationForm({
               <select
                 className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20"
                 value={status}
-                onChange={(event) => setStatus(event.target.value)}
+                onChange={(event) => setStatus(event.target.value as DoctorConsultationStatus)}
                 aria-label="Estado de la consulta"
               >
                 <option value="in_progress">En curso</option>
-                <option value="completed">Completada</option>
-                <option value="signed">Firmada</option>
-                <option value="draft">Borrador</option>
+                 <option value="completed">Completada</option>
+                 {canSign || status === "signed" ? <option value="signed">Firmar consulta</option> : null}
+                 <option value="draft">Borrador</option>
               </select>
             </label>
             <p className="mt-3 text-[0.56rem] font-bold leading-4 text-ink-secondary">

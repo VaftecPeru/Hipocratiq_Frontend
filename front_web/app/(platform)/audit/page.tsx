@@ -22,6 +22,7 @@ import type { AuditEvent, AuditFilters, AuditSummary } from "@/features/platform
 import { CountryFlag } from "@/shared/ui/country-flag";
 import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 
 const EMPTY_SUMMARY: AuditSummary = {
   totals: { events: 0, uniqueUsers: 0, countries: 0, critical: 0 },
@@ -135,6 +136,14 @@ export default function AuditPage() {
     { label: "Países Afectados", value: numberFormatter.format(summary.totals.countries), change: "Cobertura global", direction: "up", icon: Globe2, tone: "success" },
     { label: "Acciones Críticas", value: numberFormatter.format(summary.totals.critical), change: "Requieren supervisión", direction: summary.totals.critical > 0 ? "down" : "up", icon: AlertTriangle, tone: "danger" },
   ], [summary]);
+
+  if (!data) {
+    if (error) {
+      return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
+    }
+
+    return <PlatformModuleLoading label="Cargando auditoría global" />;
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">

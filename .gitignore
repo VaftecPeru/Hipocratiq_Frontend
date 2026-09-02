@@ -1,8 +1,8 @@
 # This repository contains only the web and mobile frontends.
 /back_api/
 /documentacion/
-/.github/
 /.claude/
+/.atl/
 
 # Operating system and editor artifacts.
 .DS_Store

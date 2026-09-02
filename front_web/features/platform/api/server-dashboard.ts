@@ -6,11 +6,56 @@ import type {
   SystemService,
 } from "@/features/platform/model/admin-dashboard.types";
 import { serverEnv } from "@/shared/config/server-env";
+import { parseApiList } from "@/shared/api/parse-api-list";
+
+const DASHBOARD_REQUEST_TIMEOUT_MS = 5_000;
 
 type LoadResult<T> = { ok: true; data: T } | { ok: false; message: string; status: number };
 
 type ApiService = { key: string; label: string; status: SystemService["status"]; latency_ms: number; detail: string };
 type ApiCountry = { country_code: string; clinics: number; users: number };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || isString(value);
+}
+
+function isApiCountry(value: unknown): value is ApiCountry {
+  return isRecord(value)
+    && isString(value.country_code)
+    && isNumber(value.clinics)
+    && isNumber(value.users);
+}
+
+function isApiService(value: unknown): value is ApiService {
+  return isRecord(value)
+    && isString(value.key)
+    && isString(value.label)
+    && (value.status === "operational" || value.status === "degraded" || value.status === "unavailable")
+    && isNumber(value.latency_ms)
+    && isString(value.detail);
+}
+
+function isArrayOf<T>(value: unknown, guard: (item: unknown) => item is T): value is T[] {
+  return Array.isArray(value) && value.every(guard);
+}
+
+function invalidContractResult<T>(path: string): LoadResult<T> {
+  console.error("Invalid admin API contract.", { path });
+
+  return { ok: false, message: "El servidor devolvió un contrato operativo inválido.", status: 502 };
+}
 
 function mapService(service: ApiService): SystemService {
   return { key: service.key, label: service.label, status: service.status, latencyMs: service.latency_ms, detail: service.detail };
@@ -31,6 +76,7 @@ async function getAdminPayload<T>(path: string): Promise<LoadResult<T>> {
     const response = await fetch(`${serverEnv.backendUrl}${path}`, {
       cache: "no-store",
       headers: { Accept: "application/json", Cookie: (await cookies()).toString(), Origin: serverEnv.appUrl },
+      signal: AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
     });
 
     if (!response.ok) return { ok: false, message: errorMessage(response.status), status: response.status };
@@ -62,10 +108,66 @@ type ApiDashboard = {
   system: ApiService[];
 };
 
+function isApiDashboard(value: unknown): value is ApiDashboard {
+  if (!isRecord(value) || !isRecord(value.kpis)) return false;
+
+  const { kpis } = value;
+
+  return isString(value.generated_at)
+    && [
+      kpis.active_clinics,
+      kpis.clinics_added_this_month,
+      kpis.active_users,
+      kpis.users_added_this_month,
+      kpis.active_patients,
+      kpis.monthly_revenue_cents,
+      kpis.previous_month_revenue_cents,
+      kpis.open_support_tickets,
+      kpis.overdue_support_tickets,
+    ].every(isNumber)
+    && isArrayOf(value.revenue, (item): item is ApiDashboard["revenue"][number] => isRecord(item) && isString(item.month) && isNumber(item.amount_cents))
+    && isArrayOf(value.countries, isApiCountry)
+    && isArrayOf(value.recent_clinics, (item): item is ApiDashboard["recent_clinics"][number] => isRecord(item)
+      && isNumber(item.id)
+      && isString(item.name)
+      && isString(item.country_code)
+      && isString(item.address)
+      && isString(item.created_at))
+    && isArrayOf(value.recent_activity, (item): item is ApiDashboard["recent_activity"][number] => isRecord(item)
+      && isNumber(item.id)
+      && isString(item.module)
+      && isString(item.action)
+      && isNullableString(item.resource_label)
+      && isNullableString(item.actor_name)
+      && isNullableString(item.country_code)
+      && typeof item.critical === "boolean"
+      && isNullableString(item.occurred_at))
+    && isArrayOf(value.system, isApiService);
+}
+
+function normalizeDashboardLists(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+
+  return {
+    ...value,
+    revenue: parseApiList(value.revenue, "dashboard.revenue"),
+    countries: parseApiList(value.countries, "dashboard.countries"),
+    recent_clinics: parseApiList(value.recent_clinics, "dashboard.recent_clinics"),
+    recent_activity: parseApiList(value.recent_activity, "dashboard.recent_activity"),
+    system: parseApiList(value.system, "dashboard.system"),
+  };
+}
+
 export async function getAdminDashboard(): Promise<LoadResult<AdminDashboardData>> {
-  const result = await getAdminPayload<ApiDashboard>("/api/v1/auth/admin/dashboard");
+  const result = await getAdminPayload<unknown>("/api/v1/auth/admin/dashboard");
   if (!result.ok) return result;
-  const data = result.data;
+  let data: unknown;
+  try {
+    data = normalizeDashboardLists(result.data);
+  } catch {
+    return invalidContractResult("/api/v1/auth/admin/dashboard");
+  }
+  if (!isApiDashboard(data)) return invalidContractResult("/api/v1/auth/admin/dashboard");
 
   return { ok: true, data: {
     generatedAt: data.generated_at,
@@ -99,10 +201,56 @@ type ApiMonitoring = {
   event_volume: { administrative: number; authentication: number; critical: number; failed_authentication: number };
 };
 
+function isApiMonitoring(value: unknown): value is ApiMonitoring {
+  return isRecord(value)
+    && isRecord(value.metrics)
+    && isRecord(value.event_volume)
+    && isString(value.generated_at)
+    && (value.overall_status === "operational" || value.overall_status === "degraded")
+    && isArrayOf(value.countries, isApiCountry)
+    && isArrayOf(value.services, isApiService)
+    && isArrayOf(value.operational_signals, (item): item is ApiMonitoring["operational_signals"][number] => isRecord(item)
+      && isNumber(item.id)
+      && isString(item.module)
+      && isString(item.action)
+      && isNullableString(item.resource_label)
+      && isNullableString(item.country_code)
+      && isNullableString(item.occurred_at))
+    && isArrayOf(value.incidents, (item): item is ApiMonitoring["incidents"][number] => isRecord(item)
+      && isNumber(item.id)
+      && isString(item.title)
+      && isString(item.description)
+      && (item.severity === "minor" || item.severity === "major" || item.severity === "critical")
+      && (item.status === "investigating" || item.status === "identified" || item.status === "monitoring" || item.status === "resolved")
+      && isNullableString(item.service_key)
+      && isNullableString(item.country_code)
+      && isNullableString(item.created_by)
+      && isNullableString(item.started_at)
+      && isNullableString(item.resolved_at));
+}
+
+function normalizeMonitoringLists(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+
+  return {
+    ...value,
+    countries: parseApiList(value.countries, "monitoring.countries"),
+    services: parseApiList(value.services, "monitoring.services"),
+    operational_signals: parseApiList(value.operational_signals, "monitoring.operational_signals"),
+    incidents: parseApiList(value.incidents, "monitoring.incidents"),
+  };
+}
+
 export async function getAdminMonitoring(): Promise<LoadResult<AdminMonitoringData>> {
-  const result = await getAdminPayload<ApiMonitoring>("/api/v1/auth/admin/monitoring");
+  const result = await getAdminPayload<unknown>("/api/v1/auth/admin/monitoring");
   if (!result.ok) return result;
-  const data = result.data;
+  let data: unknown;
+  try {
+    data = normalizeMonitoringLists(result.data);
+  } catch {
+    return invalidContractResult("/api/v1/auth/admin/monitoring");
+  }
+  if (!isApiMonitoring(data)) return invalidContractResult("/api/v1/auth/admin/monitoring");
 
   return { ok: true, data: {
     generatedAt: data.generated_at,

@@ -105,6 +105,8 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
   const [address, setAddress] = useState("");
   const [insurance, setInsurance] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
+  const [isReturningPatient, setIsReturningPatient] = useState(false);
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [doctor, setDoctor] = useState("");
   const [reason, setReason] = useState("");
   const [objective, setObjective] = useState("");
@@ -183,6 +185,8 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
     setAddress("");
     setInsurance("");
     setEmergencyContact("");
+    setIsReturningPatient(false);
+    setWhatsappConsent(false);
     setDoctor("");
     setReason("");
     setObjective("");
@@ -262,6 +266,9 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
         sex: sex || null,
         address: address.trim() || null,
         emergencyContact: emergencyContact.trim() || null,
+        insurance: insurance || null,
+        isReturningPatient,
+        whatsappConsent,
         requestedDoctorUserId: doctor ? Number(doctor) : null,
         specialtyId,
         subspecialtyId,
@@ -330,7 +337,7 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
               <Field label="Notas de triaje"><textarea className={`${inputClass} min-h-20 py-2`} value={triageNotes} onChange={(event) => setTriageNotes(event.target.value)} placeholder="Observaciones clínicas de la valoración (opcional)" maxLength={2000} /></Field>
             </div>
             <div><p className="text-[0.58rem] font-bold text-ink-secondary">Adjuntar documento / comprobante</p><button className="mt-1.5 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-accent/35 bg-accent-soft/30 text-[0.62rem] font-bold text-accent" type="button" onClick={() => showNotice("La carga de documentos se habilitará con el expediente digital.")}><FileText className="size-4" aria-hidden="true" />Arrastra o selecciona un archivo <span className="text-[0.52rem] font-normal text-muted">PDF, JPG, PNG (Máx. 5MB)</span></button></div>
-            <div className="flex flex-wrap items-center gap-4 text-[0.58rem] font-semibold text-ink-secondary"><label className="flex items-center gap-2"><input className="size-3.5 accent-accent" type="checkbox" />Paciente recurrente</label><label className="flex items-center gap-2"><input className="size-3.5 accent-accent" type="checkbox" />Autoriza mensajes por WhatsApp</label><span className="ml-auto text-muted">{formComplete ? "Datos básicos listos" : "Completa nombres y teléfono"}</span></div>
+             <div className="flex flex-wrap items-center gap-4 text-[0.58rem] font-semibold text-ink-secondary"><label className="flex items-center gap-2"><input className="size-3.5 accent-accent" type="checkbox" checked={isReturningPatient} onChange={(event) => setIsReturningPatient(event.target.checked)} />Paciente recurrente</label><label className="flex items-center gap-2"><input className="size-3.5 accent-accent" type="checkbox" checked={whatsappConsent} onChange={(event) => setWhatsappConsent(event.target.checked)} />Autoriza mensajes por WhatsApp</label><span className="ml-auto text-muted">{formComplete ? "Datos básicos listos" : "Completa nombres y teléfono"}</span></div>
             <div className="flex justify-end gap-2 border-t border-line pt-3"><button className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-line px-3 text-xs font-bold text-muted hover:bg-surface-hover" type="button" onClick={resetForm}><RotateCcw className="size-3.5" aria-hidden="true" />Limpiar</button><button className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-4 text-xs font-extrabold text-white disabled:opacity-50" type="submit" disabled={isPending}>{isPending ? "Guardando…" : "Registrar paciente"}<Save className="size-3.5" aria-hidden="true" /></button></div>
           </form>
         </SectionCard>

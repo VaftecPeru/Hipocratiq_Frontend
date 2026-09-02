@@ -1,4 +1,5 @@
 import { ApiError, getFromApi, patchToApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type {
   AiModel,
   LocaleCode,
@@ -34,8 +35,11 @@ function isCountryCode(value: unknown): value is CountryCode {
   return typeof value === "string" && COUNTRY_CODES.includes(value as CountryCode);
 }
 
-function normalizeCountryCodes(value: unknown): CountryCode[] {
-  const countryCodes = Array.isArray(value) ? value.filter(isCountryCode) : [];
+function normalizeCountryCodes(value: unknown, field: string): CountryCode[] {
+  const countryCodes = parseApiList<unknown>(value, field);
+  if (!countryCodes.every(isCountryCode)) {
+    throw new ApiError(`El servidor devolvió una lista inválida para ${field}.`, 502);
+  }
   const uniqueCountryCodes = Array.from(new Set(countryCodes));
 
   return ["MX", ...uniqueCountryCodes.filter((countryCode) => countryCode !== "MX")];
@@ -44,6 +48,15 @@ function normalizeCountryCodes(value: unknown): CountryCode[] {
 function isLocale(value: unknown): value is LocaleCode { return typeof value === "string" && LOCALES.includes(value as LocaleCode); }
 function isAiModel(value: unknown): value is AiModel { return typeof value === "string" && AI_MODELS.includes(value as AiModel); }
 
+function parseValidatedList<T>(value: unknown, field: string, isValid: (item: unknown) => item is T): T[] {
+  const items = parseApiList<unknown>(value, field);
+  if (!items.every(isValid)) {
+    throw new ApiError(`El servidor devolvió una lista inválida para ${field}.`, 502);
+  }
+
+  return items;
+}
+
 function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
   const settings = payload.data;
 
@@ -51,8 +64,8 @@ function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
     throw new ApiError("El servidor devolvió una configuración regional incompleta.", 502);
   }
 
-  const enabledCountryCodes = normalizeCountryCodes(settings.enabled_country_codes);
-  const headerCountryCodes = normalizeCountryCodes(settings.header_country_codes);
+  const enabledCountryCodes = normalizeCountryCodes(settings.enabled_country_codes, "settings.enabled_country_codes");
+  const headerCountryCodes = normalizeCountryCodes(settings.header_country_codes, "settings.header_country_codes");
 
   return {
     defaultCountryCode: settings.default_country_code,
@@ -66,8 +79,8 @@ function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
     },
     localization: {
       defaultLocale: isLocale(settings.localization?.default_locale) ? settings.localization.default_locale : "es-MX",
-      enabledLocales: Array.isArray(settings.localization?.enabled_locales) ? settings.localization.enabled_locales.filter(isLocale) : ["es-MX"],
-      supportedLocales: Array.isArray(settings.localization?.supported_locales) ? settings.localization.supported_locales.filter(isLocale) : [...LOCALES],
+      enabledLocales: parseValidatedList(settings.localization?.enabled_locales, "settings.localization.enabled_locales", isLocale),
+      supportedLocales: parseValidatedList(settings.localization?.supported_locales, "settings.localization.supported_locales", isLocale),
       catalogStatus: typeof settings.localization?.catalog_status === "string" ? settings.localization.catalog_status : "source_only",
     },
     ai: {
@@ -75,13 +88,13 @@ function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
       windowDays: ([14, 30, 60] as const).includes(settings.ai?.window_days as 30) ? settings.ai?.window_days as 14 | 30 | 60 : 30,
       sensitivity: (["low", "medium", "high"] as const).includes(settings.ai?.sensitivity as "medium") ? settings.ai?.sensitivity as "low" | "medium" | "high" : "medium",
       automaticAlerts: settings.ai?.automatic_alerts === true,
-      enabledModels: Array.isArray(settings.ai?.enabled_models) ? settings.ai.enabled_models.filter(isAiModel) : [],
+      enabledModels: parseValidatedList(settings.ai?.enabled_models, "settings.ai.enabled_models", isAiModel),
     },
     aiCapabilities: {
       status: settings.ai_capabilities?.status === "configured" ? "configured" : "not_configured",
       provider: typeof settings.ai_capabilities?.provider === "string" ? settings.ai_capabilities.provider : null,
       predictionsAvailable: settings.ai_capabilities?.predictions_available === true,
-      dataSources: Array.isArray(settings.ai_capabilities?.data_sources) ? settings.ai_capabilities.data_sources.filter((item): item is string => typeof item === "string") : [],
+      dataSources: parseValidatedList(settings.ai_capabilities?.data_sources, "settings.ai_capabilities.data_sources", (item): item is string => typeof item === "string"),
     },
   };
 }

@@ -1,4 +1,5 @@
 import { ApiError, getFromApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type { AuditEvent, AuditEventList, AuditFilters, AuditSummary } from "@/features/platform/model/audit.types";
 
 type ApiEvent = {
@@ -59,10 +60,10 @@ function mapSummary(summary: ApiSummary): AuditSummary {
       countries: summary.totals.countries,
       critical: summary.totals.critical,
     },
-    topModules: summary.top_modules,
-    byCountry: summary.by_country.map((item) => ({ countryCode: item.country_code, count: item.count })),
-    criticalEvents: summary.critical_events.map(mapEvent),
-    recentChanges: summary.recent_changes.map(mapEvent),
+    topModules: parseApiList<typeof summary.top_modules[number]>(summary.top_modules, "audit.summary.top_modules"),
+    byCountry: parseApiList<typeof summary.by_country[number]>(summary.by_country, "audit.summary.by_country").map((item) => ({ countryCode: item.country_code, count: item.count })),
+    criticalEvents: parseApiList<ApiEvent>(summary.critical_events, "audit.summary.critical_events").map(mapEvent),
+    recentChanges: parseApiList<ApiEvent>(summary.recent_changes, "audit.summary.recent_changes").map(mapEvent),
     generatedAt: summary.generated_at,
   };
 }
@@ -86,14 +87,18 @@ function queryString(filters: AuditFilters): string {
 
 export async function getAdminAuditEvents(filters: AuditFilters = {}, signal?: AbortSignal): Promise<AuditEventList> {
   const payload = await getFromApi<ApiResponse>(`/api/v1/auth/admin/audit-events?${queryString(filters)}`, { signal });
-  if (!Array.isArray(payload.data) || !payload.meta || !payload.summary || !payload.filter_options) {
+  if (!payload.meta || !payload.summary || !payload.filter_options) {
     throw new ApiError("El servidor devolvió una respuesta de auditoría incompleta.", 502);
   }
 
   return {
-    events: payload.data.map(mapEvent),
+    events: parseApiList<ApiEvent>(payload.data, "audit.data").map(mapEvent),
     summary: mapSummary(payload.summary),
-    options: payload.filter_options,
+    options: {
+      modules: parseApiList<string>(payload.filter_options.modules, "audit.filter_options.modules"),
+      actions: parseApiList<string>(payload.filter_options.actions, "audit.filter_options.actions"),
+      countries: parseApiList<string>(payload.filter_options.countries, "audit.filter_options.countries"),
+    },
     meta: {
       currentPage: payload.meta.current_page,
       lastPage: payload.meta.last_page,

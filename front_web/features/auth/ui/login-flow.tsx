@@ -4,20 +4,24 @@ import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
+import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
 import { ApiError } from "@/shared/api/http-client";
 
 type FieldName = "identifier" | "password" | "code";
 type FieldErrors = Partial<Record<FieldName, string>>;
+type LoginFlowProps = {
+  initialRole?: LoginRole;
+};
 
-const LOGIN_ROLE_CONTEXTS = {
-  healthcare: "staff",
-  patient: "patient",
-  administrator: "staff",
-  support: "staff", // The API's staff context is the global Super Administrator login.
-} satisfies Record<LoginRole, LoginActorContext>;
+const LOGIN_ROLE_REQUESTS = {
+  healthcare: { actorContext: "staff", requestedRole: "doctor" },
+  receptionist: { actorContext: "staff", requestedRole: "receptionist" },
+  patient: { actorContext: "patient", requestedRole: "patient" },
+  administrator: { actorContext: "staff", requestedRole: "clinic_admin" },
+  support: { actorContext: "staff", requestedRole: "super_admin" },
+} satisfies Record<LoginRole, { actorContext: LoginActorContext; requestedRole: LoginRequestedRole }>;
 
 type FlowState = {
   step: AuthStep;
@@ -104,7 +108,7 @@ function flowReducer(state: FlowState, action: FlowAction): FlowState {
   }
 }
 
-export function LoginFlow() {
+export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   const router = useRouter();
   const { defaultCountryCode } = useAuthPlatformSettings();
   const challengeId = useRef("");
@@ -112,7 +116,7 @@ export function LoginFlow() {
   const phoneInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [flow, dispatch] = useReducer(flowReducer, INITIAL_FLOW_STATE);
-  const [loginRole, setLoginRole] = useState<LoginRole>("healthcare");
+  const [loginRole, setLoginRole] = useState<LoginRole>(initialRole);
   const [identifierType, setIdentifierType] = useState<LoginIdentifierType>("phone");
   const [selectedCountry, setSelectedCountry] = useState<CountryCode | null>(null);
   const [email, setEmail] = useState("");
@@ -121,7 +125,7 @@ export function LoginFlow() {
   const [isNavigating, setIsNavigating] = useState(false);
   const dashboardPath = useRef("/dashboard");
   const country = selectedCountry ?? defaultCountryCode;
-  const actorContext = LOGIN_ROLE_CONTEXTS[loginRole];
+  const { actorContext, requestedRole } = LOGIN_ROLE_REQUESTS[loginRole];
 
   useEffect(() => {
     if (flow.step !== "otp") {
@@ -201,8 +205,8 @@ export function LoginFlow() {
       ? email.trim().toLowerCase()
       : toE164PhoneNumber(phone, country);
     const response = await requestLoginOtp(actorContext === "staff"
-      ? { identifier, actorContext, password }
-      : { identifier, actorContext });
+      ? { identifier, actorContext, requestedRole, password }
+      : { identifier, actorContext, requestedRole });
     challengeId.current = response.data.challenge_id;
     dispatch({
       type: "otpIssued",
@@ -291,6 +295,18 @@ export function LoginFlow() {
     startTransition(() => router.replace(dashboardPath.current));
   }
 
+  function returnToRoleSelection() {
+    challengeId.current = "";
+    setLoginRole("healthcare");
+    setIdentifierType("phone");
+    setSelectedCountry(null);
+    setEmail("");
+    setPhone("");
+    setPassword("");
+    dispatch({ type: "back" });
+    router.replace("/");
+  }
+
   if (flow.step === "success") {
     return <SuccessStep onContinue={continueToDashboard} isNavigating={isNavigating} />;
   }
@@ -334,6 +350,7 @@ export function LoginFlow() {
         setPassword("");
         dispatch({ type: "fieldCleared", field: "password" });
       }}
+      onBackToRoleSelection={returnToRoleSelection}
       onIdentifierTypeChange={(type) => { setIdentifierType(type); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onCountryChange={(value) => { setSelectedCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onEmailChange={(value) => { setEmail(value); dispatch({ type: "fieldCleared", field: "identifier" }); }}

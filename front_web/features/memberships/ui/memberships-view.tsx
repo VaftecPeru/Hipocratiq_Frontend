@@ -26,6 +26,7 @@ import {
 } from "@/features/memberships/ui/membership-modals";
 import type { MembershipDashboard, MembershipPlan } from "@/features/memberships/model/memberships.types";
 import { getAdminMemberships, getMembershipClinics, type MembershipClinic } from "@/features/memberships/api/browser-memberships";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 
 type Currency = "USD" | "PEN";
 type TabId = "resumen" | "suscripciones" | "planes" | "historial";
@@ -439,6 +440,14 @@ export function MembershipsView() {
 
   const totalSubscriptions = data?.kpis.activeSubscriptions.count ?? 0;
 
+  if (!data) {
+    if (error) {
+      return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
+    }
+
+    return <PlatformModuleLoading label="Cargando membresías" variant="memberships" />;
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -447,6 +456,7 @@ export function MembershipsView() {
           <p className="mt-0.5 text-xs text-muted">Gestiona los planes de suscripción y el ciclo de ingresos de la plataforma.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isLoading ? <span className="self-center text-2xs font-bold text-accent" role="status">Actualizando...</span> : null}
           <button
             className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
             type="button"
@@ -529,19 +539,7 @@ export function MembershipsView() {
           </div>
         ) : null}
 
-        {(isLoading && !data) || (!error && data === null && isLoading) ? (
-          <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Cargando indicadores" aria-busy="true">
-            {[0, 1, 2, 3].map((index) => (
-              <div className="animate-pulse rounded-xl border border-line bg-surface p-3.5" key={index}>
-                <div className="h-3 w-2/3 rounded bg-surface-subtle" />
-                <div className="mt-3 h-6 w-1/2 rounded bg-surface-subtle" />
-                <div className="mt-2 h-3 w-1/3 rounded bg-surface-subtle" />
-              </div>
-            ))}
-          </section>
-        ) : null}
-
-        {activeTab === "resumen" && data && !error ? (
+        {activeTab === "resumen" ? (
           <>
             <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Indicadores de ingresos">
               {kpis.map((kpi, index) => (
@@ -597,7 +595,7 @@ export function MembershipsView() {
           </>
         ) : null}
 
-        {activeTab !== "resumen" && !error ? (
+        {activeTab !== "resumen" ? (
           <ComingSoon label={TABS.find((tab) => tab.id === activeTab)?.label ?? "Próximamente"} />
         ) : null}
       </div>

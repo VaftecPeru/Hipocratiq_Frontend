@@ -15,7 +15,8 @@ const COUNTRY_OPTIONS: Array<{ code: CountryCode; label: string }> = [
 const COUNTRY_LABELS = COUNTRY_OPTIONS.map((country) => country.label);
 
 export function PlatformRegionCountrySetting() {
-  const [countryCode, setCountryCode] = useState<CountryCode>("MX");
+  const [countryCode, setCountryCode] = useState<CountryCode | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("Cargando configuración regional...");
 
   useEffect(() => {
@@ -25,14 +26,24 @@ export function PlatformRegionCountrySetting() {
       .then((settings) => {
         setCountryCode(settings.defaultCountryCode);
         setStatus("La configuración regional se carga desde el backend.");
+        setError(null);
       })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setStatus("México se mantiene como configuración local mientras el backend no responda.");
+      .catch((requestError: unknown) => {
+        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+        setStatus("No se pudo cargar la configuración regional.");
+        setError(requestError instanceof Error ? requestError.message : "No se pudo cargar la configuración regional.");
       });
 
     return () => controller.abort();
   }, []);
+
+  if (!countryCode) {
+    if (error) {
+      return <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs text-danger" role="alert">{error}</p>;
+    }
+
+    return <div className="motion-safe:animate-pulse" role="status" aria-live="polite" aria-busy="true"><span className="sr-only">Cargando configuración regional</span><div className="h-9 rounded-lg border border-line bg-surface-input" /></div>;
+  }
 
   const selectedCountry = COUNTRY_OPTIONS.find((country) => country.code === countryCode) ?? COUNTRY_OPTIONS[0];
 

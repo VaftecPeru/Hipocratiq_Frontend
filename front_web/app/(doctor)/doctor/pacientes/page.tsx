@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ChevronRight, FileText, HeartPulse, RefreshCw, Users } from "lucide-react";
+import { CalendarPlus, ChevronRight, FileText, HeartPulse, Pencil, Plus, RefreshCw, Save, Users, X } from "lucide-react";
 import { DoctorAvatar, DoctorCard, MetricCard, SectionHeading } from "@/features/doctors/ui/doctor-primitives";
 import { Spinner } from "@/shared/ui/spinner";
 import {
   getDoctorClinicalHistory,
   getDoctorPatients,
+  createDoctorPatient,
+  updateDoctorPatient,
   type ClinicalHistoryRecord,
+  type DoctorPatientPayload,
   type DoctorPatient,
 } from "@/features/doctors/api/doctor-clinical";
+import { getDoctorProfile } from "@/features/doctors/api/doctor-profile";
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -23,6 +27,42 @@ function initialsOf(name: string | null | undefined): string {
   return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
 }
 
+type PatientFormState = DoctorPatientPayload;
+
+function emptyPatientForm(): PatientFormState {
+  return {
+    name: "",
+    email: "",
+    phone_number: "",
+    country_code: "MX",
+    document_type: "",
+    document_number: "",
+    date_of_birth: "",
+    sex: "",
+    address: "",
+    emergency_contact: "",
+    insurance: "",
+    whatsapp_consent: false,
+  };
+}
+
+function patientToForm(patient: DoctorPatient): PatientFormState {
+  return {
+    name: patient.name ?? "",
+    email: patient.email ?? "",
+    phone_number: patient.phoneNumber ?? "",
+    country_code: patient.countryCode ?? "MX",
+    document_type: patient.documentType ?? "",
+    document_number: patient.documentNumber ?? "",
+    date_of_birth: patient.dateOfBirth ?? "",
+    sex: patient.sex ?? "",
+    address: patient.address ?? "",
+    emergency_contact: patient.emergencyContact ?? "",
+    insurance: patient.insurance ?? "",
+    whatsapp_consent: patient.whatsappConsent,
+  };
+}
+
 export default function DoctorPatientsPage() {
   const [patients, setPatients] = useState<DoctorPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +72,12 @@ export default function DoctorPatientsPage() {
   const [history, setHistory] = useState<ClinicalHistoryRecord[]>([]);
   const [historyPatient, setHistoryPatient] = useState<number | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isIndependent, setIsIndependent] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<DoctorPatient | null>(null);
+  const [form, setForm] = useState<PatientFormState>(emptyPatientForm);
+  const [formPending, setFormPending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,6 +92,16 @@ export default function DoctorPatientsPage() {
         }
       })
       .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getDoctorProfile(controller.signal)
+      .then((profile) => setIsIndependent(profile.practiceType === "independent"))
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) setIsIndependent(false);
+      });
     return () => controller.abort();
   }, []);
 
@@ -73,6 +129,57 @@ export default function DoctorPatientsPage() {
     () => patients.find((patient) => patient.id === selectedPatientId) ?? null,
     [patients, selectedPatientId],
   );
+
+  function openCreateForm(): void {
+    setEditingPatient(null);
+    setForm(emptyPatientForm());
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  function openEditForm(patient: DoctorPatient): void {
+    setEditingPatient(patient);
+    setForm(patientToForm(patient));
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  async function handlePatientSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setFormPending(true);
+    setFormError(null);
+
+    try {
+      const payload: DoctorPatientPayload = {
+        ...form,
+        name: form.name.trim(),
+        email: form.email?.trim() || null,
+        phone_number: form.phone_number.trim(),
+        document_type: form.document_type?.trim() || null,
+        document_number: form.document_number?.trim() || null,
+        date_of_birth: form.date_of_birth || null,
+        sex: form.sex || null,
+        address: form.address?.trim() || null,
+        emergency_contact: form.emergency_contact?.trim() || null,
+        insurance: form.insurance?.trim() || null,
+      };
+
+      if (editingPatient) {
+        const updated = await updateDoctorPatient(editingPatient.id, payload);
+        setPatients((current) => current.map((patient) => patient.id === updated.id ? updated : patient));
+        setFormOpen(false);
+      } else {
+        const created = await createDoctorPatient(payload);
+        setPatients((current) => [created, ...current]);
+        setSelectedPatientId(created.id);
+        setFormOpen(false);
+      }
+    } catch (caught: unknown) {
+      setFormError(caught instanceof Error ? caught.message : "No pudimos guardar el paciente.");
+    } finally {
+      setFormPending(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -103,6 +210,7 @@ export default function DoctorPatientsPage() {
           <h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Pacientes</h1>
           <p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Pacientes vinculados a tus consultas e ingresos en la clínica.</p>
         </div>
+        {isIndependent ? <button className="inline-flex min-h-9 items-center justify-center gap-2 self-start rounded-lg bg-accent px-3.5 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus sm:self-auto" type="button" onClick={openCreateForm}><Plus className="size-3.5" aria-hidden="true" />Nuevo paciente</button> : null}
       </header>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Resumen de pacientes">
@@ -128,7 +236,8 @@ export default function DoctorPatientsPage() {
                     <th className="px-3 py-2.5 font-extrabold">Documento</th>
                     <th className="px-3 py-2.5 font-extrabold">Sexo</th>
                     <th className="px-3 py-2.5 font-extrabold">Nacimiento</th>
-                    <th className="px-3 py-2.5 font-extrabold">Historial</th>
+                     <th className="px-3 py-2.5 font-extrabold">Historial</th>
+                     {isIndependent ? <th className="px-3 py-2.5 font-extrabold">Acciones</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -159,6 +268,7 @@ export default function DoctorPatientsPage() {
                           Ver historial <ChevronRight className="size-3" aria-hidden="true" />
                         </button>
                       </td>
+                      {isIndependent ? <td className="px-3 py-2.5"><button className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[0.58rem] font-extrabold text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={(event) => { event.stopPropagation(); openEditForm(patient); }}><Pencil className="size-3" aria-hidden="true" />Editar</button></td> : null}
                     </tr>
                   ))}
                 </tbody>
@@ -209,6 +319,8 @@ export default function DoctorPatientsPage() {
           </div>
         </DoctorCard>
       </section>
+
+      {formOpen ? <dialog open className="fixed inset-0 z-50 m-0 grid h-full w-full max-w-none place-items-center overflow-y-auto bg-ink/35 p-4" onCancel={() => setFormOpen(false)} aria-labelledby="patient-form-title"><div className="my-4 w-full max-w-2xl rounded-xl border border-line bg-surface p-5 shadow-2xl"><div className="flex items-center justify-between gap-4"><div><h2 id="patient-form-title" className="text-base font-extrabold">{editingPatient ? "Editar paciente" : "Nuevo paciente"}</h2><p className="mt-1 text-xs font-bold text-ink-secondary">Los pacientes independientes quedan vinculados únicamente a tu práctica.</p></div><button className="grid size-8 place-items-center rounded-lg border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Cerrar formulario" disabled={formPending} onClick={() => setFormOpen(false)}><X className="size-4" aria-hidden="true" /></button></div><form className="mt-5 grid gap-3" onSubmit={(event) => void handlePatientSubmit(event)}><div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-xs font-bold text-ink-secondary">Nombre completo<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} minLength={2} maxLength={160} required /></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">Correo electrónico<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="email" value={form.email ?? ""} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} /></label></div><div className="grid gap-3 sm:grid-cols-[1fr_120px]"><label className="grid gap-1 text-xs font-bold text-ink-secondary">Teléfono<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.phone_number} onChange={(event) => setForm((current) => ({ ...current, phone_number: event.target.value }))} maxLength={32} required /></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">País<select className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.country_code} onChange={(event) => setForm((current) => ({ ...current, country_code: event.target.value }))}><option value="MX">México</option><option value="PE">Perú</option><option value="US">Estados Unidos</option></select></label></div><div className="grid gap-3 sm:grid-cols-3"><label className="grid gap-1 text-xs font-bold text-ink-secondary">Tipo de documento<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.document_type ?? ""} onChange={(event) => setForm((current) => ({ ...current, document_type: event.target.value }))} /></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">Número de documento<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.document_number ?? ""} onChange={(event) => setForm((current) => ({ ...current, document_number: event.target.value }))} /></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">Fecha de nacimiento<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="date" value={form.date_of_birth ?? ""} onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))} /></label></div><div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-xs font-bold text-ink-secondary">Sexo<select className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.sex ?? ""} onChange={(event) => setForm((current) => ({ ...current, sex: event.target.value }))}><option value="">Sin especificar</option><option value="Femenino">Femenino</option><option value="Masculino">Masculino</option><option value="Otro">Otro</option></select></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">Seguro médico<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.insurance ?? ""} onChange={(event) => setForm((current) => ({ ...current, insurance: event.target.value }))} /></label></div><label className="grid gap-1 text-xs font-bold text-ink-secondary">Dirección<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.address ?? ""} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label><label className="grid gap-1 text-xs font-bold text-ink-secondary">Contacto de emergencia<input className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-extrabold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.emergency_contact ?? ""} onChange={(event) => setForm((current) => ({ ...current, emergency_contact: event.target.value }))} /></label><label className="flex items-center gap-2 text-xs font-bold text-ink-secondary"><input type="checkbox" checked={Boolean(form.whatsapp_consent)} onChange={(event) => setForm((current) => ({ ...current, whatsapp_consent: event.target.checked }))} />Acepta comunicaciones por WhatsApp</label>{formError ? <p className="text-xs font-bold text-danger" role="alert">{formError}</p> : null}<div className="flex justify-end gap-2 pt-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line px-4 text-xs font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="button" disabled={formPending} onClick={() => setFormOpen(false)}>Cancelar</button><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="submit" disabled={formPending}>{formPending ? <Spinner className="size-3.5" /> : <Save className="size-3.5" aria-hidden="true" />}{editingPatient ? "Guardar cambios" : "Crear paciente"}</button></div></form></div></dialog> : null}
     </div>
   );
 }
