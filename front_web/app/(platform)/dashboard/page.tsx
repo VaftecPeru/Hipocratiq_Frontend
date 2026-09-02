@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { Activity, Building2, Clock3, DollarSign, HeartPulse, LifeBuoy, ShieldCheck, UserRound, Users } from "lucide-react";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { getAdminDashboard } from "@/features/platform/api/server-dashboard";
+import { DashboardUnavailable } from "@/shared/ui/dashboard-unavailable";
 import type { AdminDashboardData, ServiceStatus } from "@/features/platform/model/admin-dashboard.types";
 import { CountryFlag } from "@/shared/ui/country-flag";
 
@@ -112,15 +113,11 @@ function SystemHealth({ services }: { services: AdminDashboardData["system"] }) 
   );
 }
 
-function LoadError({ message }: { message: string }) {
-  return <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5"><section className="rounded-2xl border border-danger/25 bg-surface p-7 text-center" role="alert"><p className="text-xs font-bold text-danger">Panel no disponible</p><h1 className="mt-2 text-xl font-extrabold">No se pudieron cargar los datos globales</h1><p className="mt-3 text-sm text-muted">{message}</p></section></main>;
-}
-
 export default async function DashboardPage() {
   const session = await getAuthenticatedSession();
   if (!session) redirect("/");
   const result = await getAdminDashboard();
-  if (!result.ok) return <LoadError message={result.message} />;
+  if (!result.ok) return <DashboardUnavailable description={result.message} retryHref="/dashboard" title="No se pudieron cargar los datos globales" />;
   const data = result.data;
   const kpis: Kpi[] = [
     { label: "Clínicas activas", value: numberFormatter.format(data.kpis.activeClinics), helper: `+${data.kpis.clinicsAddedThisMonth} este mes`, icon: Building2, tone: "bg-accent-soft text-accent" },

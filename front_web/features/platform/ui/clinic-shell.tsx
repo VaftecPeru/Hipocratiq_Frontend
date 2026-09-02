@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   ChevronDown,
+  CreditCard,
   FileText,
   House,
   Menu,
@@ -42,6 +43,17 @@ const navigation: readonly NavigationItem[] = [
   { label: "Configuración", href: "/clinic/configuracion", icon: Settings, available: true },
 ];
 
+const receptionistNavigation: readonly NavigationItem[] = [
+  { label: "Inicio", href: "/clinic/dashboard", icon: House, available: true },
+  { label: "Agenda", href: "/clinic/agenda", icon: CalendarDays, available: true },
+  { label: "Pacientes", href: "/clinic/pacientes", icon: Users, available: true },
+  { label: "Registro de Pacientes", href: "/clinic/registro-pacientes", icon: FileText, available: true },
+  { label: "Mensajes", href: "/clinic/mensajes", icon: Bell, available: true },
+  { label: "Caja y Pagos", href: "/clinic/caja-pagos", icon: CreditCard, available: true },
+  { label: "Reportes", href: "/clinic/reportes", icon: ChartNoAxesCombined, available: true },
+  { label: "Configuración", href: "/clinic/configuracion", icon: Settings, available: true },
+];
+
 type ClinicShellProps = Readonly<{
   children: React.ReactNode;
   clinicName: string;
@@ -52,7 +64,9 @@ type ClinicShellProps = Readonly<{
 export function ClinicShell({ children, clinicName, userName, actorContext }: ClinicShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-  const visibleNavigation = navigation.filter((item) => !item.clinicAdminOnly || actorContext === "clinic_admin");
+  const visibleNavigation = actorContext === "receptionist"
+    ? receptionistNavigation
+    : navigation.filter((item) => !item.clinicAdminOnly || actorContext === "clinic_admin");
 
   return (
     <div className="min-h-svh bg-paper text-ink">
@@ -70,7 +84,7 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
               const Icon = item.icon;
               const isActive = pathname === item.href || (item.href === "/clinic/configuracion" && pathname.startsWith(`${item.href}/`));
               return (
-                <li key={item.href}>
+                <li key={`${actorContext}-${item.label}`}>
                   {item.available ? (
                     <Link
                       className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus ${isActive ? "bg-accent-soft text-accent after:absolute after:inset-y-2 after:right-0 after:w-0.5 after:rounded-full after:bg-accent" : "text-icon-nav-inactive hover:bg-surface-subtle hover:text-ink"}`}
@@ -96,7 +110,7 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
         <div className="border-t border-line p-3">
           <div className="mb-2 flex items-center gap-2 rounded-xl border border-line bg-surface-subtle px-3 py-2.5">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Building2 className="size-4" aria-hidden="true" /></span>
-            <div className="min-w-0"><p className="truncate text-xs font-extrabold">{clinicName}</p><p className="text-2xs text-muted">Sede principal</p></div>
+            <div className="min-w-0"><p className="truncate text-xs font-extrabold">{actorContext === "receptionist" ? "Recepción Central" : clinicName}</p><p className="truncate text-2xs text-muted">{actorContext === "receptionist" ? clinicName : "Sede principal"}</p></div>
           </div>
           <LogoutButton appearance="navigation" />
         </div>
@@ -118,7 +132,7 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
           <Bell className="size-4" strokeWidth={1.7} aria-hidden="true" /><span className="absolute top-1.5 right-1.5 size-2 rounded-full border-2 border-surface bg-accent" />
         </button>
         <div className="hidden items-center gap-2 border-l border-line pl-3 sm:flex">
-          <div className="max-w-32 text-right"><p className="truncate text-2xs font-extrabold">{userName}</p><p className="text-[0.58rem] font-bold text-accent">{actorContext === "receptionist" ? "Recepcionista" : "Admin de Clínica"}</p></div>
+          <div className="max-w-32 text-right"><p className="truncate text-2xs font-extrabold">{userName}</p><p className="text-[0.58rem] font-bold text-accent">{actorContext === "receptionist" ? "Recepción" : "Admin de Clínica"}</p></div>
           <span className="grid size-8 place-items-center rounded-full bg-ink font-mono text-[0.6rem] font-bold text-white">{userName.split(" ").slice(0, 2).map((part) => part[0]).join("")}</span>
           <ChevronDown className="size-3 text-muted" aria-hidden="true" />
         </div>

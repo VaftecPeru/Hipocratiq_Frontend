@@ -19,6 +19,7 @@ import { DataBadge, type BadgeTone } from "@/shared/ui/data-badge";
 import { DonutChart } from "@/shared/ui/donut-chart";
 import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 import { getAdminUsers } from "@/features/users/api/browser-users";
 import type {
   AdminUser,
@@ -376,6 +377,14 @@ export default function UsersPage() {
     setFilters(INITIAL_FILTERS);
   }
 
+  if (!data) {
+    if (error) {
+      return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
+    }
+
+    return <PlatformModuleLoading label="Cargando usuarios" />;
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -407,8 +416,8 @@ export default function UsersPage() {
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="users-results-title" aria-busy={isLoading}>
           <div className="flex min-h-10 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="users-results-title">{numberFormatter.format(data?.pagination.total ?? 0)} usuarios encontrados</h2>{isLoading ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : <span className="hidden text-2xs text-muted sm:block">Datos del servidor</span>}</div>
           {error ? <div className="m-3 rounded-lg border border-danger/25 bg-danger-soft p-4 text-xs text-danger" role="alert">{error}</div> : null}
-          {!error && data?.users.length === 0 ? <div className="p-8 text-center text-xs text-muted">No encontramos usuarios con estos filtros.</div> : null}
-          {!error && data?.users.length ? <UsersTable
+          {data.users.length === 0 ? <div className="p-8 text-center text-xs text-muted">No encontramos usuarios con estos filtros.</div> : null}
+          {data.users.length ? <UsersTable
             users={data.users}
             onViewDetail={(user) => {
               setSelectedUser(user);

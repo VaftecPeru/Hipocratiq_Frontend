@@ -2,11 +2,15 @@
 
 import {
   CircleCheck,
+  Edit,
   Mail,
   Phone,
   Plus,
+  Power,
   Search,
   ShieldCheck,
+  Stethoscope,
+  Trash2,
   UserPlus,
   Users,
   type LucideIcon,
@@ -16,11 +20,17 @@ import {
   createClinicReceptionist,
   getClinicMembers,
   getClinicSettings,
+  removeClinicMember,
+  updateClinicMember,
+  updateClinicMemberStatus,
 } from "@/features/clinics/api/browser-clinic-dashboard";
+import type { UpdateClinicMemberPayload } from "@/features/clinics/api/browser-clinic-dashboard";
 import type { ClinicTeamMember } from "@/features/clinics/model/clinic-admin.types";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 import { DataBadge, type BadgeTone } from "@/shared/ui/data-badge";
 import { Modal } from "@/shared/ui/modal";
+import { CreateClinicDoctorModal } from "@/features/clinics/ui/create-clinic-doctor-modal";
 import {
   ModalField,
   ModalGrid,
@@ -150,6 +160,83 @@ function CreateReceptionistModal({
   );
 }
 
+function EditMemberModal({
+  member,
+  isOpen,
+  onClose,
+  onSaved,
+}: {
+  member: ClinicTeamMember | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: (updated: ClinicTeamMember) => void;
+}) {
+  const [name, setName] = useState(member?.name ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(member?.phoneNumber ?? "");
+  const [countryCode, setCountryCode] = useState("MX");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!member || isLoading || !name.trim() || !phoneNumber.trim()) return;
+    setIsLoading(true);
+    setError(null);
+    const payload: UpdateClinicMemberPayload = {
+      name: name.trim(),
+      email: email.trim() || null,
+      phoneNumber: phoneNumber.trim(),
+      countryCode,
+    };
+    try {
+      const updated = await updateClinicMember(member.id, payload);
+      onSaved(updated);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "No pudimos actualizar el miembro.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      title="Editar miembro"
+      description={member ? `ID: ${member.id}` : undefined}
+      footer={
+        <>
+          <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
+          <ModalPrimaryButton disabled={!name.trim() || !phoneNumber.trim() || isLoading} onClick={handleSave}>
+            {isLoading ? "Guardando..." : "Guardar cambios"}
+          </ModalPrimaryButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <ModalGrid cols={2}>
+          <ModalField id="edit-member-name" label="Nombre completo" value={name} onChange={(e) => setName(e.target.value)} required />
+          <ModalField id="edit-member-email" label="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </ModalGrid>
+        <ModalGrid cols={2}>
+          <ModalSelect
+            id="edit-member-country"
+            label="País del teléfono"
+            options={[{ value: "MX", label: "México" }, { value: "PE", label: "Perú" }, { value: "US", label: "Estados Unidos" }]}
+            value={countryCode}
+            onChange={setCountryCode}
+            required
+          />
+          <ModalField id="edit-member-phone" label="Teléfono" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+        </ModalGrid>
+        {error ? <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs font-semibold text-danger" role="alert">{error}</p> : null}
+      </div>
+    </Modal>
+  );
+}
+
 export function ClinicTeam() {
   const [members, setMembers] = useState<ClinicTeamMember[]>([]);
   const [clinicCountryCode, setClinicCountryCode] = useState<CountryCode>("MX");
@@ -157,7 +244,19 @@ export function ClinicTeam() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateDoctorOpen, setIsCreateDoctorOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Edit member modal
+  const [editMember, setEditMember] = useState<ClinicTeamMember | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  // Suspend/activate confirm dialog
+  const [suspendMember, setSuspendMember] = useState<ClinicTeamMember | null>(null);
+  const [suspendLoading, setSuspendLoading] = useState(false);
+
+  const [removeMember, setRemoveMember] = useState<ClinicTeamMember | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -195,6 +294,51 @@ export function ClinicTeam() {
     window.setTimeout(() => setNotice(null), 3000);
   }
 
+  function handleDoctorCreated(member: ClinicTeamMember) {
+    setMembers((current) => [member, ...current]);
+    setNotice("Médico agregado a la clínica.");
+    window.setTimeout(() => setNotice(null), 3000);
+  }
+
+  function handleMemberSaved(updated: ClinicTeamMember) {
+    setMembers((current) => current.map((m) => m.id === updated.id ? updated : m));
+    setNotice("Datos del miembro actualizados.");
+    window.setTimeout(() => setNotice(null), 3000);
+  }
+
+  async function handleSuspendConfirm() {
+    if (!suspendMember) return;
+    const newStatus = suspendMember.status === "active" ? "suspended" : "active";
+    setSuspendLoading(true);
+    try {
+      const updated = await updateClinicMemberStatus(suspendMember.id, newStatus);
+      setMembers((current) => current.map((m) => m.id === updated.id ? updated : m));
+      setNotice(`Miembro ${newStatus === "active" ? "activado" : "suspendido"} correctamente.`);
+      window.setTimeout(() => setNotice(null), 3000);
+      setSuspendMember(null);
+    } catch (err: unknown) {
+      setNotice(err instanceof Error ? err.message : "Error al cambiar estado.");
+      window.setTimeout(() => setNotice(null), 3000);
+    } finally {
+      setSuspendLoading(false);
+    }
+  }
+
+  async function handleRemoveConfirm() {
+    if (!removeMember || removeLoading) return;
+    setRemoveLoading(true);
+    try {
+      await removeClinicMember(removeMember.id);
+      setMembers((current) => current.filter((member) => member.id !== removeMember.id));
+      setNotice("Miembro eliminado correctamente.");
+      setRemoveMember(null);
+    } catch (err: unknown) {
+      setNotice(err instanceof Error ? err.message : "No pudimos eliminar al miembro.");
+    } finally {
+      setRemoveLoading(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7">
       {notice ? <div className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-bold text-white shadow-xl" role="status"><CircleCheck className="size-4 text-success" />{notice}</div> : null}
@@ -204,10 +348,16 @@ export function ClinicTeam() {
           <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Equipo</h1>
           <p className="mt-1 text-xs text-muted">Administra los accesos y el personal activo de tu clínica.</p>
         </div>
-        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="size-3.5" aria-hidden="true" />
-          Nueva recepcionista
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => setIsCreateDoctorOpen(true)}>
+            <Stethoscope className="size-3.5" aria-hidden="true" />
+            Agregar médico
+          </button>
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            Nueva recepcionista
+          </button>
+        </div>
       </header>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-3" aria-label="Resumen del equipo">
@@ -220,7 +370,7 @@ export function ClinicTeam() {
           <label className="relative w-full sm:max-w-64"><span className="sr-only">Buscar en el equipo</span><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" /><input className="h-8 w-full rounded-lg border border-line bg-surface-input pl-8 pr-3 text-[0.65rem] outline-none placeholder:text-muted focus:border-accent focus:ring-3 focus:ring-focus/30" type="search" placeholder="Buscar por nombre o rol..." value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-190 text-left"><caption className="sr-only">Equipo activo de la clínica</caption><thead className="bg-surface-subtle text-[0.56rem] font-extrabold uppercase tracking-wide text-muted"><tr><th className="px-4 py-2.5">Usuario</th><th className="px-3 py-2.5">Rol</th><th className="px-3 py-2.5">Contacto</th><th className="px-3 py-2.5">Estado</th><th className="px-4 py-2.5">Último acceso</th></tr></thead><tbody className="divide-y divide-line">{filteredMembers.map((member, index) => <tr className="text-[0.65rem] transition-colors hover:bg-surface-hover" key={member.id}><th className="px-4 py-2.5 font-normal"><div className="flex items-center gap-2.5"><span className={`grid size-8 place-items-center rounded-full font-mono text-[0.55rem] font-bold ${index % 2 ? "bg-violet-soft text-violet" : "bg-accent-soft text-accent"}`}>{getInitials(member.name)}</span><div><p className="font-extrabold">{member.name}</p><p className="mt-0.5 text-[0.52rem] text-muted">ID: {member.id}</p></div></div></th><td className="px-3 py-2.5"><DataBadge tone={ROLE_TONES[member.role]}>{ROLE_LABELS[member.role]}</DataBadge></td><td className="px-3 py-2.5"><div className="grid gap-1 text-[0.58rem] text-muted">{member.email ? <span className="inline-flex items-center gap-1.5"><Mail className="size-3" aria-hidden="true" />{member.email}</span> : null}<span className="inline-flex items-center gap-1.5"><Phone className="size-3" aria-hidden="true" />{member.phoneNumber}</span></div></td><td className="px-3 py-2.5"><DataBadge tone={member.status === "active" ? "success" : "neutral"} dot>{STATUS_LABELS[member.status]}</DataBadge></td><td className="px-4 py-2.5 font-mono text-[0.58rem] text-muted">{formatLastAccess(member.lastLoginAt)}</td></tr>)}</tbody></table>
+          <table className="w-full min-w-210 text-left"><caption className="sr-only">Equipo activo de la clínica</caption><thead className="bg-surface-subtle text-[0.56rem] font-extrabold uppercase tracking-wide text-muted"><tr><th className="px-4 py-2.5">Usuario</th><th className="px-3 py-2.5">Rol</th><th className="px-3 py-2.5">Contacto</th><th className="px-3 py-2.5">Estado</th><th className="px-4 py-2.5">Último acceso</th><th className="px-3 py-2.5">Acciones</th></tr></thead><tbody className="divide-y divide-line">{filteredMembers.map((member, index) => <tr className="text-[0.65rem] transition-colors hover:bg-surface-hover" key={member.id}><th className="px-4 py-2.5 font-normal"><div className="flex items-center gap-2.5"><span className={`grid size-8 place-items-center rounded-full font-mono text-[0.55rem] font-bold ${index % 2 ? "bg-violet-soft text-violet" : "bg-accent-soft text-accent"}`}>{getInitials(member.name)}</span><div><p className="font-extrabold">{member.name}</p><p className="mt-0.5 text-[0.52rem] text-muted">ID: {member.id}</p></div></div></th><td className="px-3 py-2.5"><DataBadge tone={ROLE_TONES[member.role]}>{ROLE_LABELS[member.role]}</DataBadge></td><td className="px-3 py-2.5"><div className="grid gap-1 text-[0.58rem] text-muted">{member.email ? <span className="inline-flex items-center gap-1.5"><Mail className="size-3" aria-hidden="true" />{member.email}</span> : null}<span className="inline-flex items-center gap-1.5"><Phone className="size-3" aria-hidden="true" />{member.phoneNumber}</span></div></td><td className="px-3 py-2.5"><DataBadge tone={member.status === "active" ? "success" : "neutral"} dot>{STATUS_LABELS[member.status]}</DataBadge></td><td className="px-4 py-2.5 font-mono text-[0.58rem] text-muted">{formatLastAccess(member.lastLoginAt)}</td><td className="px-3 py-2.5"><div className="flex gap-1">{<button className="grid size-8 place-items-center rounded-lg text-muted hover:bg-accent-soft hover:text-accent" type="button" aria-label={`Editar ${member.name}`} onClick={() => { setEditMember(member); setEditOpen(true); }}><Edit className="size-3.5" /></button>}{member.role !== "clinic_admin" ? <><button className={`grid size-8 place-items-center rounded-lg text-muted ${member.status === "active" ? "hover:bg-danger-soft hover:text-danger" : "hover:bg-success-soft hover:text-success"}`} type="button" aria-label={member.status === "active" ? `Suspender ${member.name}` : `Activar ${member.name}`} onClick={() => setSuspendMember(member)}><Power className="size-3.5" /></button><button className="grid size-8 place-items-center rounded-lg text-muted hover:bg-danger-soft hover:text-danger" type="button" aria-label={`Eliminar ${member.name}`} onClick={() => setRemoveMember(member)}><Trash2 className="size-3.5" aria-hidden="true" /></button></> : null}</div></td></tr>)}</tbody></table>
           {isLoading ? <div className="grid min-h-40 place-items-center text-center text-xs font-bold text-muted">Cargando equipo...</div> : null}
           {!isLoading && filteredMembers.length === 0 ? <div className="grid min-h-40 place-items-center px-4 text-center"><div><Users className="mx-auto size-7 text-muted" aria-hidden="true" /><p className="mt-2 text-xs font-extrabold">{loadError ?? "No hay miembros con esta búsqueda."}</p><button className="mt-2 text-2xs font-bold text-accent" type="button" onClick={() => setQuery("")}>Limpiar búsqueda</button></div></div> : null}
         </div>
@@ -228,6 +378,42 @@ export function ClinicTeam() {
       </section>
 
       <CreateReceptionistModal key={`${clinicCountryCode}-${isCreateOpen ? "open" : "closed"}`} clinicCountryCode={clinicCountryCode} isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />
+
+      <CreateClinicDoctorModal
+        key={`${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
+        clinicCountryCode={clinicCountryCode}
+        isOpen={isCreateDoctorOpen}
+        onClose={() => setIsCreateDoctorOpen(false)}
+        onCreated={handleDoctorCreated}
+      />
+
+      <EditMemberModal key={editMember?.id ?? "closed"} member={editMember} isOpen={editOpen} onClose={() => { setEditOpen(false); setEditMember(null); }} onSaved={handleMemberSaved} />
+
+      <ConfirmDialog
+        isOpen={suspendMember !== null}
+        onClose={() => setSuspendMember(null)}
+        onConfirm={handleSuspendConfirm}
+        title={suspendMember?.status === "active" ? "Suspender miembro" : "Activar miembro"}
+        description={
+          suspendMember?.status === "active"
+            ? `¿Suspender a ${suspendMember?.name ?? "este miembro"}? Perderá acceso a la plataforma.`
+            : `¿Reactivar a ${suspendMember?.name ?? "este miembro"}? Recuperará acceso a la plataforma.`
+        }
+        confirmLabel={suspendMember?.status === "active" ? "Suspender" : "Activar"}
+        confirmTone={suspendMember?.status === "active" ? "danger" : "accent"}
+        isLoading={suspendLoading}
+      />
+
+      <ConfirmDialog
+        isOpen={removeMember !== null}
+        onClose={() => setRemoveMember(null)}
+        onConfirm={handleRemoveConfirm}
+        title="Eliminar miembro"
+        description={`¿Eliminar a ${removeMember?.name ?? "este miembro"} del equipo? Perderá el acceso a esta clínica.`}
+        confirmLabel="Eliminar"
+        confirmTone="danger"
+        isLoading={removeLoading}
+      />
     </div>
   );
 }

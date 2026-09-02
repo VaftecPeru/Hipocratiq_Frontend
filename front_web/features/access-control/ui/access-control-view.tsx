@@ -25,6 +25,7 @@ import { CountryFlag } from "@/shared/ui/country-flag";
 import { DataBadge, type BadgeTone } from "@/shared/ui/data-badge";
 import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard } from "@/shared/ui/stat-card";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 
 const ROLE_LABELS: Record<AdminUserRole, string> = {
   super_admin: "Superadministrador",
@@ -121,6 +122,14 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
     { label: "Roles del sistema", value: numberFormatter.format(access?.roles.length ?? 0), change: "Matriz protegida", direction: "up" as const, icon: ShieldCheck, tone: "violet" as const },
   ];
 
+  if (!access || !usersData) {
+    if (error) {
+      return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
+    }
+
+    return <PlatformModuleLoading label="Cargando roles y permisos" variant="access" />;
+  }
+
   function updateFilters(patch: Partial<AdminUsersFilters>) {
     setIsLoading(true);
     setError(null);
@@ -195,6 +204,7 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
               <h2 className="text-xs font-extrabold" id="assignments-title">Asignaciones de acceso</h2>
               <p className="mt-0.5 text-2xs text-muted">{numberFormatter.format(usersData?.pagination.total ?? 0)} usuarios encontrados</p>
             </div>
+            {isLoading ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : null}
             <FilterSelect className="w-full sm:w-48" label="Rol" options={roleOptions} value={filters.role} onChange={(role) => updateFilters({ role })} />
             <label className="grid w-full gap-1.5 text-2xs font-bold text-muted sm:w-64">Buscar usuario
               <span className="relative">
@@ -205,8 +215,8 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
           </div>
 
           {error ? <p className="m-3 rounded-lg border border-danger/25 bg-danger-soft p-4 text-xs text-danger" role="alert">{error}</p> : null}
-          {!error && usersData?.users.length === 0 ? <p className="p-8 text-center text-xs text-muted">No encontramos usuarios con estos filtros.</p> : null}
-          {!error && usersData?.users.length ? (
+          {usersData.users.length === 0 ? <p className="p-8 text-center text-xs text-muted">No encontramos usuarios con estos filtros.</p> : null}
+          {usersData.users.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[48rem] border-collapse text-left text-xs">
                 <caption className="sr-only">Asignaciones de rol y clínica</caption>

@@ -6,6 +6,7 @@ import { getAdminPlatformSettings, updateAdminPlatformSettings } from "@/feature
 import type { AiModel, LocaleCode, PlatformSettings } from "@/features/platform/model/platform-settings.types";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
 import { SettingsCard, SettingsInput, SettingsSelect, SettingsToggle } from "@/features/platform/ui/settings-primitives";
+import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 
 const localeLabels: Record<LocaleCode, string> = { "es-MX": "Español (México)", "es-PE": "Español (Perú)", "en-US": "English (US)" };
 const modelLabels: Record<AiModel, string> = { respiratory: "Respiratorio", dengue: "Dengue", gastrointestinal: "Gastrointestinal", hospital_occupancy: "Ocupación hospitalaria" };
@@ -21,21 +22,23 @@ function Status({ value }: { value: string }) {
 function useSettings() {
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [status, setStatus] = useState("Cargando configuración...");
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    getAdminPlatformSettings(controller.signal).then((data) => { setSettings(data); setStatus("Configuración cargada desde el backend."); }).catch((error: unknown) => {
-      if (error instanceof DOMException && error.name === "AbortError") return;
+    getAdminPlatformSettings(controller.signal).then((data) => { setSettings(data); setStatus("Configuración cargada desde el backend."); setError(null); }).catch((requestError: unknown) => {
+      if (requestError instanceof DOMException && requestError.name === "AbortError") return;
       setStatus("Error: no se pudo cargar la configuración.");
+      setError(requestError instanceof Error ? requestError.message : "No se pudo cargar la configuración.");
     });
     return () => controller.abort();
   }, []);
-  return { settings, setSettings, status, setStatus };
+  return { settings, setSettings, status, setStatus, error };
 }
 
 export function BrandingSettingsForm() {
-  const { settings, setSettings, status, setStatus } = useSettings();
+  const { settings, setSettings, status, setStatus, error } = useSettings();
   const [loading, setLoading] = useState(false);
-  if (!settings) return <Status value={status} />;
+  if (!settings) return error ? <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs text-danger" role="alert">{error}</p> : <PlatformModuleLoading label="Cargando configuración" variant="settings" />;
 
   const save = async () => {
     setLoading(true); setStatus("Guardando identidad de plataforma...");
@@ -50,9 +53,9 @@ export function BrandingSettingsForm() {
 }
 
 export function LocalizationSettingsForm() {
-  const { settings, setSettings, status, setStatus } = useSettings();
+  const { settings, setSettings, status, setStatus, error } = useSettings();
   const [loading, setLoading] = useState(false);
-  if (!settings) return <Status value={status} />;
+  if (!settings) return error ? <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs text-danger" role="alert">{error}</p> : <PlatformModuleLoading label="Cargando configuración" variant="settings" />;
   const enabledLocaleSet = new Set(settings.localization.enabledLocales);
   const toggleLocale = (locale: LocaleCode) => {
     const enabled = enabledLocaleSet.has(locale);
@@ -69,9 +72,9 @@ export function LocalizationSettingsForm() {
 }
 
 export function AiSettingsForm() {
-  const { settings, setSettings, status, setStatus } = useSettings();
+  const { settings, setSettings, status, setStatus, error } = useSettings();
   const [loading, setLoading] = useState(false);
-  if (!settings) return <Status value={status} />;
+  if (!settings) return error ? <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs text-danger" role="alert">{error}</p> : <PlatformModuleLoading label="Cargando configuración" variant="settings" />;
   const enabledModels = new Set(settings.ai.enabledModels);
   const toggleModel = (model: AiModel) => setSettings({ ...settings, ai: { ...settings.ai, enabledModels: enabledModels.has(model) ? settings.ai.enabledModels.filter((item) => item !== model) : [...settings.ai.enabledModels, model] } });
   const save = async () => {

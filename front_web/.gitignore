@@ -46,9 +46,6 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -62,3 +59,4 @@ skills-lock.json
 .eslintcache
 /test-results/
 /playwright-report/
+dist

@@ -1,6 +1,5 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
 import {
   Bell,
   BrainCircuit,
@@ -12,10 +11,12 @@ import {
   LayoutDashboard,
   Menu,
   MessageCircle,
-  User,
+  Plus,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -24,20 +25,101 @@ import { LogoutButton } from "@/features/auth/ui/logout-button";
 type NavigationItem = {
   label: string;
   href: string;
-  icon: LucideIcon;
-  available?: boolean;
+  icon: typeof LayoutDashboard;
+  enabled: boolean;
 };
 
-const navigation: NavigationItem[] = [
-  { label: "Mi Panel", href: "/patient/dashboard", icon: LayoutDashboard, available: true },
-  { label: "Mis Citas", href: "/patient/citas", icon: CalendarDays },
-  { label: "Resultados", href: "/patient/resultados", icon: FlaskConical },
-  { label: "Historial Clínico", href: "/patient/historial", icon: FileText },
-  { label: "Recetas", href: "/patient/recetas", icon: HeartPulse },
-  { label: "IA Epidemiológica", href: "/patient/ia", icon: BrainCircuit },
-  { label: "Membresía", href: "/patient/membresia", icon: CreditCard },
-  { label: "Mi Perfil", href: "/patient/perfil", icon: User },
-];
+function PatientAvatar({ userName }: { userName: string }) {
+  const initials = userName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  return (
+    <span className="patient-avatar" aria-hidden="true">
+      <span className="patient-avatar__hair" />
+      <span className="patient-avatar__face">{initials || "AM"}</span>
+      <span className="patient-avatar__shirt" />
+    </span>
+  );
+}
+
+function pageMeta(pathname: string, userName: string) {
+  const firstName = userName.trim().split(/\s+/)[0] || "Paciente";
+
+  if (pathname.includes("/citas")) {
+    return {
+      title: "Mis Citas",
+      subtitle: "Administra tus próximas citas, historial y teleconsultas.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/triaje")) {
+    return {
+      title: "Dashboard Paciente · Triaje",
+      subtitle: "Completa tus signos vitales y motivo de consulta antes de la atención.",
+      action: "Enviar Triaje",
+    };
+  }
+
+  if (pathname.includes("/resultados")) {
+    return {
+      title: "Resultados",
+      subtitle: "Consulta tus estudios, análisis y documentos médicos.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/historial")) {
+    return {
+      title: "Historial Clínico",
+      subtitle: "Revisa tus atenciones, diagnósticos y evolución médica.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/recetas")) {
+    return {
+      title: "Recetas",
+      subtitle: "Gestiona tus medicamentos, renovaciones y tratamientos.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/ia")) {
+    return {
+      title: "IA Epidemiológica",
+      subtitle: "Monitorea el riesgo epidemiológico en tu zona y recibe recomendaciones para cuidarte.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/membresia")) {
+    return {
+      title: "Membresía",
+      subtitle: "Administra tu plan MEDIQ, beneficios, pagos y cobertura familiar.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  if (pathname.includes("/perfil")) {
+    return {
+      title: "Mi Perfil",
+      subtitle: "Gestiona tu información personal, datos de contacto y preferencias.",
+      action: "Agendar Nueva Cita",
+    };
+  }
+
+  return {
+    title: `Bienvenida de nuevo, ${firstName}`,
+    subtitle: "Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.",
+    action: "Agendar Nueva Cita",
+  };
+}
 
 export function PatientShell({
   children,
@@ -50,74 +132,67 @@ export function PatientShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const meta = pageMeta(pathname, userName);
+  const showTriage = pathname.includes("/triaje");
+
+  const navigation: NavigationItem[] = [
+    { label: "Mi Panel", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
+    { label: "Mis Citas", href: "/patient/citas", icon: CalendarDays, enabled: true },
+    ...(showTriage
+      ? [{ label: "Triaje", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true }]
+      : []),
+    { label: "Resultados", href: "/patient/resultados", icon: FlaskConical, enabled: true },
+    { label: "Historial Clínico", href: "/patient/historial", icon: FileText, enabled: true },
+    { label: "Recetas", href: "/patient/recetas", icon: HeartPulse, enabled: true },
+    { label: "IA Epidemiológica", href: "/patient/ia", icon: BrainCircuit, enabled: true },
+    { label: "Membresía", href: "/patient/membresia", icon: CreditCard, enabled: true },
+    { label: "Mi Perfil", href: "/patient/perfil", icon: UserRound, enabled: true },
+  ];
+
+  function isActive(href: string) {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
-    <div className="min-h-svh bg-paper text-ink">
-      {/* Sidebar */}
-      <aside
-        className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-30 w-60 flex-col border-r border-line bg-surface lg:flex`}
-      >
-        {/* Logo */}
-        <div className="flex h-16 items-center border-b border-line px-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent">
-            <Image
-              src="/logo_hipocratiq.webp"
-              alt="Hipocratiq"
-              width={28}
-              height={28}
-              className="object-contain brightness-0 invert"
-              priority
-            />
-          </div>
-          <span className="ml-2 text-sm font-extrabold tracking-[0.06em]">HIPOCRATIQ</span>
+    <div className="patient-shell">
+      <aside className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}>
+        <div className="patient-brand" aria-label="MEDIQ">
+          <span className="patient-brand__mark">
+            <ShieldCheck className="size-5" strokeWidth={2.2} aria-hidden="true" />
+          </span>
+          <span className="patient-brand__word">MEDIQ</span>
         </div>
 
-        {/* User info */}
-        <div className="border-b border-line px-4 py-3">
-          <div className="flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent text-xs font-extrabold">
-              {userName.slice(0, 2).toUpperCase()}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-extrabold">{userName}</p>
-              {patientId && (
-                <p className="truncate text-2xs text-muted">Paciente #{patientId}</p>
-              )}
-            </div>
+        <div className="patient-user-card">
+          <PatientAvatar userName={userName} />
+          <div className="patient-user-card__copy">
+            <p>{userName || "Ana Martínez"}</p>
+            <span>Paciente #{patientId || "44021"}</span>
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-3" aria-label="Navegación del paciente">
-          <ul className="grid gap-0.5">
+        <nav className="patient-nav" aria-label="Navegación del paciente">
+          <ul>
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const active = isActive(item.href);
 
               return (
                 <li key={item.href}>
-                  {item.available ? (
+                  {item.enabled ? (
                     <Link
-                      className={`flex min-h-10 items-center gap-3 rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus ${
-                        isActive
-                          ? "bg-accent-soft text-accent"
-                          : "text-icon-nav-inactive hover:bg-surface-subtle hover:text-ink"
-                      }`}
+                      className={`patient-nav__item ${active ? "patient-nav__item--active" : ""}`}
                       href={item.href}
                       onClick={() => setMenuOpen(false)}
-                      aria-current={isActive ? "page" : undefined}
+                      aria-current={active ? "page" : undefined}
                     >
-                      <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
-                      {item.label}
+                      <Icon className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
+                      <span>{item.label}</span>
                     </Link>
                   ) : (
-                    <span
-                      className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-xs font-bold text-muted/70"
-                      aria-disabled="true"
-                      title="Disponible próximamente"
-                    >
-                      <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
-                      {item.label}
+                    <span className="patient-nav__item patient-nav__item--disabled" aria-disabled="true">
+                      <Icon className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
+                      <span>{item.label}</span>
                     </span>
                   )}
                 </li>
@@ -126,66 +201,54 @@ export function PatientShell({
           </ul>
         </nav>
 
-        {/* Logout */}
-        <div className="border-t border-line p-3">
+        <div className="patient-sidebar__footer">
           <LogoutButton appearance="navigation" />
         </div>
       </aside>
 
-      {/* Mobile overlay */}
       {menuOpen ? (
-        <div
-          className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden"
-          aria-hidden="true"
+        <button
+          className="patient-sidebar__overlay"
+          type="button"
+          aria-label="Cerrar menú"
           onClick={() => setMenuOpen(false)}
         />
       ) : null}
 
-      {/* Top header */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-60 lg:px-7">
-        <button
-          className="grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
-          type="button"
-          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? (
-            <X className="size-4" aria-hidden="true" />
-          ) : (
-            <Menu className="size-4" aria-hidden="true" />
-          )}
-        </button>
-
-        <p className="text-xs font-bold text-muted">Portal del paciente</p>
-
-        <div className="ml-auto flex items-center gap-1">
+      <div className="patient-content">
+        <header className="patient-topbar">
           <button
-            className="relative grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus"
+            className="patient-mobile-menu"
             type="button"
-            aria-label="Ver notificaciones"
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
           >
-            <Bell className="size-4" strokeWidth={1.7} aria-hidden="true" />
+            {menuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
           </button>
-          <button
-            className="grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus"
-            type="button"
-            aria-label="Mensajes"
-          >
-            <MessageCircle className="size-4" strokeWidth={1.7} aria-hidden="true" />
-          </button>
-          <button
-            className="ml-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-extrabold text-white transition-colors hover:bg-accent/90 focus-visible:outline-3 focus-visible:outline-focus"
-            type="button"
-          >
-            <CalendarDays className="size-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Agendar Nueva Cita</span>
-          </button>
-        </div>
-      </header>
 
-      {/* Page content */}
-      <main className="min-w-0 lg:ml-60">{children}</main>
+          <div className="patient-topbar__heading">
+            <h1>{meta.title}</h1>
+            <p>{meta.subtitle}</p>
+          </div>
+
+          <div className="patient-topbar__actions">
+            <button className="patient-icon-button" type="button" aria-label="Ver notificaciones">
+              <Bell className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
+              <span className="patient-notification-dot" aria-hidden="true" />
+            </button>
+            <button className="patient-icon-button" type="button" aria-label="Abrir mensajes">
+              <MessageCircle className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
+            </button>
+            <button className="patient-primary-button patient-topbar__cta" type="button">
+              {showTriage ? <Plus className="size-4" aria-hidden="true" /> : <CalendarDays className="size-4" aria-hidden="true" />}
+              <span>{meta.action}</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="patient-main">{children}</main>
+      </div>
     </div>
   );
 }

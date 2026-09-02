@@ -38,7 +38,7 @@ export type AccessChange = {
 
 export type AccessControlData = {
   actorUserId: number;
-  enforcement: "actor_context";
+  enforcement: "catalog_gate";
   roles: AccessRoleDefinition[];
   permissions: AccessPermission[];
   clinics: AccessClinic[];

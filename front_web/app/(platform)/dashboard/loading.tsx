@@ -6,7 +6,7 @@ export default function DashboardLoading() {
     <div className="mx-auto w-full max-w-[1560px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8" role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">Preparando el panel de control global</span>
 
-      <div className="animate-pulse">
+      <div className="motion-safe:animate-pulse">
         <header className="flex flex-col gap-3 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="h-2.5 w-32 rounded bg-accent-soft" />

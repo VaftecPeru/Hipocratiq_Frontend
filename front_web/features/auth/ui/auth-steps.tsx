@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { useState, type FormEventHandler, type RefObject } from "react";
-import { ArrowLeft, Building2, Check, CircleAlert, Eye, EyeOff, Headphones, LockKeyhole, Mail, Smartphone, UserRound, UsersRound } from "lucide-react";
+import { ArrowLeft, Building2, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone, UserRound, UsersRound } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
 import { BrandLogo } from "@/shared/ui/brand-logo";
@@ -58,6 +58,7 @@ type CredentialsStepProps = {
   phoneInput: RefObject<HTMLInputElement | null>;
   passwordInput: RefObject<HTMLInputElement | null>;
   onLoginRoleChange: (role: LoginRole) => void;
+  onBackToRoleSelection: () => void;
   onIdentifierTypeChange: (type: LoginIdentifierType) => void;
   onCountryChange: (country: CountryCode) => void;
   onEmailChange: (value: string) => void;
@@ -69,10 +70,10 @@ type CredentialsStepProps = {
 };
 
 const LOGIN_ROLE_OPTIONS = [
-  { value: "healthcare", label: "Profesional de salud", description: "Médicos, enfermeros y personal clínico", icon: UserRound },
+  { value: "healthcare", label: "Profesional de salud", description: "Médicos con acceso clínico", icon: UserRound },
+  { value: "receptionist", label: "Recepción", description: "Agenda y atención de clínica", icon: Building2 },
   { value: "patient", label: "Paciente", description: "Accede a tu historial clínico", icon: UsersRound },
   { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
-  { value: "support", label: "Soporte", description: "Soporte técnico y asistencia", icon: Headphones },
 ] satisfies ReadonlyArray<{ value: LoginRole; label: string; description: string; icon: typeof UserRound }>;
 
 export function CredentialsStep({
@@ -91,6 +92,7 @@ export function CredentialsStep({
   phoneInput,
   passwordInput,
   onLoginRoleChange,
+  onBackToRoleSelection,
   onIdentifierTypeChange,
   onCountryChange,
   onEmailChange,
@@ -102,16 +104,13 @@ export function CredentialsStep({
 }: CredentialsStepProps) {
   const countryOption = COUNTRY_OPTIONS[country];
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const isSupportLogin = loginRole === "support";
 
   return (
-    <div className="w-full max-w-[30rem]">
-      <div className="mb-7 flex justify-end">
-        <CountrySelect id="login-locale-country" mode="locale" value={country} onChange={onCountryChange} />
-      </div>
-
+    <div className="w-full max-w-[38rem]">
       <div className="mb-6 flex items-center gap-4">
         <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-accent shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)]">
-          <BrandLogo className="h-9 w-10 brightness-0 invert" priority />
+          <BrandLogo className="h-9 w-10 brightness-0 invert" />
         </span>
         <Image className="h-auto w-[12rem] max-w-full" src="/logo_hipogratiq_1.png" alt="HIPOCRATIQ" width={1567} height={183} priority />
       </div>
@@ -121,31 +120,48 @@ export function CredentialsStep({
       </h1>
       <p className="mt-2 text-sm leading-5 text-muted">Accede de forma segura a tu cuenta.</p>
 
-      <div className="mt-8">
-        <p className="mb-3 text-sm font-semibold text-ink">Iniciar sesión como</p>
-        <div className="grid grid-cols-2 gap-3 min-[520px]:grid-cols-4" role="group" aria-label="Tipo de cuenta">
-          {LOGIN_ROLE_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const isSelected = loginRole === option.value;
+      <div className="mt-6">
+        {isSupportLogin ? (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="text-sm font-semibold text-ink">Acceso de soporte</p>
+            <button
+              type="button"
+              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border-0 bg-transparent px-0 text-2xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}
+              onClick={onBackToRoleSelection}
+            >
+              <ArrowLeft className="size-3.5" strokeWidth={2} aria-hidden="true" />
+              Volver al inicio de sesión
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="mb-2 text-sm font-semibold text-ink">Iniciar sesión como</p>
+            <div className="login-role-grid-container min-w-0">
+              <div className="login-role-grid" role="group" aria-label="Tipo de cuenta">
+                {LOGIN_ROLE_OPTIONS.map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = loginRole === option.value;
 
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`group flex min-h-[10.75rem] flex-col items-center rounded-xl border px-2 py-4 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-white text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
-                onClick={() => onLoginRoleChange(option.value)}
-                aria-pressed={isSelected}
-                aria-label={option.value === "support" ? "Soporte, Super Administrador" : option.label}
-              >
-                <span className={`grid size-12 shrink-0 place-items-center rounded-full transition-colors ${isSelected ? "bg-white text-accent" : "bg-surface-subtle text-ink-secondary group-hover:text-accent"}`}>
-                  <Icon className="size-6" strokeWidth={1.7} aria-hidden="true" />
-                </span>
-                <span className="mt-3 text-xs font-semibold leading-4">{option.label}</span>
-                <span className="mt-1 text-[0.66rem] leading-4 text-muted">{option.description}</span>
-              </button>
-            );
-          })}
-        </div>
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`group flex min-h-[8.5rem] min-w-0 flex-col items-center rounded-xl border p-2.5 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-white text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
+                      onClick={() => onLoginRoleChange(option.value)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${isSelected ? "bg-white text-accent" : "bg-surface-subtle text-ink-secondary group-hover:text-accent"}`}>
+                        <Icon className="size-5" strokeWidth={1.7} aria-hidden="true" />
+                      </span>
+                      <span className="mt-2 text-xs font-semibold leading-4">{option.label}</span>
+                      <span className="mt-1 text-balance text-[0.66rem] leading-4 text-muted">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="mt-7 flex items-center gap-3 text-xs text-muted">
@@ -177,7 +193,7 @@ export function CredentialsStep({
           <div className="grid gap-2">
             <label className="text-2xs font-bold text-ink" htmlFor="phone">Número de celular</label>
             <div className="flex items-center gap-0">
-              <CountrySelect id="login-phone-country" value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} />
+              <CountrySelect id="login-phone-country" value={country} onChange={onCountryChange} hasError={Boolean(identifierError)} ariaDescribedBy={identifierError ? "identifier-error" : undefined} />
               <div className={`${FIELD_CONTAINER_CLASSES} flex-1 rounded-l-none border-l-0 ${identifierError ? INVALID_FIELD_CLASSES : ""}`}>
                 <input ref={phoneInput} className="min-h-9 w-full min-w-0 border-0 bg-transparent px-3 text-2xs text-ink outline-0 placeholder:text-placeholder" id="phone" name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" autoComplete="tel-national" spellCheck={false} maxLength={countryOption.nationalLength} placeholder={countryOption.placeholder} value={phone} onChange={(event) => onPhoneChange(event.target.value)} onBlur={onIdentifierBlur} aria-invalid={identifierError ? true : undefined} aria-describedby={identifierError ? "identifier-error" : undefined} />
               </div>
@@ -218,10 +234,12 @@ export function CredentialsStep({
         </button>
       </form>
 
-      <p className="mt-7 text-center text-xs text-muted">
-        ¿No tienes una cuenta?{" "}
-         <Link href="/register" className={`border-0 bg-transparent p-0 text-xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Regístrate aquí</Link>
-      </p>
+      {!isSupportLogin ? (
+        <p className="mt-7 text-center text-xs text-muted">
+          ¿No tienes una cuenta?{" "}
+          <Link href="/register" className={`border-0 bg-transparent p-0 text-xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}>Regístrate aquí</Link>
+        </p>
+      ) : null}
     </div>
   );
 }

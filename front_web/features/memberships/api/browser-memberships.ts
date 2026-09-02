@@ -1,4 +1,5 @@
 import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
+import { parseApiList } from "@/shared/api/parse-api-list";
 import type {
   CreatePlanPayload,
   CreateSubscriptionPayload,
@@ -114,7 +115,7 @@ function mapPlan(apiPlan: ApiPlan): MembershipPlan {
     monthlyPriceUsdCents: apiPlan.monthly_price_usd_cents,
     annualPriceUsdCents: apiPlan.annual_price_usd_cents,
     currency: apiPlan.currency,
-    features: apiPlan.features,
+    features: parseApiList<string>(apiPlan.features, "memberships.plan.features"),
     publiclySelectable: apiPlan.publicly_selectable,
     isActive: apiPlan.is_active,
     subscribers: apiPlan.subscribers,
@@ -153,11 +154,7 @@ export async function getAdminMemberships(signal?: AbortSignal): Promise<Members
 
   if (
     !payload.data ||
-    !payload.data.kpis ||
-    !Array.isArray(payload.data.plans) ||
-    !Array.isArray(payload.data.subscriptions_by_country) ||
-    !Array.isArray(payload.data.subscriptions_by_plan) ||
-    !Array.isArray(payload.data.upcoming_renewals)
+    !payload.data.kpis
   ) {
     throw new ApiError("El servidor devolvió una respuesta de membresías incompleta.", 502);
   }
@@ -179,18 +176,18 @@ export async function getAdminMemberships(signal?: AbortSignal): Promise<Members
         changeNote: kpis.renewal_rate.change_note,
       },
     },
-    plans: payload.data.plans.map(mapPlan),
-    subscriptionsByCountry: payload.data.subscriptions_by_country.map((item) => ({
+    plans: parseApiList<ApiPlan>(payload.data.plans, "memberships.plans").map(mapPlan),
+    subscriptionsByCountry: parseApiList<ApiCountryDistribution>(payload.data.subscriptions_by_country, "memberships.subscriptions_by_country").map((item) => ({
       countryCode: item.country_code,
       count: item.count,
       percentage: item.percentage,
     })),
-    subscriptionsByPlan: payload.data.subscriptions_by_plan.map((item) => ({
+    subscriptionsByPlan: parseApiList<ApiPlanDistribution>(payload.data.subscriptions_by_plan, "memberships.subscriptions_by_plan").map((item) => ({
       plan: item.plan,
       count: item.count,
       percentage: item.percentage,
     })),
-    upcomingRenewals: payload.data.upcoming_renewals.map(mapRenewal),
+    upcomingRenewals: parseApiList<ApiRenewal>(payload.data.upcoming_renewals, "memberships.upcoming_renewals").map(mapRenewal),
     conversionRate: payload.data.conversion_rate,
     generatedAt: payload.data.generated_at,
   };
@@ -214,11 +211,11 @@ export async function getMembershipClinics(signal?: AbortSignal): Promise<Member
     { signal },
   );
 
-  if (!Array.isArray(payload.data)) {
+  if (!payload.data) {
     throw new ApiError("El servidor devolvió una respuesta de clínicas incompleta.", 502);
   }
 
-  return payload.data.map((clinic) => ({
+  return parseApiList<ApiClinicItem>(payload.data, "memberships.clinics.data").map((clinic) => ({
     id: clinic.id,
     name: clinic.name,
     countryCode: clinic.country_code,

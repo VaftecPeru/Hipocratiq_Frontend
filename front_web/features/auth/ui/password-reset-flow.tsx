@@ -473,7 +473,7 @@ export function PasswordResetFlow() {
         <div className="grid gap-2">
           <label className="text-2xs font-bold text-ink" htmlFor="reset-phone">Número de celular</label>
           <div className="flex items-center gap-0">
-            <CountrySelect value={country} onChange={(value) => { setCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }} hasError={Boolean(flow.fieldErrors.identifier)} />
+            <CountrySelect value={country} onChange={(value) => { setCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }} hasError={Boolean(flow.fieldErrors.identifier)} ariaDescribedBy={flow.fieldErrors.identifier ? "identifier-error" : undefined} />
             <div className={`${FIELD_CONTAINER} flex-1 rounded-l-none border-l-0 ${flow.fieldErrors.identifier ? INVALID_FIELD : ""}`}>
               <input
                 ref={phoneInput}

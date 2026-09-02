@@ -4,6 +4,8 @@ import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 
 export function RegistrationShell({ children }: { children: ReactNode }) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-[minmax(34rem,38%)_1fr]">
       <section
@@ -23,12 +25,9 @@ export function RegistrationShell({ children }: { children: ReactNode }) {
           <div className="mx-auto grid min-h-full w-full place-items-center">{children}</div>
         </div>
 
-        <footer className="flex min-h-12 items-center justify-between gap-4 px-[clamp(1.25rem,5vw,3.25rem)] text-2xs text-footer-text">
-          <span>© 2026 Hipocratiq</span>
-          <div className="flex gap-5">
-            <Link href="/soporte" className="transition-colors hover:text-ink">Soporte</Link>
-            <Link href="/seguridad" className="transition-colors hover:text-ink">Seguridad</Link>
-          </div>
+        <footer className="flex min-h-12 items-center justify-between gap-3 px-[clamp(1.25rem,5vw,3.25rem)] py-1 text-2xs text-footer-text">
+          <span className="shrink-0 whitespace-nowrap">© {currentYear} Hipocratiq</span>
+          <Link href="/soporte" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
         </footer>
       </section>
 

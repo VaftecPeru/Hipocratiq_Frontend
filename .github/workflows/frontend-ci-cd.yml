@@ -1,0 +1,318 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - front_web/**
+      - .github/workflows/frontend-ci-cd.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - front_web/**
+      - .github/workflows/frontend-ci-cd.yml
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: front_web
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck frontend
+        working-directory: front_web
+        run: npm run typecheck
+
+      - name: Lint frontend
+        working-directory: front_web
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: front_web
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        run: npm run build
+
+      - name: Build frontend Docker image
+        run: docker build --file front_web/Dockerfile --tag hipocratiq-frontend:ci front_web
+
+  deploy:
+    name: Deploy frontend to Production
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: Production
+    concurrency:
+      group: frontend-production
+      cancel-in-progress: false
+    steps:
+      - name: Validate deployment secrets
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          set -Eeuo pipefail
+
+          missing_secrets=()
+          for secret_name in DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST DEPLOY_USER; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              missing_secrets+=("$secret_name")
+            fi
+          done
+
+          if (( ${#missing_secrets[@]} > 0 )); then
+            printf 'Deployment blocked: missing required Production secrets: %s\n' "${missing_secrets[*]}" >&2
+            exit 1
+          fi
+
+          if [[ -n "${DEPLOY_SSH_PORT:-}" ]] && ! [[ "$DEPLOY_SSH_PORT" =~ ^[1-9][0-9]{0,4}$ ]]; then
+            printf 'Deployment blocked: DEPLOY_SSH_PORT must be a valid TCP port.\n' >&2
+            exit 1
+          fi
+
+          if [[ -n "${DEPLOY_SSH_PORT:-}" ]] && (( 10#$DEPLOY_SSH_PORT > 65535 )); then
+            printf 'Deployment blocked: DEPLOY_SSH_PORT must be between 1 and 65535.\n' >&2
+            exit 1
+          fi
+
+      - name: Deploy over strict native SSH
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+
+          if [[ ! "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            printf 'Deployment blocked: GitHub provided an invalid commit SHA.\n' >&2
+            exit 1
+          fi
+
+          ssh_dir="$(mktemp -d "${RUNNER_TEMP}/frontend-ssh.XXXXXX")"
+          key_file="${ssh_dir}/id_deploy"
+          known_hosts_file="${ssh_dir}/known_hosts"
+
+          cleanup_ssh_files() {
+            rm -f "$key_file" "$known_hosts_file"
+            rmdir "$ssh_dir" 2>/dev/null || true
+          }
+          trap cleanup_ssh_files EXIT
+
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$key_file"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$known_hosts_file"
+          chmod 600 "$key_file" "$known_hosts_file"
+
+          if ! ssh-keygen -y -f "$key_file" >/dev/null 2>&1; then
+            printf 'Deployment blocked: DEPLOY_SSH_PRIVATE_KEY is not a readable private key.\n' >&2
+            exit 1
+          fi
+
+          if [[ ! -s "$known_hosts_file" ]]; then
+            printf 'Deployment blocked: DEPLOY_KNOWN_HOSTS is empty.\n' >&2
+            exit 1
+          fi
+
+          ssh_options=(
+            -i "$key_file"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$known_hosts_file"
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+          )
+
+          if [[ -n "${DEPLOY_SSH_PORT:-}" ]]; then
+            ssh_options+=( -p "$DEPLOY_SSH_PORT" )
+          fi
+
+          ssh "${ssh_options[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -s -- '${GITHUB_SHA}'" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+
+          target_sha="${1:-}"
+          remote_app_dir="/srv/hipocratiq/frontend"
+
+          if [[ ! "$target_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            printf 'Deployment blocked: invalid target commit SHA.\n' >&2
+            exit 1
+          fi
+
+          if [[ ! -d "$remote_app_dir/.git" ]]; then
+            printf 'Deployment blocked: remote frontend checkout is unavailable.\n' >&2
+            exit 1
+          fi
+
+          cd "$remote_app_dir"
+          exec 9>/tmp/hipocratiq-frontend-deploy.lock
+          if ! flock -n 9; then
+            printf 'Deployment blocked: another frontend deployment is already running.\n' >&2
+            exit 1
+          fi
+
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            printf 'Deployment blocked: remote frontend checkout has tracked changes.\n' >&2
+            exit 1
+          fi
+
+          if ! git remote get-url origin >/dev/null 2>&1; then
+            printf 'Deployment blocked: remote frontend checkout has no origin remote.\n' >&2
+            exit 1
+          fi
+
+          if ! previous_sha="$(git rev-parse --verify HEAD^{commit})"; then
+            printf 'Deployment blocked: remote frontend checkout has no valid current commit.\n' >&2
+            exit 1
+          fi
+
+          if ! git fetch --no-tags origin main; then
+            printf 'Deployment blocked: could not fetch origin main.\n' >&2
+            exit 1
+          fi
+
+          if ! fetched_sha="$(git rev-parse --verify refs/remotes/origin/main^{commit})"; then
+            printf 'Deployment blocked: origin main did not resolve to a commit.\n' >&2
+            exit 1
+          fi
+
+          if [[ "$fetched_sha" != "$target_sha" ]]; then
+            printf 'Deployment blocked: fetched origin main does not match the GitHub commit.\n' >&2
+            exit 1
+          fi
+
+          if ! git cat-file -e "${target_sha}^{commit}"; then
+            printf 'Deployment blocked: target commit is unavailable locally.\n' >&2
+            exit 1
+          fi
+
+          compose_project_dir="${remote_app_dir}/front_web"
+          compose_file="${compose_project_dir}/compose.yaml"
+          compose_env_file="${compose_project_dir}/.env"
+
+          if [[ ! -f "$compose_file" ]]; then
+            printf 'Deployment blocked: frontend Compose file is unavailable.\n' >&2
+            exit 1
+          fi
+
+          if [[ ! -f "$compose_env_file" ]]; then
+            printf 'Deployment blocked: frontend Compose environment file is unavailable.\n' >&2
+            exit 1
+          fi
+
+          compose() {
+            docker compose \
+              --file "$compose_file" \
+              --project-directory "$compose_project_dir" \
+              --env-file "$compose_env_file" \
+              "$@"
+          }
+
+          wait_for_frontend_health() {
+            local container_id container_state health_status
+
+            for _ in {1..60}; do
+              container_id="$(compose ps -q frontend 2>/dev/null || true)"
+
+              if [[ -n "$container_id" ]]; then
+                container_state="$(docker inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
+                health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$container_id" 2>/dev/null || true)"
+
+                if [[ "$health_status" == "healthy" ]]; then
+                  return 0
+                fi
+
+                if [[ "$container_state" == "exited" || "$container_state" == "dead" ]]; then
+                  return 1
+                fi
+              fi
+
+              sleep 2
+            done
+
+            printf 'Frontend health check did not become healthy.\n' >&2
+            return 1
+          }
+
+          check_frontend_and_backend_proxy() {
+            curl --fail --silent --show-error --max-time 10 --retry 2 --retry-delay 1 --output /dev/null http://127.0.0.1:3000/
+            curl --fail --silent --show-error --max-time 10 --retry 2 --retry-delay 1 --output /dev/null http://127.0.0.1:3000/backend/api/health
+          }
+
+          rollback_required=false
+
+          rollback_on_failure() {
+            local deployment_status=$?
+            local rollback_status=0
+
+            if [[ "$deployment_status" -eq 0 || "$rollback_required" != "true" ]]; then
+              return "$deployment_status"
+            fi
+
+            set +e
+            printf 'Deployment failed; attempting rollback to the previous frontend commit.\n' >&2
+
+            git checkout --detach "$previous_sha" || rollback_status=1
+            if (( rollback_status == 0 )); then
+              compose config --quiet || rollback_status=1
+            fi
+            if (( rollback_status == 0 )); then
+              compose up -d --build --force-recreate --no-deps frontend || rollback_status=1
+            fi
+            if (( rollback_status == 0 )); then
+              wait_for_frontend_health || rollback_status=1
+            fi
+            if (( rollback_status == 0 )); then
+              check_frontend_and_backend_proxy || rollback_status=1
+            fi
+
+            if (( rollback_status == 0 )); then
+              printf 'Rollback completed, but the deployment remains failed.\n' >&2
+            else
+              printf 'Rollback failed; manual recovery is required.\n' >&2
+            fi
+
+            exit "$deployment_status"
+          }
+
+          trap rollback_on_failure EXIT
+          rollback_required=true
+
+          git checkout --detach "$target_sha"
+          compose config --quiet
+          compose up -d --build --force-recreate --no-deps frontend
+          wait_for_frontend_health
+          check_frontend_and_backend_proxy
+
+          rollback_required=false
+          trap - EXIT
+          printf 'Frontend deployment completed and local frontend/proxy checks passed.\n'
+          REMOTE_SCRIPT

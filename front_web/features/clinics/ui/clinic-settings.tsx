@@ -4,11 +4,14 @@ import { ArrowUpRight, BellRing, Building2, Crown, Globe2, Save, ShieldCheck, Sl
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getClinicSettings, updateClinicSettings } from "@/features/clinics/api/browser-clinic-dashboard";
+import type { ClinicPreferences } from "@/features/clinics/model/clinic-admin.types";
 import { Notice, SectionCard, Toggle, useNotice } from "./clinic-admin-primitives";
 
 function Field({ label, value, onChange, className = "" }: Readonly<{ label: string; value: string; onChange?: (value: string) => void; className?: string }>) {
   return <label className={`grid gap-1.5 ${className}`}><span className="text-[0.54rem] font-bold text-muted">{label}</span><input className="h-9 rounded-lg border border-line bg-surface-input px-3 text-[0.6rem] font-semibold outline-none focus:border-accent focus:ring-3 focus:ring-focus/20" value={value} readOnly={!onChange} onChange={(event) => onChange?.(event.target.value)} /></label>;
 }
+
+const DEFAULT_PREFERENCES: ClinicPreferences = { maintenance: false, audit: true, signatures: true, backups: true };
 
 export function ClinicSettings() {
   const [name, setName] = useState("");
@@ -16,7 +19,7 @@ export function ClinicSettings() {
   const [contactPhone, setContactPhone] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [preferences, setPreferences] = useState({ maintenance: false, audit: true, signatures: true, backups: true });
+  const [preferences, setPreferences] = useState<ClinicPreferences>(DEFAULT_PREFERENCES);
   const { notice, showNotice } = useNotice();
   const toggle = (key: keyof typeof preferences, checked: boolean) => setPreferences((current) => ({ ...current, [key]: checked }));
   useEffect(() => {
@@ -26,6 +29,7 @@ export function ClinicSettings() {
         setName(clinic.name);
         setAddress(clinic.address);
         setContactPhone(clinic.contactPhone);
+        setPreferences(clinic.preferences);
       })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -42,7 +46,7 @@ export function ClinicSettings() {
     if (isSaving || !name.trim() || !address.trim()) return;
     setIsSaving(true);
     try {
-      const clinic = await updateClinicSettings({ name: name.trim(), address: address.trim(), contactPhone: contactPhone.trim() });
+      const clinic = await updateClinicSettings({ name: name.trim(), address: address.trim(), contactPhone: contactPhone.trim(), preferences });
       setName(clinic.name);
       setAddress(clinic.address);
       setContactPhone(clinic.contactPhone);

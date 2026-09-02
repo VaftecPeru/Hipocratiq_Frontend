@@ -1,6 +1,7 @@
 export type LoginIdentifierType = "email" | "phone";
-export type LoginRole = "healthcare" | "patient" | "administrator" | "support";
+export type LoginRole = "healthcare" | "receptionist" | "patient" | "administrator" | "support";
 export type LoginActorContext = "staff" | "patient";
+export type LoginRequestedRole = "super_admin" | "clinic_admin" | "receptionist" | "doctor" | "patient";
 export type AuthStep = "credentials" | "otp" | "success";
 export type CountryCode = "PE" | "MX" | "US";
 
