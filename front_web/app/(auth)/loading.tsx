@@ -17,14 +17,16 @@ export default function AuthLoading() {
             <span className="block h-8 w-72 max-w-full rounded-lg bg-line/60" />
             <span className="mt-3 block h-4 w-56 max-w-full rounded bg-line/40" />
 
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 min-[1280px]:grid-cols-5">
-              {Array.from({ length: 5 }, (_, index) => (
-                <div className="flex min-h-[10.75rem] flex-col items-center rounded-xl border border-line bg-surface p-4" key={index}>
-                  <span className="size-12 rounded-full bg-surface-subtle" />
-                  <span className="mt-3 h-3 w-20 max-w-full rounded bg-line/50" />
-                  <span className="mt-2 h-8 w-full rounded bg-line/30" />
-                </div>
-              ))}
+            <div className="login-role-grid-container mt-6">
+              <div className="login-role-grid">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div className="flex min-h-[8.5rem] flex-col items-center rounded-xl border border-line bg-surface p-2.5" key={index}>
+                    <span className="size-10 rounded-full bg-surface-subtle" />
+                    <span className="mt-2 h-3 w-20 max-w-full rounded bg-line/50" />
+                    <span className="mt-1 h-8 w-full rounded bg-line/30" />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-7 h-4 w-full rounded bg-line/30" />
@@ -33,7 +35,7 @@ export default function AuthLoading() {
           </div>
         </div>
 
-        <footer className="flex min-h-16 items-center justify-between gap-4 px-[clamp(1.25rem,4vw,3rem)]" aria-hidden="true">
+        <footer className="flex min-h-12 items-center justify-between gap-3 px-[clamp(1.25rem,4vw,3rem)] py-1" aria-hidden="true">
           <span className="h-2.5 w-28 rounded bg-line/40" />
           <span className="h-2.5 w-32 rounded bg-line/30" />
         </footer>

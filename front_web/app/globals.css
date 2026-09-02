@@ -110,6 +110,22 @@ body {
   overflow-x: hidden;
 }
 
+.login-role-grid-container {
+  container-type: inline-size;
+}
+
+.login-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+@container (min-width: 32rem) {
+  .login-role-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 button,
 input,
 select {
