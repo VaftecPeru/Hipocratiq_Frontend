@@ -9,6 +9,7 @@ import type {
   ClinicPatient,
   ClinicPatientTriagePriority,
   ClinicPatientsPage,
+  ClinicScheduleBlock,
   ClinicTeamMember,
 } from "@/features/clinics/model/clinic-admin.types";
 import type { CountryCode } from "@/shared/ui/country-flag";
@@ -94,6 +95,27 @@ type ApiAppointment = {
   patient: {id: number; patient_code: string; name: string | null; phone_number: string | null};
 
   doctor: {id: number; name: string; specialty: string | null  } | null;
+};
+
+type ApiScheduleBlock = {
+  id: number;
+  starts_at: string;
+  ends_at: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string | null;
+  scope: "clinic" | "doctor";
+
+  doctor: {
+    id: number;
+    name: string;
+  } | null;
+
+  created_by: {
+    id: number;
+    name: string;
+  };
 };
 
 type ApiPatientsResponse = {
@@ -182,6 +204,23 @@ function mapAppointment(appointment: ApiAppointment): ClinicAppointment {
     },
 
     doctor: appointment.doctor,
+  };
+}
+
+function mapScheduleBlock(
+  block: ApiScheduleBlock,
+): ClinicScheduleBlock {
+  return {
+    id: block.id,
+    startsAt: block.starts_at,
+    endsAt: block.ends_at,
+    scheduledDate: block.scheduled_date,
+    startTime: block.start_time,
+    endTime: block.end_time,
+    reason: block.reason,
+    scope: block.scope,
+    doctor: block.doctor,
+    createdBy: block.created_by,
   };
 }
 
@@ -393,6 +432,8 @@ export async function getClinicSettings(signal?: AbortSignal): Promise<ClinicAdm
 
 export type UpdateClinicSettingsPayload = Partial<Pick<ClinicAdminInfo, "name" | "contactPhone" | "address">>;
 
+
+
 export async function updateClinicSettings(payload: UpdateClinicSettingsPayload): Promise<ClinicAdminInfo> {
   const response = await patchToApi<ApiClinicResponse>("/api/v1/auth/clinic/settings", {
     name: payload.name,
@@ -401,4 +442,57 @@ export async function updateClinicSettings(payload: UpdateClinicSettingsPayload)
   });
   if (!response.data?.clinic) throw new ApiError("El servidor no devolvió la configuración actualizada.", 502);
   return mapClinic(response.data.clinic);
+}
+
+export async function getClinicScheduleBlocks(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ClinicScheduleBlock[]> {
+  const query = new URLSearchParams({ from, to });
+
+  const response = await getFromApi<{
+    data: ApiScheduleBlock[];
+  }>(
+    `/api/v1/auth/clinic/schedule-blocks?${query.toString()}`,
+    { signal },
+  );
+
+  if (!Array.isArray(response.data)) {
+    throw new ApiError(
+      "El servidor devolvió los bloqueos incompletos.",
+      502,
+    );
+  }
+
+  return response.data.map(mapScheduleBlock);
+}
+
+export type CreateClinicScheduleBlockPayload = {
+  doctorUserId: number | null;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+};
+
+export async function createClinicScheduleBlock(
+  payload: CreateClinicScheduleBlockPayload,
+): Promise<ClinicScheduleBlock> {
+  const response = await postToApi<{
+    data: ApiScheduleBlock;
+  }>("/api/v1/auth/clinic/schedule-blocks", {
+    doctor_user_id: payload.doctorUserId,
+    starts_at: payload.startsAt,
+    ends_at: payload.endsAt,
+    reason: payload.reason,
+  });
+
+  if (!response.data) {
+    throw new ApiError(
+      "El servidor no devolvió el bloqueo registrado.",
+      502,
+    );
+  }
+
+  return mapScheduleBlock(response.data);
 }

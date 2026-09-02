@@ -119,3 +119,24 @@ export type ClinicPatientsPage = {
     total: number;
   };
 };
+
+export type ClinicScheduleBlock = {
+  id: number;
+  startsAt: string;
+  endsAt: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string;
+  reason: string | null;
+  scope: "clinic" | "doctor";
+
+  doctor: {
+    id: number;
+    name: string;
+  } | null;
+
+  createdBy: {
+    id: number;
+    name: string;
+  };
+};

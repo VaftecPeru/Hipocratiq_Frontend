@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Clock3,
+  Loader2,
+  Pencil,
   Stethoscope,
+  Trash2,
   UserRound,
   X,
 } from "lucide-react";
@@ -16,6 +20,10 @@ import type {
 type Props = {
   appointment: ClinicAppointment | null;
   onClose: () => void;
+  onEdit: (appointment: ClinicAppointment) => void;
+  onDelete: (
+    appointment: ClinicAppointment,
+  ) => Promise<void> | void;
 };
 
 const statusStyles: Record<ClinicAppointmentStatus, string> = {
@@ -31,7 +39,17 @@ const statusStyles: Record<ClinicAppointmentStatus, string> = {
 export function ClinicAppointmentDetailModal({
   appointment,
   onClose,
+  onEdit,
+  onDelete,
 }: Readonly<Props>) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setConfirmDelete(false);
+    setIsDeleting(false);
+  }, [appointment?.id]);
+
   if (!appointment) {
     return null;
   }
@@ -44,6 +62,20 @@ export function ClinicAppointmentDetailModal({
     month: "long",
     year: "numeric",
   });
+
+  async function handleDelete(): Promise<void> {
+    if (!appointment || isDeleting) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await onDelete(appointment);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div
@@ -74,6 +106,7 @@ export function ClinicAppointmentDetailModal({
             type="button"
             className="grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-hover"
             onClick={onClose}
+            disabled={isDeleting}
             aria-label="Cerrar"
           >
             <X className="size-4" />
@@ -117,6 +150,7 @@ export function ClinicAppointmentDetailModal({
             <div className="rounded-xl border border-line p-3">
               <div className="flex items-center gap-2 text-muted">
                 <CalendarDays className="size-4" />
+
                 <span className="text-[0.62rem] font-bold">
                   Fecha
                 </span>
@@ -130,6 +164,7 @@ export function ClinicAppointmentDetailModal({
             <div className="rounded-xl border border-line p-3">
               <div className="flex items-center gap-2 text-muted">
                 <Clock3 className="size-4" />
+
                 <span className="text-[0.62rem] font-bold">
                   Hora
                 </span>
@@ -184,16 +219,99 @@ export function ClinicAppointmentDetailModal({
               </p>
             </div>
           </div>
+
+          {confirmDelete ? (
+            <section className="rounded-xl border border-danger/25 bg-danger-soft/50 p-4">
+              <div className="flex items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-danger/10 text-danger">
+                  <Trash2 className="size-4" />
+                </span>
+
+                <div>
+                  <p className="text-xs font-extrabold text-danger">
+                    ¿Eliminar esta cita?
+                  </p>
+
+                  <p className="mt-1 text-[0.65rem] leading-relaxed text-muted">
+                    Se eliminará la cita de{" "}
+                    <strong className="text-ink">
+                      {appointment.patient.name ?? "este paciente"}
+                    </strong>{" "}
+                    programada para {formattedDate} a las{" "}
+                    {appointment.time}.
+                  </p>
+
+                  <p className="mt-1 text-[0.62rem] font-semibold text-danger">
+                    Esta acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : null}
         </div>
 
-        <footer className="flex justify-end gap-2 border-t border-line bg-surface-subtle/50 px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-10 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold hover:bg-surface-hover"
-          >
-            Cerrar
-          </button>
+        <footer className="border-t border-line bg-surface-subtle/50 px-5 py-4">
+          {confirmDelete ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setConfirmDelete(false)}
+                className="min-h-10 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold hover:bg-surface-hover disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDelete}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-danger px-4 text-xs font-extrabold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    Eliminar cita
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-danger/25 bg-danger-soft px-4 text-xs font-extrabold text-danger hover:bg-danger/10"
+              >
+                <Trash2 className="size-4" />
+                Eliminar
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="min-h-10 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold hover:bg-surface-hover"
+                >
+                  Cerrar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onEdit(appointment)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm hover:bg-accent-hover"
+                >
+                  <Pencil className="size-4" />
+                  Editar
+                </button>
+              </div>
+            </div>
+          )}
         </footer>
       </div>
     </div>
