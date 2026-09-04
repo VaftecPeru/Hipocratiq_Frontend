@@ -335,6 +335,59 @@ export async function getClinicAppointments(
   };
 }
 
+export async function getClinicScheduleBlocks(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ClinicScheduleBlock[]> {
+  const query = new URLSearchParams({ from, to });
+  const response = await getFromApi<{ data: ApiScheduleBlock[] }>(
+    `/api/v1/auth/clinic/schedule-blocks?${query.toString()}`,
+    { signal },
+  );
+
+  if (!Array.isArray(response.data)) {
+    throw new ApiError("El servidor devolvió los bloqueos incompletos.", 502);
+  }
+
+  return response.data.map(mapScheduleBlock);
+}
+
+export type CreateClinicScheduleBlockPayload = {
+  doctorUserId: number | null;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+};
+
+export async function createClinicScheduleBlock(
+  payload: CreateClinicScheduleBlockPayload,
+): Promise<ClinicScheduleBlock> {
+  const response = await postToApi<{ data: ApiScheduleBlock }>(
+    "/api/v1/auth/clinic/schedule-blocks",
+    {
+      doctor_user_id: payload.doctorUserId,
+      starts_at: payload.startsAt,
+      ends_at: payload.endsAt,
+      reason: payload.reason,
+    },
+  );
+
+  if (!response.data) {
+    throw new ApiError("El servidor no devolvió el bloqueo registrado.", 502);
+  }
+
+  return mapScheduleBlock(response.data);
+}
+
+export async function deleteClinicScheduleBlock(
+  id: number,
+): Promise<void> {
+  await deleteFromApi(
+    `/api/v1/auth/clinic/schedule-blocks/${id}`,
+  );
+}
+
 export type CreateClinicAppointmentPayload = {
   patientProfileId: number;
   doctorUserId: number | null;
@@ -639,28 +692,10 @@ export async function updateClinicPatientStatus(
 
 const API_PREFIX = "/backend";
 
-// --- Appointment write operations ---
-
-export type CreateClinicAppointmentPayload = {
-  patientProfileId: number;
-  doctorUserId: number;
-  scheduledAt: string;
-  appointmentType: string;
-  notes: string | null;
-};
-
-export async function createClinicAppointment(
-  payload: CreateClinicAppointmentPayload,
-): Promise<ClinicAppointment> {
-  const response = await postToApi<{ data: ApiAppointment }>("/api/v1/auth/clinic/appointments", {
-    patient_profile_id: payload.patientProfileId,
-    doctor_user_id: payload.doctorUserId,
-    scheduled_at: payload.scheduledAt,
-    appointment_type: payload.appointmentType,
-    notes: payload.notes,
-  });
-  if (!response.data) throw new ApiError("El servidor no devolvió la cita creada.", 502);
-  return mapAppointment(response.data);
+export async function deleteClinicAppointment(
+  id: number,
+): Promise<void> {
+  await deleteFromApi(`/api/v1/auth/clinic/appointments/${id}`);
 }
 
 export async function updateClinicAppointmentStatus(

@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState } from "react";
 import { Stethoscope } from "lucide-react";
 import { getDoctorRegistrationSpecialties, type RegistrationSpecialty } from "@/features/auth/api/doctor-registration";
 import {
@@ -77,13 +77,17 @@ export function CreateClinicDoctorModal({
     const controller = new AbortController();
 
     getDoctorRegistrationSpecialties(controller.signal)
-      .then((response) => {
-        if (!Array.isArray(response.data)) {
-          throw new Error("El catálogo de especialidades está incompleto.");
-        }
-        setSpecialties(response.data);
-        setCatalogLoaded(true);
-      })
+  .then((response) => {
+    if (!Array.isArray(response.data)) {
+      throw new Error("El catálogo de especialidades está incompleto.");
+    }
+    if (response.data.length === 0) {
+      throw new Error("No hay especialidades disponibles en el catálogo.");
+    }
+    setSpecialties(response.data);
+    setCatalogLoaded(true);
+    setCatalogError(null);
+  })
       .catch((requestError: unknown) => {
         if (isAbortError(requestError)) return;
         setCatalogError(requestError instanceof Error ? requestError.message : "No pudimos cargar las especialidades.");
@@ -111,7 +115,7 @@ export function CreateClinicDoctorModal({
     });
   }
 
-  function resetForm(): void {
+  const resetForm = useCallback((): void => {
     setName("");
     setEmail("");
     setPhoneNumber("");
@@ -121,14 +125,14 @@ export function CreateClinicDoctorModal({
     setSubspecialtyId("");
     setError(null);
     setFieldErrors({});
-  }
+  }, [clinicCountryCode]);
 
-  function handleClose(): void {
+  const handleClose = useCallback((): void => {
     if (isLoading) return;
+
     resetForm();
     onClose();
-  }
-
+  }, [isLoading, onClose, resetForm]);
   async function handleCreate(): Promise<void> {
     if (isLoading) return;
 
@@ -248,7 +252,8 @@ export function CreateClinicDoctorModal({
             label="Teléfono"
             value={phoneNumber}
             onChange={(event) => {
-              setPhoneNumber(event.target.value);
+              const onlyNumbers = event.target.value.replace(/\D/g, "");
+              setPhoneNumber(onlyNumbers);
               clearFieldError("phone_number");
             }}
             error={fieldErrors.phone_number}
@@ -292,7 +297,7 @@ export function CreateClinicDoctorModal({
               setSubspecialtyId(value);
               clearFieldError("subspecialty_id");
             }}
-            placeholder={selectedSpecialty ? "Opcional" : "Selecciona primero una especialidad"}
+            placeholder={  !selectedSpecialty ? "Selecciona primero una especialidad" : subspecialtyOptions.length === 0 ? "Sin subespecialidades disponibles" : "Seleccionar subespecialidad (opcional)"}
             error={fieldErrors.subspecialty_id}
             disabled={!selectedSpecialty || subspecialtyOptions.length === 0}
           />
