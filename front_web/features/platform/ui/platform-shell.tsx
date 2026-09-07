@@ -21,11 +21,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
 import { NotificationBell } from "@/features/platform/ui/notification-bell";
+import {
+  SUPERADMIN_NAVIGATION_INVALIDATED_EVENT,
+  type SuperadminNavigationScope,
+} from "@/features/platform/model/superadmin-navigation-invalidation";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 
@@ -56,6 +61,20 @@ const navigationItems: NavigationItem[] = [
 ];
 
 type SettingsItem = { label: string; href: string; available: boolean };
+
+const NAVIGATION_SCOPE_PATHS: Record<SuperadminNavigationScope, readonly string[]> = {
+  clinics: ["/dashboard", "/clinics"],
+  users: ["/users", "/roles-permissions"],
+  "access-control": ["/users", "/roles-permissions"],
+};
+const PREFETCHABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics", "/users", "/roles-permissions"]);
+const PREFETCH_TTL_MS = 15_000;
+const MAX_PREFETCH_ENTRIES = 20;
+
+function isRouteInScopes(key: string, scopes: readonly SuperadminNavigationScope[]): boolean {
+  const pathname = key.split("?", 1)[0] ?? "";
+  return scopes.some((scope) => NAVIGATION_SCOPE_PATHS[scope].includes(pathname));
+}
 
 const settingsItems: SettingsItem[] = [
   { label: "General", href: "/settings/general", available: true },
@@ -92,7 +111,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
               <li key={item.href}>
                 {item.available ? (
                   <Link
-                    className={"flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                    className={"flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                     href={item.href}
                     prefetch={false}
                     onMouseEnter={() => onPrefetch(item.href)}
@@ -105,7 +124,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                   </Link>
                 ) : (
                   <span
-                    className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
+                    className="flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
                     aria-disabled="true"
                     title="Disponible próximamente"
                   >
@@ -120,7 +139,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
 
         <div className="mt-2 border-t border-line px-2 pt-2">
           <button
-            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
+            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
             type="button"
             aria-expanded={isSettingsOpen}
             aria-controls={settingsId}
@@ -139,7 +158,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                   <li key={item.label}>
                     {item.available ? (
                       <Link
-                        className={"flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                        className={"flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                         href={item.href}
                         prefetch={false}
                         onMouseEnter={() => onPrefetch(item.href)}
@@ -150,7 +169,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                         {item.label}
                       </Link>
                     ) : (
-                      <span className="flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
+                      <span className="flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
                         {item.label}
                       </span>
                     )}
@@ -169,10 +188,10 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
   );
 }
 
-function Brand() {
+function Brand({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false}>
-      <BrandLogo className="h-8 w-9" priority />
+    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false} onClick={onNavigate}>
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent" aria-hidden="true"><BrandLogo className="h-6 w-6 brightness-0 invert" priority /></span>
       <span className="text-sm font-extrabold tracking-[0.07em] text-ink">HIPOCRATIQ</span>
     </Link>
   );
@@ -180,15 +199,57 @@ function Brand() {
 
 export function PlatformShell({ children, userName }: PlatformShellProps) {
   const router = useRouter();
-  const prefetchedHrefs = useRef(new Set<string>());
+  const pathname = usePathname();
+  const prefetchedHrefs = useRef(new Map<string, number>());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
-  const prefetchOnIntent = useCallback((href: string) => {
-    if (prefetchedHrefs.current.has(href)) return;
 
-    prefetchedHrefs.current.add(href);
-    router.prefetch(href);
+  const prefetchOnIntent = useCallback((href: string) => {
+    if (!PREFETCHABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
+    const prefetchedAt = prefetchedHrefs.current.get(href);
+    if (prefetchedAt && Date.now() - prefetchedAt < PREFETCH_TTL_MS) return;
+
+    prefetchedHrefs.current.set(href, Date.now());
+    while (prefetchedHrefs.current.size > MAX_PREFETCH_ENTRIES) {
+      const oldestHref = prefetchedHrefs.current.keys().next().value;
+      if (oldestHref === undefined) break;
+      prefetchedHrefs.current.delete(oldestHref);
+    }
+    router.prefetch(href, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(href) });
   }, [router]);
+
+  useEffect(() => {
+    const invalidateNavigationRoutes = (event: Event) => {
+      const detail = (event as CustomEvent<{ scopes?: SuperadminNavigationScope[] }>).detail;
+      const scopes: readonly SuperadminNavigationScope[] = detail?.scopes?.length ? detail.scopes : ["clinics"];
+      const scopeRoutes = scopes.flatMap((scope) => NAVIGATION_SCOPE_PATHS[scope]);
+      const candidateHrefs = new Set([
+        ...scopeRoutes,
+        ...prefetchedHrefs.current.keys(),
+      ]);
+      const affectedHrefs = [...candidateHrefs].filter((key) => isRouteInScopes(key, scopes));
+
+      affectedHrefs.forEach((href) => {
+        prefetchedHrefs.current.delete(href);
+      });
+
+      if (isRouteInScopes(pathname, scopes)) {
+        router.refresh();
+      }
+
+      for (const href of affectedHrefs) {
+        if (href === pathname) continue;
+        router.prefetch(href, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(href) });
+      }
+    };
+
+    window.addEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
+    return () => window.removeEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
+  }, [pathname, router]);
+
+  const handleNavigation = useCallback(() => {
+    setIsMenuOpen(false);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -216,13 +277,13 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   return (
     <div className="min-h-svh bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 hidden w-52 border-r border-line bg-surface lg:flex lg:flex-col">
-        <Brand />
-        <Navigation idPrefix="desktop" onPrefetch={prefetchOnIntent} />
+        <Brand onNavigate={handleNavigation} />
+        <Navigation idPrefix="desktop" onPrefetch={prefetchOnIntent} onNavigate={handleNavigation} />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-13 items-center gap-2.5 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-52 lg:px-5">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
           aria-expanded={isMenuOpen}
           aria-controls="mobile-navigation"
@@ -272,8 +333,8 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
         <>
           <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
           <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
-            <div className="border-b border-line"><Brand /></div>
-            <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} onPrefetch={prefetchOnIntent} />
+            <div className="border-b border-line"><Brand onNavigate={handleNavigation} /></div>
+            <Navigation idPrefix="mobile" onNavigate={handleNavigation} onPrefetch={prefetchOnIntent} />
           </aside>
         </>
       ) : null}

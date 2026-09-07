@@ -1,30 +1,189 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:front_movil/main.dart';
+import 'package:front_movil/app.dart';
+import 'package:front_movil/core/config/app_config.dart';
+import 'package:front_movil/features/auth/data/auth_repository.dart';
+import 'package:front_movil/features/auth/domain/auth_models.dart';
+import 'package:front_movil/features/auth/domain/registration_models.dart';
+import 'package:front_movil/features/auth/presentation/auth_controller.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows the mobile authentication entry point', (tester) async {
+    final gateway = _FakeAuthGateway();
+    final controller = AuthController(gateway);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      HipocratiqApp(
+        config: const AppConfig(backendUrl: '', supportPortalUrl: ''),
+        authGateway: gateway,
+        authController: controller,
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Bienvenido a HipocratiQ'), findsOneWidget);
+    expect(find.text('Profesional de salud'), findsOneWidget);
+    expect(find.text('Recepción'), findsOneWidget);
+    expect(find.text('Paciente'), findsOneWidget);
+    expect(find.text('Administrador'), findsOneWidget);
+    expect(find.text('Crear cuenta de paciente'), findsOneWidget);
+    expect(find.text('Soporte web'), findsOneWidget);
   });
+}
+
+class _FakeAuthGateway implements AuthGateway {
+  @override
+  Future<ReceptionistInvitation> createReceptionistInvitation({
+    required String name,
+    required String email,
+    required CountryCode country,
+    required String phoneNumber,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> clearLocalSession() async {}
+
+  @override
+  Future<List<ClinicOption>> fetchDoctorClinics() async {
+    return const <ClinicOption>[];
+  }
+
+  @override
+  Future<List<PlanOption>> fetchRegistrationPlans() async {
+    return const <PlanOption>[];
+  }
+
+  @override
+  Future<List<ClinicOption>> fetchPatientClinics() async {
+    return const <ClinicOption>[];
+  }
+
+  @override
+  Future<void> logout({required bool allDevices}) async {}
+
+  @override
+  Future<OtpChallenge> requestLogin({
+    required AuthRole role,
+    required String identifier,
+    String? password,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> requestPatientRegistration(RegistrationDraft draft) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> requestPasswordReset(String identifier) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RegistrationDraftSession> requestClinicRegistration(
+    ClinicRegistrationDraft draft,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RegistrationDraftSession> requestDoctorRegistration(
+    DoctorRegistrationDraft draft,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> requestReceptionistActivation(String invitationToken) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> resendOtp(String challengeId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> resendClinicRegistration({required String draftToken}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<OtpChallenge> resendDoctorRegistration({required String draftToken}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RegistrationDraftSession> selectClinicPlan({
+    required String draftToken,
+    required String plan,
+    required String billingCycle,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RegistrationDraftSession> selectDoctorPlan({
+    required String draftToken,
+    required String plan,
+    required String billingCycle,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthenticatedSession?> restoreSession() async {
+    return null;
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String challengeId,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MobileAuthSession> verifyAuthenticationOtp({
+    required OtpPurpose purpose,
+    required String challengeId,
+    required String code,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MobileAuthSession> verifyClinicRegistration({
+    required String draftToken,
+    required String challengeId,
+    required String code,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MobileAuthSession> verifyDoctorRegistration({
+    required String draftToken,
+    required String challengeId,
+    required String code,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MobileAuthSession> verifyReceptionistActivation({
+    required String invitationToken,
+    required String challengeId,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) {
+    throw UnimplementedError();
+  }
 }

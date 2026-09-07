@@ -3,8 +3,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Eye,
-  MoreHorizontal,
   Pencil,
+  Send,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -21,6 +21,7 @@ import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
 import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 import { getAdminUsers } from "@/features/users/api/browser-users";
+import { notifySuperadminNavigationMutation } from "@/features/platform/model/superadmin-navigation-invalidation";
 import type {
   AdminUser,
   AdminUserRole,
@@ -149,7 +150,7 @@ function UserActions({
   return (
     <div className="flex justify-end gap-0.5">
       <button
-        className="grid size-6.5 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus xl:size-8"
         type="button"
         aria-label={`Ver ${userName}`}
         onClick={onViewDetail}
@@ -157,7 +158,7 @@ function UserActions({
         <Eye className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
       <button
-        className="grid size-6.5 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus xl:size-8"
         type="button"
         aria-label={`Editar ${userName}`}
         onClick={onEdit}
@@ -165,12 +166,12 @@ function UserActions({
         <Pencil className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
       <button
-        className="grid size-6.5 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus xl:size-8"
         type="button"
         aria-label={`Más acciones para ${userName}`}
         onClick={onMore}
       >
-        <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
+        <Send className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
   );
@@ -382,7 +383,7 @@ export default function UsersPage() {
       return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
     }
 
-    return <PlatformModuleLoading label="Cargando usuarios" />;
+    return <PlatformModuleLoading label="Cargando usuarios" variant="users" />;
   }
 
   return (
@@ -392,7 +393,7 @@ export default function UsersPage() {
           <h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Usuarios</h1>
           <p className="mt-0.5 text-xs text-muted">Gestiona los usuarios registrados en la plataforma.</p>
         </div>
-        <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateUserOpen(true)}><UserPlus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nuevo usuario</button>
+        <button className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus sm:min-h-9" type="button" onClick={() => setCreateUserOpen(true)}><UserPlus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nuevo usuario</button>
       </div>
 
       <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Indicadores de usuarios">
@@ -435,11 +436,11 @@ export default function UsersPage() {
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando {data?.pagination.from ?? 0} a {data?.pagination.to ?? 0} de {data?.pagination.total ?? 0} usuarios</p>
             <div className="flex items-center gap-1" aria-label="Paginación">
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40" type="button" aria-label="Página anterior" disabled={currentPage <= 1 || isLoading} onClick={() => updateFilters({ page: currentPage - 1 })}>‹</button>
+              <button className="grid size-9 place-items-center rounded-md border border-line text-muted disabled:opacity-40 sm:size-8" type="button" aria-label="Página anterior" disabled={currentPage <= 1 || isLoading} onClick={() => updateFilters({ page: currentPage - 1 })}>‹</button>
               {visiblePages.map((page) => (
-                <button className={`grid size-7 place-items-center rounded-md text-xs font-bold ${page === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={page} aria-current={page === currentPage ? "page" : undefined} disabled={isLoading} onClick={() => updateFilters({ page })}>{page}</button>
+                <button className={`grid size-9 place-items-center rounded-md text-xs font-bold sm:size-8 ${page === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={page} aria-current={page === currentPage ? "page" : undefined} disabled={isLoading} onClick={() => updateFilters({ page })}>{page}</button>
               ))}
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40" type="button" aria-label="Página siguiente" disabled={currentPage >= totalPages || isLoading} onClick={() => updateFilters({ page: currentPage + 1 })}>›</button>
+              <button className="grid size-9 place-items-center rounded-md border border-line text-muted disabled:opacity-40 sm:size-8" type="button" aria-label="Página siguiente" disabled={currentPage >= totalPages || isLoading} onClick={() => updateFilters({ page: currentPage + 1 })}>›</button>
             </div>
           </div>
         </section>
@@ -490,6 +491,7 @@ export default function UsersPage() {
         onClose={() => setCreateUserOpen(false)}
         onCreated={(user) => {
           setSelectedUser(user);
+          notifySuperadminNavigationMutation(["users", "access-control"]);
           setRefreshVersion((current) => current + 1);
         }}
       />
@@ -523,6 +525,7 @@ export default function UsersPage() {
         onClose={() => setEditUserOpen(false)}
         onUpdated={(updatedUser) => {
           setSelectedUser(updatedUser);
+          notifySuperadminNavigationMutation(["users", "access-control"]);
           setRefreshVersion((current) => current + 1);
         }}
         user={

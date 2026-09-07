@@ -24,6 +24,12 @@ export function ModalField({
   min,
   max,
   step,
+  minLength,
+  maxLength,
+  pattern,
+  inputMode,
+  autoComplete,
+  autoFocus,
   describedBy,
   error,
 }: {
@@ -39,6 +45,12 @@ export function ModalField({
   min?: number;
   max?: number;
   step?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
+  autoComplete?: string;
+  autoFocus?: boolean;
   describedBy?: string;
   error?: string;
 }) {
@@ -56,12 +68,18 @@ export function ModalField({
         aria-describedby={describedByIds}
         aria-invalid={error ? true : undefined}
         aria-required={required || undefined}
-        className={FIELD_BASE}
+        className={FIELD_BASE.replace("h-10", "h-11 md:h-10")}
         defaultValue={defaultValue}
         id={id}
+        data-modal-initial-focus={autoFocus || undefined}
         max={max}
         min={min}
+        minLength={minLength}
+        maxLength={maxLength}
         onChange={onChange}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        pattern={pattern}
         placeholder={placeholder}
         required={required}
         step={step}
@@ -88,6 +106,7 @@ export function ModalSelect({
   value,
   onChange,
   error,
+  autoFocus = false,
 }: {
   id: string;
   label: string;
@@ -100,6 +119,7 @@ export function ModalSelect({
   value?: string;
   onChange?: (value: string) => void;
   error?: string;
+  autoFocus?: boolean;
 }) {
   const normalizedOptions = options.map((option) =>
     typeof option === "string" ? { value: option, label: option } : option,
@@ -118,6 +138,7 @@ export function ModalSelect({
       placeholder={placeholder}
       hint={hint}
       error={error}
+      autoFocus={autoFocus}
       density="form"
       surface="input"
     />
@@ -194,7 +215,7 @@ export function ModalPrimaryButton({
 }) {
   return (
     <button
-      className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5 ${
+       className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5 md:min-h-9 ${
         tone === "danger" ? "bg-danger hover:bg-danger/90" : "bg-accent hover:bg-accent-hover"
       }`}
       disabled={disabled}
@@ -210,7 +231,7 @@ export function ModalPrimaryButton({
 export function ModalSecondaryButton({ children, onClick, disabled = false }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
-      className="flex min-h-9 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5"
+      className="flex min-h-11 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 sm:flex-initial sm:px-5 md:min-h-9"
       disabled={disabled}
       onClick={onClick}
       type="button"

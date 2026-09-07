@@ -11,6 +11,7 @@ import { serverEnv } from "@/shared/config/server-env";
 
 type AdminClinicsQuery = {
   page?: number;
+  perPage?: number;
   search?: string;
   country?: ClinicCountryCode | "all";
   plan?: ClinicPlan | "all";
@@ -104,7 +105,7 @@ function errorMessage(status: number): string {
 export async function getClinicsDashboardData(
   query: AdminClinicsQuery = {},
 ): Promise<ClinicsDashboardLoadResult> {
-  const search = new URLSearchParams({ per_page: "10" });
+  const search = new URLSearchParams({ per_page: String(query.perPage ?? 10) });
 
   if (query.page && query.page > 1) search.set("page", String(query.page));
   if (query.search?.trim()) search.set("search", query.search.trim());

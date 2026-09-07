@@ -6,9 +6,11 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 export type SelectOption<T extends string | number = string> = {
   value: T;
@@ -35,6 +37,7 @@ type FilterSelectProps<T extends string | number> = {
   surface?: "surface" | "input";
   className?: string;
   buttonClassName?: string;
+  autoFocus?: boolean;
 };
 
 /**
@@ -60,6 +63,7 @@ export function FilterSelect<T extends string | number>({
   surface = "surface",
   className = "",
   buttonClassName = "",
+  autoFocus = false,
 }: FilterSelectProps<T>) {
   const generatedId = useId();
   const controlId = id ?? `${generatedId}-select`;
@@ -71,7 +75,9 @@ export function FilterSelect<T extends string | number>({
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const currentValue = value !== undefined ? value : internalValue;
   const selectedIndex = options.findIndex((option) => option.value === currentValue);
   const selectedOption = options[selectedIndex];
@@ -118,17 +124,61 @@ export function FilterSelect<T extends string | number>({
     if (!isOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) close();
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !listRef.current?.contains(target)) close();
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, close]);
 
+  useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current) {
+      setMenuStyle(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const viewportPadding = 8;
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const availableAbove = rect.top - viewportPadding;
+      const shouldOpenAbove = availableBelow < 160 && availableAbove > availableBelow;
+      const availableHeight = Math.max(96, Math.min(256, shouldOpenAbove ? availableAbove : availableBelow));
+
+      setMenuStyle({
+        left: rect.left,
+        top: shouldOpenAbove ? Math.max(viewportPadding, rect.top - availableHeight - 4) : rect.bottom + 4,
+        width: rect.width,
+        maxHeight: availableHeight,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen || focusedIndex < 0) return;
-    const items = listRef.current?.querySelectorAll("[role=option]");
-    (items?.[focusedIndex] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+
+    const list = listRef.current;
+    const item = list?.querySelectorAll<HTMLElement>("[role=option]")[focusedIndex];
+    if (!list || !item) return;
+
+    const itemTop = item.offsetTop;
+    const itemBottom = itemTop + item.offsetHeight;
+    if (itemTop < list.scrollTop) {
+      list.scrollTop = itemTop;
+    } else if (itemBottom > list.scrollTop + list.clientHeight) {
+      list.scrollTop = itemBottom - list.clientHeight;
+    }
   }, [isOpen, focusedIndex]);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -173,15 +223,15 @@ export function FilterSelect<T extends string | number>({
     }
   }
 
-  const heightClass = density === "form" ? "h-10" : "h-9 md:h-8";
+  const heightClass = density === "form" ? "h-11 md:h-10" : "h-11 md:h-8";
   const surfaceClass = surface === "input" ? "bg-surface-input focus-visible:bg-surface" : "bg-surface";
 
   return (
     <div className={`grid min-w-0 gap-1.5 text-2xs font-bold text-muted ${className}`} ref={containerRef}>
-      <span id={labelId}>
+      <label className="block" htmlFor={controlId} id={labelId}>
         {label}
         {required ? <span className="ml-0.5 text-danger">*</span> : null}
-      </span>
+      </label>
       <div className="relative">
         {leading ? <span className="pointer-events-none absolute top-1/2 left-3 z-1 -translate-y-1/2">{leading}</span> : null}
         <button
@@ -197,7 +247,9 @@ export function FilterSelect<T extends string | number>({
           aria-invalid={error ? true : undefined}
           aria-required={required || undefined}
           aria-activedescendant={isOpen && focusedIndex >= 0 ? `${listboxId}-${focusedIndex}` : undefined}
+          data-modal-initial-focus={autoFocus || undefined}
           disabled={disabled}
+          ref={buttonRef}
           onClick={() => (isOpen ? close() : open())}
           onKeyDown={handleKeyDown}
         >
@@ -211,41 +263,45 @@ export function FilterSelect<T extends string | number>({
           />
         </button>
         {name ? <input type="hidden" name={name} value={currentValue ?? ""} /> : null}
-        {isOpen && !disabled ? (
-          <ul
-            id={listboxId}
-            ref={listRef}
-            role="listbox"
-            aria-labelledby={labelId}
-            className="absolute top-[calc(100%+0.25rem)] left-0 z-50 max-h-64 w-full overflow-auto rounded-lg border border-line bg-surface p-1 shadow-[0_0.5rem_1.5rem_rgb(16_27_51/12%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)]"
-          >
-            {options.map((option, index) => {
-              const isSelected = option.value === currentValue;
-              const isFocused = index === focusedIndex;
+        {isOpen && !disabled && menuStyle && typeof document !== "undefined"
+          ? createPortal(
+            <ul
+              id={listboxId}
+              ref={listRef}
+              role="listbox"
+              aria-labelledby={labelId}
+              style={menuStyle}
+              className="fixed z-[70] overflow-y-auto overscroll-contain rounded-lg border border-line bg-surface p-1 shadow-[0_0.5rem_1.5rem_rgb(16_27_51/12%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)]"
+            >
+              {options.map((option, index) => {
+                const isSelected = option.value === currentValue;
+                const isFocused = index === focusedIndex;
 
-              return (
-                <li
-                  id={`${listboxId}-${index}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={option.disabled || undefined}
-                  key={option.value}
-                  className={`flex min-h-8 items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-xs transition-colors duration-75 ${option.disabled ? "cursor-not-allowed text-muted opacity-55" : "cursor-pointer"} ${isFocused && !option.disabled ? "bg-surface-subtle" : ""} ${isSelected ? "font-bold text-accent" : option.disabled ? "" : "font-medium text-ink"}`}
-                  onClick={() => select(index)}
-                  onMouseEnter={() => {
-                    if (!option.disabled) setFocusedIndex(index);
-                  }}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate">{option.label}</span>
-                    {option.detail ? <span className="mt-0.5 block truncate text-2xs font-normal text-muted">{option.detail}</span> : null}
-                  </span>
-                  {isSelected ? <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2.5} aria-hidden="true" /> : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
+                return (
+                  <li
+                    id={`${listboxId}-${index}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={option.disabled || undefined}
+                    key={option.value}
+                    className={`flex min-h-11 items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-xs transition-colors duration-75 md:min-h-8 ${option.disabled ? "cursor-not-allowed text-muted opacity-55" : "cursor-pointer"} ${isFocused && !option.disabled ? "bg-surface-subtle" : ""} ${isSelected ? "font-bold text-accent" : option.disabled ? "" : "font-medium text-ink"}`}
+                    onClick={() => select(index)}
+                    onMouseEnter={() => {
+                      if (!option.disabled) setFocusedIndex(index);
+                    }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate">{option.label}</span>
+                      {option.detail ? <span className="mt-0.5 block truncate text-2xs font-normal text-muted">{option.detail}</span> : null}
+                    </span>
+                    {isSelected ? <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2.5} aria-hidden="true" /> : null}
+                  </li>
+                );
+              })}
+            </ul>,
+            document.body,
+          )
+          : null}
       </div>
       {hint ? <p className="text-2xs font-normal leading-4 text-muted" id={hintId}>{hint}</p> : null}
       {error ? <p className="text-2xs font-semibold leading-4 text-danger" id={errorId} role="alert">{error}</p> : null}

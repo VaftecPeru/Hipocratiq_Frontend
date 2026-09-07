@@ -64,4 +64,5 @@ export type ClinicsFilters = {
   plan: ClinicPlan | "all";
   status: ClinicStatus | "all";
   page: number;
+  perPage: number;
 };

@@ -7,12 +7,12 @@ import { CountryFlag } from "@/shared/ui/country-flag";
 import { FilterSelect } from "@/shared/ui/filter-select";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
 import { NewManualPaymentButton, RefundManualPaymentButton } from "@/features/platform/ui/billing-operations";
+import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
 
 export const metadata: Metadata = { title: "Facturación" };
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
-const monthFormatter = new Intl.DateTimeFormat("es-MX", { month: "short", timeZone: "UTC" });
 const countryNames: Record<string, string> = { MX: "México", PE: "Perú", US: "Estados Unidos" };
 const statusLabels: Record<PaymentStatus, string> = { succeeded: "Exitoso", pending: "Pendiente", failed: "Fallido", refunded: "Reembolsado" };
 const statusStyles: Record<PaymentStatus, string> = { succeeded: "bg-success-soft text-success", pending: "bg-warning-soft text-warning", failed: "bg-danger-soft text-danger", refunded: "bg-violet-soft text-violet" };
@@ -25,18 +25,6 @@ function percentage(current: number, previous: number): string {
   if (!previous) return current ? "Actividad nueva" : "Sin movimiento";
   const value = ((current - previous) / previous) * 100;
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}% vs. mes anterior`;
-}
-
-function RevenueTrend({ data }: { data: AdminBillingData }) {
-  const max = Math.max(...data.summary.revenue.map((item) => item.amountCents), 1);
-  return (
-    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="billing-revenue-title">
-      <header className="flex items-end justify-between gap-3 border-b border-line pb-3"><div><h2 className="text-xs font-extrabold" id="billing-revenue-title">Ingresos confirmados</h2><p className="mt-0.5 text-2xs text-muted">Últimos 12 meses · pagos exitosos</p></div><p className="font-mono text-sm font-bold">{money(data.summary.totalRevenueCents)}</p></header>
-      <div className="mt-4 grid h-48 grid-cols-12 items-end gap-1.5 border-b border-line" role="img" aria-label="Ingresos mensuales confirmados">
-        {data.summary.revenue.map((item) => <div className="flex h-full min-w-0 flex-col justify-end" key={item.month} title={`${item.month}: ${money(item.amountCents)}`}><span className="min-h-1 rounded-t bg-accent" style={{ height: `${item.amountCents ? Math.max(6, item.amountCents / max * 100) : 2}%` }} /><span className="py-2 text-center text-[0.55rem] font-bold capitalize text-muted">{monthFormatter.format(new Date(`${item.month}-01T00:00:00Z`))}</span></div>)}
-      </div>
-    </article>
-  );
 }
 
 function CountryRevenue({ data }: { data: AdminBillingData }) {
@@ -110,7 +98,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Facturación</h1><p className="mt-0.5 text-xs text-muted">Pagos y recaudación reales de todas las clínicas y países.</p></div><div className="flex flex-wrap gap-2"><Link className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink hover:bg-surface-subtle" href={`/backend/api/v1/auth/admin/billing/export?${exportQuery}`} prefetch={false}><Download className="size-3.5" aria-hidden="true" />Exportar CSV</Link><NewManualPaymentButton subscriptions={data.filters.manualSubscriptions} /></div></header>
       <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Indicadores de facturación">{stats.map((stat, index) => <StatCard key={stat.label} {...stat} index={index} />)}</section>
       <BillingFilters data={data} filters={filters} />
-      <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)]"><RevenueTrend data={data} /><CountryRevenue data={data} /></section>
+       <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)]"><RevenueBarChart id="billing-revenue" title="Ingresos confirmados" description="Últimos 12 meses · pagos exitosos" totalCents={data.summary.totalRevenueCents} points={data.summary.revenue.map((item) => ({ id: item.month, label: formatRevenueMonth(item.month), amountCents: item.amountCents }))} chartHeightClassName="h-48" /><CountryRevenue data={data} /></section>
       <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface" aria-labelledby="payments-title"><div className="flex items-center justify-between border-b border-line px-4 py-3"><h2 className="text-xs font-extrabold" id="payments-title">Pagos registrados</h2><span className="text-2xs text-muted">{numberFormatter.format(data.pagination.total)} resultados</span></div><div className="overflow-x-auto"><table className="w-full min-w-[60rem] text-left text-xs"><thead className="bg-surface-subtle text-2xs text-muted"><tr><th className="px-4 py-2.5">Referencia</th><th className="px-4 py-2.5">Clínica</th><th className="px-4 py-2.5">Plan</th><th className="px-4 py-2.5">Monto</th><th className="px-4 py-2.5">Estado</th><th className="px-4 py-2.5">Proveedor</th><th className="px-4 py-2.5">Fecha</th><th className="px-4 py-2.5 text-right">Acciones</th></tr></thead><tbody className="divide-y divide-line">{data.payments.length ? data.payments.map((payment) => <tr key={payment.id}><td className="px-4 py-3 font-mono text-2xs">{payment.reference}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{payment.clinic.countryCode ? <CountryFlag countryCode={payment.clinic.countryCode} /> : null}{payment.clinic.name}</span></td><td className="px-4 py-3 text-muted">{payment.plan ?? "—"}</td><td className="px-4 py-3 font-mono font-bold">{money(payment.amountCents, payment.currency)}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-2xs font-bold ${statusStyles[payment.status]}`}>{statusLabels[payment.status]}</span></td><td className="px-4 py-3 capitalize text-muted">{payment.provider === "admin_manual" ? "Manual" : payment.provider}</td><td className="px-4 py-3 text-muted">{dateFormatter.format(new Date(payment.refundedAt ?? payment.paidAt ?? payment.createdAt))}</td><td className="px-4 py-3 text-right">{payment.provider === "admin_manual" && payment.status === "succeeded" ? <RefundManualPaymentButton payment={payment} /> : <span className="text-2xs text-muted">Sólo lectura</span>}</td></tr>) : <tr><td className="px-4 py-10 text-center text-muted" colSpan={8}><ReceiptText className="mx-auto mb-2 size-6" aria-hidden="true" />No hay pagos con estos filtros.</td></tr>}</tbody></table></div><footer className="flex items-center justify-between border-t border-line px-4 py-3 text-2xs text-muted"><p>Mostrando {data.pagination.from ?? 0}–{data.pagination.to ?? 0}</p><div className="flex gap-2"><Link className={`rounded-md border border-line px-3 py-1.5 font-bold ${data.pagination.currentPage <= 1 ? "pointer-events-none opacity-40" : "text-accent"}`} href={buildHref(filters, data.pagination.currentPage - 1)}>Anterior</Link><Link className={`rounded-md border border-line px-3 py-1.5 font-bold ${data.pagination.currentPage >= data.pagination.lastPage ? "pointer-events-none opacity-40" : "text-accent"}`} href={buildHref(filters, data.pagination.currentPage + 1)}>Siguiente</Link></div></footer></section>
     </div>
   );

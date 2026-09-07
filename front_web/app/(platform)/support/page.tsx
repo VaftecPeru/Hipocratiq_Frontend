@@ -200,8 +200,8 @@ export default function SupportPage() {
           <p className="mt-0.5 text-xs text-muted">Supervisa tickets, SLA, responsables y escalaciones de todos los países.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex min-h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink" type="button" onClick={refresh}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />Actualizar</button>
-          <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white hover:bg-accent-hover" type="button" onClick={() => { setCreateVersion((version) => version + 1); setCreateOpen(true); }}><Plus className="size-3.5" />Nuevo ticket</button>
+          <button className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink sm:min-h-9" type="button" onClick={refresh}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" />Actualizar</button>
+          <button className="flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white hover:bg-accent-hover sm:min-h-9" type="button" onClick={() => { setCreateVersion((version) => version + 1); setCreateOpen(true); }}><Plus className="size-3.5" aria-hidden="true" />Nuevo ticket</button>
         </div>
       </header>
 
@@ -230,7 +230,7 @@ export default function SupportPage() {
                   <td className="px-3 py-3 font-semibold text-ink">{PRIORITY_LABELS[ticket.priority]}</td>
                   <td className="px-3 py-3 text-muted">{ticket.assignedTo?.name ?? "Sin asignar"}</td>
                   <td className={`px-3 py-3 text-2xs font-semibold ${ticket.isOverdue ? "text-danger" : "text-muted"}`}>{ticket.isOverdue ? "Vencido · " : ""}{formatDate(ticket.dueAt)}</td>
-                  <td className="px-4 py-3 text-right"><button className="rounded-lg border border-line px-3 py-1.5 text-2xs font-extrabold text-accent hover:border-accent" type="button" onClick={() => setSelectedTicket(ticket)}>Gestionar</button></td>
+                   <td className="px-4 py-3 text-right"><button className="min-h-11 rounded-lg border border-line px-3 py-1.5 text-2xs font-extrabold text-accent hover:border-accent sm:min-h-8" type="button" onClick={() => setSelectedTicket(ticket)}>Gestionar</button></td>
                 </tr>
               ))}
               {!isLoading && (data?.tickets.length ?? 0) === 0 ? <tr><td className="px-4 py-10 text-center text-xs text-muted" colSpan={7}>No hay tickets para los filtros seleccionados.</td></tr> : null}
@@ -240,8 +240,8 @@ export default function SupportPage() {
         <div className="flex items-center justify-between border-t border-line px-4 py-3 text-2xs text-muted">
           <span>Página {data?.meta.currentPage ?? 1} de {data?.meta.lastPage ?? 1}</span>
           <div className="flex gap-1">
-            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página anterior" disabled={(data?.meta.currentPage ?? 1) <= 1 || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))}><ChevronLeft className="size-3.5" /></button>
-            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página siguiente" disabled={(data?.meta.currentPage ?? 1) >= (data?.meta.lastPage ?? 1) || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))}><ChevronRight className="size-3.5" /></button>
+            <button className="grid size-11 place-items-center rounded-lg border border-line disabled:opacity-40 sm:size-8" type="button" aria-label="Página anterior" disabled={(data?.meta.currentPage ?? 1) <= 1 || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))}><ChevronLeft className="size-3.5" aria-hidden="true" /></button>
+            <button className="grid size-11 place-items-center rounded-lg border border-line disabled:opacity-40 sm:size-8" type="button" aria-label="Página siguiente" disabled={(data?.meta.currentPage ?? 1) >= (data?.meta.lastPage ?? 1) || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))}><ChevronRight className="size-3.5" aria-hidden="true" /></button>
           </div>
         </div>
       </section>
