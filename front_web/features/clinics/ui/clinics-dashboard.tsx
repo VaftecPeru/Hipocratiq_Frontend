@@ -39,7 +39,7 @@ import {
   SuspendClinicDialog,
 } from "./clinic-modals";
 import { updateAdminClinic } from "@/features/clinics/api/browser-clinics";
-import { notifySuperadminClinicMutation } from "@/features/platform/model/superadmin-navigation-cache";
+import { notifySuperadminClinicMutation } from "@/features/platform/model/superadmin-navigation-invalidation";
 import { FilterSelect } from "@/shared/ui/filter-select";
 
 type ClinicsDashboardProps = {

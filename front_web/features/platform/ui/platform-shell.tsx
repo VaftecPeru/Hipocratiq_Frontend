@@ -27,7 +27,10 @@ import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
 import { NotificationBell } from "@/features/platform/ui/notification-bell";
-import { SUPERADMIN_NAVIGATION_CACHE_EVENT } from "@/features/platform/model/superadmin-navigation-cache";
+import {
+  SUPERADMIN_NAVIGATION_INVALIDATED_EVENT,
+  type SuperadminNavigationScope,
+} from "@/features/platform/model/superadmin-navigation-invalidation";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 
@@ -64,17 +67,24 @@ type CachedRoute = {
   cachedAt: number;
 };
 
-const CACHEABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics"]);
+const NAVIGATION_SCOPE_PATHS: Record<SuperadminNavigationScope, readonly string[]> = {
+  clinics: ["/dashboard", "/clinics"],
+  users: ["/users", "/roles-permissions"],
+  "access-control": ["/users", "/roles-permissions"],
+};
+const CACHEABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics", "/users", "/roles-permissions"]);
 const ROUTE_CACHE_TTL_MS = 15_000;
-const MAX_ROUTE_CACHE_ENTRIES = 4;
+const MAX_ROUTE_CACHE_ENTRIES = CACHEABLE_SUPERADMIN_PATHS.size * 2;
+const PREFETCH_TTL_MS = 15_000;
 const MAX_PREFETCH_ENTRIES = 20;
 
 function routeKey(pathname: string, search: string): string {
   return `${pathname}${search ? `?${search}` : ""}`;
 }
 
-function isCacheableRoute(key: string): boolean {
-  return CACHEABLE_SUPERADMIN_PATHS.has(key.split("?", 1)[0] ?? "");
+function isRouteInScopes(key: string, scopes: readonly SuperadminNavigationScope[]): boolean {
+  const pathname = key.split("?", 1)[0] ?? "";
+  return scopes.some((scope) => NAVIGATION_SCOPE_PATHS[scope].includes(pathname));
 }
 
 const settingsItems: SettingsItem[] = [
@@ -224,7 +234,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   }, []);
 
   const storeRoute = useCallback((key: string, nextChildren: React.ReactNode) => {
-    if (!isCacheableRoute(key)) return;
+    if (!CACHEABLE_SUPERADMIN_PATHS.has(key.split("?", 1)[0] ?? "")) return;
     routeCacheRef.current.set(key, { children: nextChildren, cachedAt: Date.now() });
     while (routeCacheRef.current.size > MAX_ROUTE_CACHE_ENTRIES) {
       const oldestKey = routeCacheRef.current.keys().next().value;
@@ -234,9 +244,9 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   }, []);
 
   const prefetchOnIntent = useCallback((href: string) => {
-    if (!isCacheableRoute(href)) return;
+    if (!CACHEABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
     const prefetchedAt = prefetchedHrefs.current.get(href);
-    if (prefetchedAt && Date.now() - prefetchedAt < ROUTE_CACHE_TTL_MS) return;
+    if (prefetchedAt && Date.now() - prefetchedAt < PREFETCH_TTL_MS) return;
 
     prefetchedHrefs.current.set(href, Date.now());
     while (prefetchedHrefs.current.size > MAX_PREFETCH_ENTRIES) {
@@ -254,13 +264,13 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
     previousChildrenRef.current = children;
 
     const cached = getFreshCachedRoute(currentRouteKey);
-    if (cached && invalidatedRoutesRef.current.has(currentRouteKey) === false) {
+    if (cached && !invalidatedRoutesRef.current.has(currentRouteKey)) {
       setActiveCachedRoute({ key: currentRouteKey, children: cached.children });
     } else {
       setActiveCachedRoute(null);
     }
 
-    if (!isCacheableRoute(currentRouteKey)) return;
+    if (!CACHEABLE_SUPERADMIN_PATHS.has(currentRouteKey.split("?", 1)[0] ?? "")) return;
     if (invalidatedRoutesRef.current.has(currentRouteKey)) {
       if (!childrenChanged) return;
       invalidatedRoutesRef.current.delete(currentRouteKey);
@@ -273,32 +283,44 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   }, [children, currentRouteKey, getFreshCachedRoute, storeRoute]);
 
   useEffect(() => {
-    const invalidateClinicRoutes = () => {
-      const cachedKeys = [...routeCacheRef.current.keys()];
-      const refreshKeys = new Set(["/dashboard", "/clinics", currentRouteKey, ...cachedKeys, ...prefetchedHrefs.current.keys()]);
-      refreshKeys.forEach((key) => {
-        if (isCacheableRoute(key)) invalidatedRoutesRef.current.add(key);
-      });
-      routeCacheRef.current.clear();
-      setActiveCachedRoute(null);
+    const invalidateNavigationRoutes = (event: Event) => {
+      const detail = (event as CustomEvent<{ scopes?: SuperadminNavigationScope[] }>).detail;
+      const scopes: readonly SuperadminNavigationScope[] = detail?.scopes?.length ? detail.scopes : ["clinics"];
+      const scopeRoutes = scopes.flatMap((scope) => NAVIGATION_SCOPE_PATHS[scope]);
+      const candidateKeys = new Set([
+        currentRouteKey,
+        ...scopeRoutes,
+        ...routeCacheRef.current.keys(),
+        ...prefetchedHrefs.current.keys(),
+      ]);
+      const affectedKeys = [...candidateKeys].filter((key) => isRouteInScopes(key, scopes));
 
-      if (isCacheableRoute(currentRouteKey)) {
+      affectedKeys.forEach((key) => {
+        invalidatedRoutesRef.current.add(key);
+        routeCacheRef.current.delete(key);
+        prefetchedHrefs.current.delete(key);
+      });
+
+      setActiveCachedRoute((current) => current && isRouteInScopes(current.key, scopes) ? null : current);
+
+      if (isRouteInScopes(currentRouteKey, scopes)) {
         router.refresh();
       }
 
-      [...refreshKeys]
-        .filter((key) => key !== currentRouteKey)
-        .forEach((key) => router.prefetch(key, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(key) }));
+      for (const key of affectedKeys) {
+        if (key === currentRouteKey) continue;
+        router.prefetch(key, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(key) });
+      }
     };
 
-    window.addEventListener(SUPERADMIN_NAVIGATION_CACHE_EVENT, invalidateClinicRoutes);
-    return () => window.removeEventListener(SUPERADMIN_NAVIGATION_CACHE_EVENT, invalidateClinicRoutes);
+    window.addEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
+    return () => window.removeEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
   }, [currentRouteKey, router]);
 
   const handleNavigation = useCallback((href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
     setIsMenuOpen(false);
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    if (!isCacheableRoute(href)) return;
+    if (!CACHEABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
 
     const cached = getFreshCachedRoute(href);
     if (!cached || invalidatedRoutesRef.current.has(href)) {

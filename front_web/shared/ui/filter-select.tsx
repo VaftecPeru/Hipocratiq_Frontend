@@ -167,8 +167,18 @@ export function FilterSelect<T extends string | number>({
 
   useEffect(() => {
     if (!isOpen || focusedIndex < 0) return;
-    const items = listRef.current?.querySelectorAll("[role=option]");
-    (items?.[focusedIndex] as HTMLElement | undefined)?.scrollIntoView({ block: "nearest" });
+
+    const list = listRef.current;
+    const item = list?.querySelectorAll<HTMLElement>("[role=option]")[focusedIndex];
+    if (!list || !item) return;
+
+    const itemTop = item.offsetTop;
+    const itemBottom = itemTop + item.offsetHeight;
+    if (itemTop < list.scrollTop) {
+      list.scrollTop = itemTop;
+    } else if (itemBottom > list.scrollTop + list.clientHeight) {
+      list.scrollTop = itemBottom - list.clientHeight;
+    }
   }, [isOpen, focusedIndex]);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {

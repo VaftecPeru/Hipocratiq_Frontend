@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Shield, UserPlus } from "lucide-react";
+import { Send, Shield, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { createAdminUser, sendAdminUserMessage, updateAdminUser } from "@/features/users/api/browser-users";
@@ -163,12 +163,12 @@ export function UserDetailModal({
           <ModalDetailRow label="Fecha de registro">{user.createdAt}</ModalDetailRow>
         </dl>
 
-        <div className="flex gap-2">
-          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={onMessage}>
-            <Mail className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus sm:min-h-9" type="button" onClick={onMessage}>
+            <Send className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             Enviar mensaje
           </button>
-          <Link className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus" href={`/roles-permissions?search=${encodeURIComponent(user.email === "Sin correo" ? user.name : user.email)}`}>
+          <Link className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus sm:min-h-9" href={`/roles-permissions?search=${encodeURIComponent(user.email === "Sin correo" ? user.name : user.email)}`}>
             <Shield className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             Permisos
           </Link>
@@ -242,7 +242,7 @@ function EditUserForm({
       size="lg"
       title="Editar usuario"
       description={user.name}
-      footer={<><ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton><ModalPrimaryButton onClick={handleSubmit}>{isLoading ? "Guardando..." : "Guardar cambios"}</ModalPrimaryButton></>}
+      footer={<><ModalSecondaryButton onClick={onClose} disabled={isLoading}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading || !name.trim() || !phone.trim()} onClick={handleSubmit}>{isLoading ? "Guardando..." : "Guardar cambios"}</ModalPrimaryButton></>}
     >
       <div className="space-y-4">
         <ModalGrid cols={2}>
@@ -310,7 +310,7 @@ function SendMessageForm({ isOpen, onClose, user }: { isOpen: boolean; onClose: 
       size="md"
       title="Enviar mensaje"
       description={`Enviar un mensaje a ${user.name}`}
-      footer={<><ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton><ModalPrimaryButton onClick={handleSend}><Mail className="size-3.5" strokeWidth={1.9} aria-hidden="true" />{isLoading ? "Enviando..." : "Enviar mensaje"}</ModalPrimaryButton></>}
+      footer={<><ModalSecondaryButton onClick={onClose} disabled={isLoading}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading || !subject.trim() || !body.trim()} onClick={handleSend}><Send className="size-3.5" strokeWidth={1.9} aria-hidden="true" />{isLoading ? "Enviando..." : "Enviar mensaje"}</ModalPrimaryButton></>}
     >
       <div className="space-y-4">
         <ModalField id="message-subject" label="Asunto" placeholder="Asunto del mensaje" value={subject} onChange={(event) => setSubject(event.target.value)} required />
