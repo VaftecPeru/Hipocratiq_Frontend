@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
@@ -62,25 +62,14 @@ const navigationItems: NavigationItem[] = [
 
 type SettingsItem = { label: string; href: string; available: boolean };
 
-type CachedRoute = {
-  children: React.ReactNode;
-  cachedAt: number;
-};
-
 const NAVIGATION_SCOPE_PATHS: Record<SuperadminNavigationScope, readonly string[]> = {
   clinics: ["/dashboard", "/clinics"],
   users: ["/users", "/roles-permissions"],
   "access-control": ["/users", "/roles-permissions"],
 };
-const CACHEABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics", "/users", "/roles-permissions"]);
-const ROUTE_CACHE_TTL_MS = 15_000;
-const MAX_ROUTE_CACHE_ENTRIES = CACHEABLE_SUPERADMIN_PATHS.size * 2;
+const PREFETCHABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics", "/users", "/roles-permissions"]);
 const PREFETCH_TTL_MS = 15_000;
 const MAX_PREFETCH_ENTRIES = 20;
-
-function routeKey(pathname: string, search: string): string {
-  return `${pathname}${search ? `?${search}` : ""}`;
-}
 
 function isRouteInScopes(key: string, scopes: readonly SuperadminNavigationScope[]): boolean {
   const pathname = key.split("?", 1)[0] ?? "";
@@ -105,7 +94,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void; onPrefetch: (href: string) => void }) {
+function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: () => void; onPrefetch: (href: string) => void }) {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
@@ -127,7 +116,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                     prefetch={false}
                     onMouseEnter={() => onPrefetch(item.href)}
                     onFocus={() => onPrefetch(item.href)}
-                    onClick={(event) => onNavigate?.(item.href, event)}
+                    onClick={onNavigate}
                     aria-current={isActive ? "page" : undefined}
                   >
                     <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
@@ -174,7 +163,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                         prefetch={false}
                         onMouseEnter={() => onPrefetch(item.href)}
                         onFocus={() => onPrefetch(item.href)}
-                        onClick={(event) => onNavigate?.(item.href, event)}
+                        onClick={onNavigate}
                         aria-current={isActive ? "page" : undefined}
                       >
                         {item.label}
@@ -199,9 +188,9 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
   );
 }
 
-function Brand({ onNavigate }: { onNavigate?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void }) {
+function Brand({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false} onClick={(event) => onNavigate?.("/dashboard", event)}>
+    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false} onClick={onNavigate}>
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent" aria-hidden="true"><BrandLogo className="h-6 w-6 brightness-0 invert" priority /></span>
       <span className="text-sm font-extrabold tracking-[0.07em] text-ink">HIPOCRATIQ</span>
     </Link>
@@ -211,40 +200,12 @@ function Brand({ onNavigate }: { onNavigate?: (href: string, event: React.MouseE
 export function PlatformShell({ children, userName }: PlatformShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentRouteKey = routeKey(pathname, searchParams.toString());
-  const routeCacheRef = useRef(new Map<string, CachedRoute>());
-  const invalidatedRoutesRef = useRef(new Set<string>());
-  const previousRouteKeyRef = useRef(currentRouteKey);
-  const previousChildrenRef = useRef<React.ReactNode>(children);
-  const cacheInitializedRef = useRef(false);
   const prefetchedHrefs = useRef(new Map<string, number>());
-  const [activeCachedRoute, setActiveCachedRoute] = useState<{ key: string; children: React.ReactNode } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
 
-  const getFreshCachedRoute = useCallback((key: string): CachedRoute | null => {
-    const cached = routeCacheRef.current.get(key);
-    if (!cached) return null;
-    if (Date.now() - cached.cachedAt >= ROUTE_CACHE_TTL_MS) {
-      routeCacheRef.current.delete(key);
-      return null;
-    }
-    return cached;
-  }, []);
-
-  const storeRoute = useCallback((key: string, nextChildren: React.ReactNode) => {
-    if (!CACHEABLE_SUPERADMIN_PATHS.has(key.split("?", 1)[0] ?? "")) return;
-    routeCacheRef.current.set(key, { children: nextChildren, cachedAt: Date.now() });
-    while (routeCacheRef.current.size > MAX_ROUTE_CACHE_ENTRIES) {
-      const oldestKey = routeCacheRef.current.keys().next().value;
-      if (oldestKey === undefined) break;
-      routeCacheRef.current.delete(oldestKey);
-    }
-  }, []);
-
   const prefetchOnIntent = useCallback((href: string) => {
-    if (!CACHEABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
+    if (!PREFETCHABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
     const prefetchedAt = prefetchedHrefs.current.get(href);
     if (prefetchedAt && Date.now() - prefetchedAt < PREFETCH_TTL_MS) return;
 
@@ -258,82 +219,37 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   }, [router]);
 
   useEffect(() => {
-    const routeChanged = previousRouteKeyRef.current !== currentRouteKey;
-    const childrenChanged = previousChildrenRef.current !== children;
-    previousRouteKeyRef.current = currentRouteKey;
-    previousChildrenRef.current = children;
-
-    const cached = getFreshCachedRoute(currentRouteKey);
-    if (cached && !invalidatedRoutesRef.current.has(currentRouteKey)) {
-      setActiveCachedRoute({ key: currentRouteKey, children: cached.children });
-    } else {
-      setActiveCachedRoute(null);
-    }
-
-    if (!CACHEABLE_SUPERADMIN_PATHS.has(currentRouteKey.split("?", 1)[0] ?? "")) return;
-    if (invalidatedRoutesRef.current.has(currentRouteKey)) {
-      if (!childrenChanged) return;
-      invalidatedRoutesRef.current.delete(currentRouteKey);
-    }
-    if (routeChanged && !childrenChanged) return;
-    if (!cacheInitializedRef.current || childrenChanged) {
-      storeRoute(currentRouteKey, children);
-      cacheInitializedRef.current = true;
-    }
-  }, [children, currentRouteKey, getFreshCachedRoute, storeRoute]);
-
-  useEffect(() => {
     const invalidateNavigationRoutes = (event: Event) => {
       const detail = (event as CustomEvent<{ scopes?: SuperadminNavigationScope[] }>).detail;
       const scopes: readonly SuperadminNavigationScope[] = detail?.scopes?.length ? detail.scopes : ["clinics"];
       const scopeRoutes = scopes.flatMap((scope) => NAVIGATION_SCOPE_PATHS[scope]);
-      const candidateKeys = new Set([
-        currentRouteKey,
+      const candidateHrefs = new Set([
         ...scopeRoutes,
-        ...routeCacheRef.current.keys(),
         ...prefetchedHrefs.current.keys(),
       ]);
-      const affectedKeys = [...candidateKeys].filter((key) => isRouteInScopes(key, scopes));
+      const affectedHrefs = [...candidateHrefs].filter((key) => isRouteInScopes(key, scopes));
 
-      affectedKeys.forEach((key) => {
-        invalidatedRoutesRef.current.add(key);
-        routeCacheRef.current.delete(key);
-        prefetchedHrefs.current.delete(key);
+      affectedHrefs.forEach((href) => {
+        prefetchedHrefs.current.delete(href);
       });
 
-      setActiveCachedRoute((current) => current && isRouteInScopes(current.key, scopes) ? null : current);
-
-      if (isRouteInScopes(currentRouteKey, scopes)) {
+      if (isRouteInScopes(pathname, scopes)) {
         router.refresh();
       }
 
-      for (const key of affectedKeys) {
-        if (key === currentRouteKey) continue;
-        router.prefetch(key, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(key) });
+      for (const href of affectedHrefs) {
+        if (href === pathname) continue;
+        router.prefetch(href, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(href) });
       }
     };
 
     window.addEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
     return () => window.removeEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
-  }, [currentRouteKey, router]);
+  }, [pathname, router]);
 
-  const handleNavigation = useCallback((href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleNavigation = useCallback(() => {
     setIsMenuOpen(false);
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    if (!CACHEABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
-
-    const cached = getFreshCachedRoute(href);
-    if (!cached || invalidatedRoutesRef.current.has(href)) {
-      setActiveCachedRoute(null);
-      return;
-    }
-
-    event.preventDefault();
-    setActiveCachedRoute({ key: href, children: cached.children });
-    window.history.pushState({ superadminRouteCache: true }, "", href);
-  }, [getFreshCachedRoute]);
-
-  const renderedChildren = activeCachedRoute?.key === currentRouteKey ? activeCachedRoute.children : children;
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -424,7 +340,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
       ) : null}
 
       <main id="main-content" className="min-w-0 lg:ml-52">
-        {renderedChildren}
+        {children}
       </main>
     </div>
   );
