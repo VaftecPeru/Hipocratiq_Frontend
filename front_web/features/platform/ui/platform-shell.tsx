@@ -20,12 +20,14 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
 import { NotificationBell } from "@/features/platform/ui/notification-bell";
+import { SUPERADMIN_NAVIGATION_CACHE_EVENT } from "@/features/platform/model/superadmin-navigation-cache";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 
@@ -57,6 +59,24 @@ const navigationItems: NavigationItem[] = [
 
 type SettingsItem = { label: string; href: string; available: boolean };
 
+type CachedRoute = {
+  children: React.ReactNode;
+  cachedAt: number;
+};
+
+const CACHEABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics"]);
+const ROUTE_CACHE_TTL_MS = 15_000;
+const MAX_ROUTE_CACHE_ENTRIES = 4;
+const MAX_PREFETCH_ENTRIES = 20;
+
+function routeKey(pathname: string, search: string): string {
+  return `${pathname}${search ? `?${search}` : ""}`;
+}
+
+function isCacheableRoute(key: string): boolean {
+  return CACHEABLE_SUPERADMIN_PATHS.has(key.split("?", 1)[0] ?? "");
+}
+
 const settingsItems: SettingsItem[] = [
   { label: "General", href: "/settings/general", available: true },
   { label: "Idiomas y región", href: "/settings/languages", available: true },
@@ -75,7 +95,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: () => void; onPrefetch: (href: string) => void }) {
+function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void; onPrefetch: (href: string) => void }) {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
@@ -92,12 +112,12 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
               <li key={item.href}>
                 {item.available ? (
                   <Link
-                    className={"flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                    className={"flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                     href={item.href}
                     prefetch={false}
                     onMouseEnter={() => onPrefetch(item.href)}
                     onFocus={() => onPrefetch(item.href)}
-                    onClick={onNavigate}
+                    onClick={(event) => onNavigate?.(item.href, event)}
                     aria-current={isActive ? "page" : undefined}
                   >
                     <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
@@ -105,7 +125,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                   </Link>
                 ) : (
                   <span
-                    className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
+                    className="flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
                     aria-disabled="true"
                     title="Disponible próximamente"
                   >
@@ -120,7 +140,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
 
         <div className="mt-2 border-t border-line px-2 pt-2">
           <button
-            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
+            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:min-h-7"
             type="button"
             aria-expanded={isSettingsOpen}
             aria-controls={settingsId}
@@ -139,18 +159,18 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                   <li key={item.label}>
                     {item.available ? (
                       <Link
-                        className={"flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
+                        className={"flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
                         href={item.href}
                         prefetch={false}
                         onMouseEnter={() => onPrefetch(item.href)}
                         onFocus={() => onPrefetch(item.href)}
-                        onClick={onNavigate}
+                        onClick={(event) => onNavigate?.(item.href, event)}
                         aria-current={isActive ? "page" : undefined}
                       >
                         {item.label}
                       </Link>
                     ) : (
-                      <span className="flex min-h-8 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
+                      <span className="flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
                         {item.label}
                       </span>
                     )}
@@ -169,10 +189,10 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
   );
 }
 
-function Brand() {
+function Brand({ onNavigate }: { onNavigate?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void }) {
   return (
-    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false}>
-      <BrandLogo className="h-8 w-9" priority />
+    <Link className="flex h-14 items-center gap-2.5 px-4 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-focus" href="/dashboard" prefetch={false} onClick={(event) => onNavigate?.("/dashboard", event)}>
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent" aria-hidden="true"><BrandLogo className="h-6 w-6 brightness-0 invert" priority /></span>
       <span className="text-sm font-extrabold tracking-[0.07em] text-ink">HIPOCRATIQ</span>
     </Link>
   );
@@ -180,15 +200,118 @@ function Brand() {
 
 export function PlatformShell({ children, userName }: PlatformShellProps) {
   const router = useRouter();
-  const prefetchedHrefs = useRef(new Set<string>());
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentRouteKey = routeKey(pathname, searchParams.toString());
+  const routeCacheRef = useRef(new Map<string, CachedRoute>());
+  const invalidatedRoutesRef = useRef(new Set<string>());
+  const previousRouteKeyRef = useRef(currentRouteKey);
+  const previousChildrenRef = useRef<React.ReactNode>(children);
+  const cacheInitializedRef = useRef(false);
+  const prefetchedHrefs = useRef(new Map<string, number>());
+  const [activeCachedRoute, setActiveCachedRoute] = useState<{ key: string; children: React.ReactNode } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
-  const prefetchOnIntent = useCallback((href: string) => {
-    if (prefetchedHrefs.current.has(href)) return;
 
-    prefetchedHrefs.current.add(href);
-    router.prefetch(href);
+  const getFreshCachedRoute = useCallback((key: string): CachedRoute | null => {
+    const cached = routeCacheRef.current.get(key);
+    if (!cached) return null;
+    if (Date.now() - cached.cachedAt >= ROUTE_CACHE_TTL_MS) {
+      routeCacheRef.current.delete(key);
+      return null;
+    }
+    return cached;
+  }, []);
+
+  const storeRoute = useCallback((key: string, nextChildren: React.ReactNode) => {
+    if (!isCacheableRoute(key)) return;
+    routeCacheRef.current.set(key, { children: nextChildren, cachedAt: Date.now() });
+    while (routeCacheRef.current.size > MAX_ROUTE_CACHE_ENTRIES) {
+      const oldestKey = routeCacheRef.current.keys().next().value;
+      if (oldestKey === undefined) break;
+      routeCacheRef.current.delete(oldestKey);
+    }
+  }, []);
+
+  const prefetchOnIntent = useCallback((href: string) => {
+    if (!isCacheableRoute(href)) return;
+    const prefetchedAt = prefetchedHrefs.current.get(href);
+    if (prefetchedAt && Date.now() - prefetchedAt < ROUTE_CACHE_TTL_MS) return;
+
+    prefetchedHrefs.current.set(href, Date.now());
+    while (prefetchedHrefs.current.size > MAX_PREFETCH_ENTRIES) {
+      const oldestHref = prefetchedHrefs.current.keys().next().value;
+      if (oldestHref === undefined) break;
+      prefetchedHrefs.current.delete(oldestHref);
+    }
+    router.prefetch(href, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(href) });
   }, [router]);
+
+  useEffect(() => {
+    const routeChanged = previousRouteKeyRef.current !== currentRouteKey;
+    const childrenChanged = previousChildrenRef.current !== children;
+    previousRouteKeyRef.current = currentRouteKey;
+    previousChildrenRef.current = children;
+
+    const cached = getFreshCachedRoute(currentRouteKey);
+    if (cached && invalidatedRoutesRef.current.has(currentRouteKey) === false) {
+      setActiveCachedRoute({ key: currentRouteKey, children: cached.children });
+    } else {
+      setActiveCachedRoute(null);
+    }
+
+    if (!isCacheableRoute(currentRouteKey)) return;
+    if (invalidatedRoutesRef.current.has(currentRouteKey)) {
+      if (!childrenChanged) return;
+      invalidatedRoutesRef.current.delete(currentRouteKey);
+    }
+    if (routeChanged && !childrenChanged) return;
+    if (!cacheInitializedRef.current || childrenChanged) {
+      storeRoute(currentRouteKey, children);
+      cacheInitializedRef.current = true;
+    }
+  }, [children, currentRouteKey, getFreshCachedRoute, storeRoute]);
+
+  useEffect(() => {
+    const invalidateClinicRoutes = () => {
+      const cachedKeys = [...routeCacheRef.current.keys()];
+      const refreshKeys = new Set(["/dashboard", "/clinics", currentRouteKey, ...cachedKeys, ...prefetchedHrefs.current.keys()]);
+      refreshKeys.forEach((key) => {
+        if (isCacheableRoute(key)) invalidatedRoutesRef.current.add(key);
+      });
+      routeCacheRef.current.clear();
+      setActiveCachedRoute(null);
+
+      if (isCacheableRoute(currentRouteKey)) {
+        router.refresh();
+      }
+
+      [...refreshKeys]
+        .filter((key) => key !== currentRouteKey)
+        .forEach((key) => router.prefetch(key, { kind: PrefetchKind.AUTO, onInvalidate: () => prefetchedHrefs.current.delete(key) }));
+    };
+
+    window.addEventListener(SUPERADMIN_NAVIGATION_CACHE_EVENT, invalidateClinicRoutes);
+    return () => window.removeEventListener(SUPERADMIN_NAVIGATION_CACHE_EVENT, invalidateClinicRoutes);
+  }, [currentRouteKey, router]);
+
+  const handleNavigation = useCallback((href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
+    setIsMenuOpen(false);
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!isCacheableRoute(href)) return;
+
+    const cached = getFreshCachedRoute(href);
+    if (!cached || invalidatedRoutesRef.current.has(href)) {
+      setActiveCachedRoute(null);
+      return;
+    }
+
+    event.preventDefault();
+    setActiveCachedRoute({ key: href, children: cached.children });
+    window.history.pushState({ superadminRouteCache: true }, "", href);
+  }, [getFreshCachedRoute]);
+
+  const renderedChildren = activeCachedRoute?.key === currentRouteKey ? activeCachedRoute.children : children;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -216,13 +339,13 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   return (
     <div className="min-h-svh bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 hidden w-52 border-r border-line bg-surface lg:flex lg:flex-col">
-        <Brand />
-        <Navigation idPrefix="desktop" onPrefetch={prefetchOnIntent} />
+        <Brand onNavigate={handleNavigation} />
+        <Navigation idPrefix="desktop" onPrefetch={prefetchOnIntent} onNavigate={handleNavigation} />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-13 items-center gap-2.5 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-52 lg:px-5">
         <button
-          className="grid size-10 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
           aria-expanded={isMenuOpen}
           aria-controls="mobile-navigation"
@@ -272,14 +395,14 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
         <>
           <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
           <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
-            <div className="border-b border-line"><Brand /></div>
-            <Navigation idPrefix="mobile" onNavigate={() => setIsMenuOpen(false)} onPrefetch={prefetchOnIntent} />
+            <div className="border-b border-line"><Brand onNavigate={handleNavigation} /></div>
+            <Navigation idPrefix="mobile" onNavigate={handleNavigation} onPrefetch={prefetchOnIntent} />
           </aside>
         </>
       ) : null}
 
       <main id="main-content" className="min-w-0 lg:ml-52">
-        {children}
+        {renderedChildren}
       </main>
     </div>
   );
