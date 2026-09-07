@@ -383,7 +383,7 @@ export default function UsersPage() {
       return <main className="mx-auto grid min-h-[48vh] max-w-2xl place-items-center px-4"><p className="rounded-xl border border-danger/25 bg-danger-soft p-5 text-center text-xs text-danger" role="alert">{error}</p></main>;
     }
 
-    return <PlatformModuleLoading label="Cargando usuarios" />;
+    return <PlatformModuleLoading label="Cargando usuarios" variant="users" />;
   }
 
   return (
