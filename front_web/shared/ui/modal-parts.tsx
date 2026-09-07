@@ -171,6 +171,7 @@ export function ModalTextarea({
         {required ? <span className="ml-0.5 text-danger">*</span> : null}
       </label>
       <textarea
+        aria-required={required || undefined}
         className="w-full resize-none rounded-lg border border-line bg-surface-input p-3 text-xs leading-5 text-ink outline-none transition-colors focus:border-accent focus:bg-surface focus:ring-3 focus:ring-focus/40"
         defaultValue={defaultValue}
         id={id}

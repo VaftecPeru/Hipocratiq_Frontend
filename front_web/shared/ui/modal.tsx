@@ -61,7 +61,7 @@ export function Modal({ isOpen, onClose, title, description, children, size = "m
     lockBodyScroll();
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      if (e.key === "Escape" && !e.defaultPrevented) onCloseRef.current();
     };
 
     const handleTab = (e: KeyboardEvent) => {

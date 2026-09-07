@@ -1,4 +1,12 @@
 export type PaymentStatus = "succeeded" | "pending" | "failed" | "refunded";
+export type BillingCurrency = "USD" | "MXN" | "PEN";
+
+export type BillingCurrencySummary = {
+  monthlyRevenueCents: number;
+  previousMonthRevenueCents: number;
+  totalRevenueCents: number;
+  revenue: Array<{ month: string; amountCents: number }>;
+};
 
 export type AdminPayment = {
   id: number;
@@ -7,7 +15,7 @@ export type AdminPayment = {
   plan: string | null;
   status: PaymentStatus;
   amountCents: number;
-  currency: string;
+  currency: BillingCurrency;
   provider: string;
   reconciliationNote: string | null;
   refundReference: string | null;
@@ -33,7 +41,8 @@ export type AdminBillingData = {
     failedPayments: number;
     totalRevenueCents: number;
     revenue: Array<{ month: string; amountCents: number }>;
-    countries: Array<{ countryCode: string; clinics: number; users: number; revenueCents: number }>;
+    countries: Array<{ countryCode: string; clinics: number; users: number; revenueCents: number; revenueByCurrency: Record<BillingCurrency, number> }>;
+    byCurrency: Record<BillingCurrency, BillingCurrencySummary>;
   };
   filters: { countries: string[]; statuses: PaymentStatus[]; manualSubscriptions: AdminManualSubscription[] };
   pagination: { currentPage: number; from: number | null; lastPage: number; perPage: number; to: number | null; total: number };
