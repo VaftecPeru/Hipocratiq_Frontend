@@ -7,9 +7,9 @@ import {
   ChevronRight,
   CircleDollarSign,
   CirclePause,
+  CirclePlay,
   Eye,
   FilePlus2,
-  MoreHorizontal,
   Pencil,
   Plus,
   Search,
@@ -39,6 +39,7 @@ import {
   SuspendClinicDialog,
 } from "./clinic-modals";
 import { updateAdminClinic } from "@/features/clinics/api/browser-clinics";
+import { notifySuperadminClinicMutation } from "@/features/platform/model/superadmin-navigation-cache";
 import { FilterSelect } from "@/shared/ui/filter-select";
 
 type ClinicsDashboardProps = {
@@ -54,6 +55,7 @@ type FiltersAction =
   | { type: "page"; value: number }
   | { type: "previousPage" }
   | { type: "nextPage"; totalPages: number }
+  | { type: "sync"; value: ClinicsFilters }
   | { type: "clear" };
 
 function filtersReducer(state: ClinicsFilters, action: FiltersAction): ClinicsFilters {
@@ -69,8 +71,10 @@ function filtersReducer(state: ClinicsFilters, action: FiltersAction): ClinicsFi
       return { ...state, page: Math.max(1, state.page - 1) };
     case "nextPage":
       return { ...state, page: Math.min(action.totalPages, state.page + 1) };
+    case "sync":
+      return action.value;
     case "clear":
-      return { search: "", country: "all", plan: "all", status: "all", page: 1 };
+      return { search: "", country: "all", plan: "all", status: "all", page: 1, perPage: state.perPage };
   }
 }
 
@@ -250,7 +254,7 @@ function ClinicActions({
   return (
     <div className="flex justify-end gap-1">
       <button
-        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus md:size-7"
         type="button"
         aria-label={`Ver ${clinicName}`}
         onClick={onViewDetail}
@@ -258,7 +262,7 @@ function ClinicActions({
         <Eye className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
       <button
-        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus md:size-7"
         type="button"
         aria-label={`Editar ${clinicName}`}
         onClick={onEdit}
@@ -266,12 +270,16 @@ function ClinicActions({
         <Pencil className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
       </button>
       <button
-        className="grid size-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        className="grid size-11 place-items-center rounded-md text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus md:size-7"
         type="button"
         aria-label={`${clinicStatus === "active" ? "Suspender" : "Reactivar"} ${clinicName}`}
         onClick={onSuspend}
       >
-        <MoreHorizontal className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
+        {clinicStatus === "active" ? (
+          <CirclePause className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
+        ) : (
+          <CirclePlay className="size-3.5" strokeWidth={1.7} aria-hidden="true" />
+        )}
       </button>
     </div>
   );
@@ -469,6 +477,10 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
     plan !== "all" ||
     status !== "all";
 
+  useEffect(() => {
+    dispatch({ type: "sync", value: initialFilters });
+  }, [initialFilters, initialFilters.country, initialFilters.page, initialFilters.plan, initialFilters.search, initialFilters.status]);
+
   useEffect(() => () => {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
   }, []);
@@ -481,6 +493,7 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
     if (next.plan !== "all") params.set("plan", next.plan);
     if (next.status !== "all") params.set("status", next.status);
     if (next.page > 1) params.set("page", String(next.page));
+    if (next.perPage !== 10) params.set("per_page", String(next.perPage));
 
     const query = params.toString();
     startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }));
@@ -523,7 +536,7 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
           <h1 className="mt-0.5 font-display text-[clamp(1.3rem,1.8vw,1.6rem)] italic tracking-[-0.02em]">Clínicas <span className="not-italic font-sans font-extrabold text-muted">/ Tenants</span></h1>
           <p className="mt-0.5 text-xs text-muted">Administra clínicas, planes y estado operativo desde un solo lugar.</p>
         </div>
-        <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" type="button" onClick={() => setCreateClinicOpen(true)}><Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
+        <button className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus md:min-h-9" type="button" onClick={() => setCreateClinicOpen(true)}><Plus className="size-3.5" strokeWidth={2} aria-hidden="true" />Nueva clínica</button>
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(11rem,0.8fr))_minmax(19rem,1.45fr)]" aria-label="Indicadores de clínicas">
@@ -553,8 +566,8 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
             options={STATUS_OPTIONS}
             onChange={(value) => updateFilter({ type: "status", value })}
           />
-          <label className="grid gap-1 text-2xs font-bold text-muted">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input className="h-9 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre de la clínica..." onChange={(event) => updateSearch(event.target.value)} /></span></label>
-          <button className={`mt-auto flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-8 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-accent-soft-hover" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
+          <label className="grid gap-1 text-2xs font-bold text-muted" htmlFor="clinics-search">Buscar clínica<span className="relative"><Search className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted" strokeWidth={1.7} aria-hidden="true" /><input id="clinics-search" className="h-11 w-full rounded-lg border border-line bg-surface pr-2.5 pl-8 text-xs font-medium text-ink outline-none placeholder:text-muted/75 focus:border-accent focus:ring-3 focus:ring-focus/40 md:h-8" type="search" value={search} placeholder="Nombre de la clínica..." onChange={(event) => updateSearch(event.target.value)} /></span></label>
+          <button className={`mt-auto flex min-h-11 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus md:min-h-8 ${hasActiveFilters ? "border-accent bg-accent-soft text-accent hover:bg-accent-soft-hover" : "border-line text-muted"}`} type="button" onClick={clearFilters} disabled={!hasActiveFilters}><SlidersHorizontal className="size-3" strokeWidth={1.7} aria-hidden="true" />{hasActiveFilters ? "Limpiar" : "Filtros"}</button>
         </div>
       </section>
 
@@ -580,12 +593,12 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
           />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando {initialData.pagination.from ?? 0} a {initialData.pagination.to ?? 0} de {initialData.pagination.total} clínicas</p>
-            <div className="flex items-center gap-1" aria-label="Paginación">
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página anterior" disabled={currentPage === 1 || isPending} onClick={() => updateFilter({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
+            <div className="flex max-w-full flex-wrap items-center justify-center gap-1" role="navigation" aria-label="Paginación">
+              <button className="grid size-11 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus md:size-7" type="button" aria-label="Página anterior" disabled={currentPage === 1 || isPending} onClick={() => updateFilter({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
               {paginationItems(currentPage, totalPages).map((item, index) => item === "ellipsis"
                 ? <span className="grid size-7 place-items-center text-xs text-muted" key={`ellipsis-${index}`} aria-hidden="true">…</span>
-                : <button className={`grid size-7 place-items-center rounded-md text-xs font-bold focus-visible:outline-3 focus-visible:outline-focus ${item === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={item} aria-label={`Página ${item}`} aria-current={item === currentPage ? "page" : undefined} disabled={isPending} onClick={() => updateFilter({ type: "page", value: item })}>{item}</button>)}
-              <button className="grid size-7 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages || isPending} onClick={() => updateFilter({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
+                : <button className={`grid size-11 place-items-center rounded-md text-xs font-bold focus-visible:outline-3 focus-visible:outline-focus md:size-7 ${item === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={item} aria-label={`Página ${item}`} aria-current={item === currentPage ? "page" : undefined} disabled={isPending} onClick={() => updateFilter({ type: "page", value: item })}>{item}</button>)}
+              <button className="grid size-11 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus md:size-7" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages || isPending} onClick={() => updateFilter({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
             </div>
           </div>
         </section>
@@ -596,7 +609,7 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
         key={createClinicOpen ? "create-open" : "create-closed"}
         isOpen={createClinicOpen}
         onClose={() => setCreateClinicOpen(false)}
-        onCreated={() => router.refresh()}
+        onCreated={() => notifySuperadminClinicMutation()}
       />
       <ClinicDetailModal
         isOpen={detailClinicOpen}
@@ -604,20 +617,22 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
         clinic={selectedClinic}
       />
       <EditClinicModal
+        key={`${editClinicOpen ? "edit-open" : "edit-closed"}-${selectedClinic?.id ?? "none"}`}
         isOpen={editClinicOpen}
         onClose={() => setEditClinicOpen(false)}
         clinic={selectedClinic}
-        onUpdated={() => router.refresh()}
+        onUpdated={() => notifySuperadminClinicMutation()}
       />
       <SuspendClinicDialog
+        key={`${suspendClinicOpen ? "suspend-open" : "suspend-closed"}-${selectedClinic?.id ?? "none"}-${selectedClinic?.status ?? "none"}`}
         isOpen={suspendClinicOpen}
         onClose={() => setSuspendClinicOpen(false)}
         onConfirm={async () => {
           if (!selectedClinic) return;
           await updateAdminClinic(selectedClinic.id, { status: selectedClinic.status === "active" ? "suspended" : "active" });
+          notifySuperadminClinicMutation();
           setSuspendClinicOpen(false);
           setSelectedClinic(null);
-          router.refresh();
         }}
         clinicName={selectedClinic?.name ?? ""}
         nextStatus={selectedClinic?.status === "active" ? "suspended" : "active"}
