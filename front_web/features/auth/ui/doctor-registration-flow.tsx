@@ -21,12 +21,20 @@ import { DoctorRegistrationForm } from "@/features/auth/ui/doctor-registration-f
 import { ClinicOtpStep, PlanStep, RegistrationSuccessStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/auth/ui/clinic-registration-ui";
 import { ApiError } from "@/shared/api/http-client";
+import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 
 const initialDraft: DoctorRegistrationDraft = {
   doctor_name: "", doctor_email: "", country_code: "PE", doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
 };
 
 type DoctorStep = "details" | "plan" | "otp" | "success";
+
+const DOCTOR_REGISTRATION_TITLES = {
+  details: "Registro médico",
+  plan: "Plan médico",
+  otp: "Verificar registro médico",
+  success: "Cuenta médica activada",
+} satisfies Record<DoctorStep, string>;
 
 function validateDraft(draft: DoctorRegistrationDraft, catalogStatus: "loading" | "available" | "unavailable"): RegistrationFieldErrors {
   const errors: RegistrationFieldErrors = {};
@@ -63,6 +71,8 @@ export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegistrationFieldErrors>({});
+
+  useAuthDocumentTitle(DOCTOR_REGISTRATION_TITLES[step]);
 
   useEffect(() => { getDoctorRegistrationClinics().then((response) => setClinics(response.data)).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "No pudimos completar el registro médico.")); }, []);
   useEffect(() => { getDoctorRegistrationSpecialties().then((response) => { setSpecialties(response.data); setCatalogStatus("available"); }).catch(() => setCatalogStatus("unavailable")); }, []);
