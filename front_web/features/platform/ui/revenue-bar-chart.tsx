@@ -1,4 +1,5 @@
 import { RevenueBarChartInteractive } from "@/features/platform/ui/revenue-bar-chart-interactive";
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
 
 export type RevenueBarChartPoint = Readonly<{
   id: string;
@@ -18,6 +19,7 @@ type RevenueBarChartProps = Readonly<{
   billingHref?: string;
   className?: string;
   id: string;
+  currency?: BillingCurrency;
 }>;
 
 type NormalizedRevenuePoint = Readonly<{
@@ -27,14 +29,18 @@ type NormalizedRevenuePoint = Readonly<{
   amountCents: number | null;
 }>;
 
-const currencyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const currencyFormatters: Record<BillingCurrency, Intl.NumberFormat> = {
+  USD: new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD", maximumFractionDigits: 0 }),
+  MXN: new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }),
+  PEN: new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 0 }),
+};
 
 function normalizeAmount(amountCents: number | null | undefined): number | null {
   return typeof amountCents === "number" && Number.isFinite(amountCents) ? amountCents : null;
 }
 
-function formatAmount(amountCents: number | null): string {
-  return amountCents === null ? "Sin importe" : currencyFormatter.format(amountCents / 100);
+function formatAmount(amountCents: number | null, currency: BillingCurrency): string {
+  return amountCents === null ? "Sin importe" : currencyFormatters[currency].format(amountCents / 100);
 }
 
 function formatChange(current: number, previous: { amountCents: number; label: string } | undefined): string | null {
@@ -63,6 +69,7 @@ export function RevenueBarChart({
   billingHref = "/billing",
   className = "",
   id,
+  currency = "USD",
 }: RevenueBarChartProps) {
   const normalizedPoints: NormalizedRevenuePoint[] = points.map((point, index) => ({
     key: `${point.id || "point"}-${index}`,
@@ -81,7 +88,7 @@ export function RevenueBarChart({
       .findLast((candidate): candidate is NormalizedRevenuePoint & { amountCents: number } => candidate.amountCents !== null);
     const view = {
       ...point,
-      amountLabel: formatAmount(amountCents),
+       amountLabel: formatAmount(amountCents, currency),
       shareLabel: amountCents === null || periodTotalCents === 0 ? (amountCents === null ? "Sin participación" : "0.0% del periodo") : `${((amountCents / periodTotalCents) * 100).toFixed(1)}% del periodo`,
       changeLabel: amountCents === null ? null : formatChange(amountCents, previousRealPoint),
       heightPercent: amountCents === null || maxAmountCents <= 0 ? 0 : Math.max(0, (amountCents / maxAmountCents) * 100),
@@ -107,7 +114,7 @@ export function RevenueBarChart({
         </div>
         <div className="sm:text-right">
           <p className="text-2xs font-semibold text-muted">{totalLabel}</p>
-          <p className="mt-0.5 font-mono text-xl font-bold tracking-tighter">{currencyFormatter.format(displayTotalCents / 100)}</p>
+           <p className="mt-0.5 font-mono text-xl font-bold tracking-tighter">{currencyFormatters[currency].format(displayTotalCents / 100)}</p>
         </div>
       </header>
       <RevenueBarChartInteractive points={pointViews} chartLabel={chartLabel} chartHeightClassName={chartHeightClassName} billingHref={billingHref} emptyStateLabel={emptyStateLabel} />

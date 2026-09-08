@@ -143,15 +143,19 @@ export function FilterSelect<T extends string | number>({
       if (!button) return;
       const rect = button.getBoundingClientRect();
       const viewportPadding = 8;
-      const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
-      const availableAbove = rect.top - viewportPadding;
+      const gap = 4;
+      const availableBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding - gap);
+      const availableAbove = Math.max(0, rect.top - viewportPadding - gap);
       const shouldOpenAbove = availableBelow < 160 && availableAbove > availableBelow;
-      const availableHeight = Math.max(96, Math.min(256, shouldOpenAbove ? availableAbove : availableBelow));
+      const availableHeight = Math.min(256, shouldOpenAbove ? availableAbove : availableBelow);
+      const availableWidth = Math.max(0, window.innerWidth - viewportPadding * 2);
+      const menuWidth = Math.min(rect.width, availableWidth);
+      const maxLeft = Math.max(viewportPadding, window.innerWidth - menuWidth - viewportPadding);
 
       setMenuStyle({
-        left: rect.left,
-        top: shouldOpenAbove ? Math.max(viewportPadding, rect.top - availableHeight - 4) : rect.bottom + 4,
-        width: rect.width,
+        left: Math.min(Math.max(viewportPadding, rect.left), maxLeft),
+        top: shouldOpenAbove ? Math.max(viewportPadding, rect.top - availableHeight - gap) : rect.bottom + gap,
+        width: menuWidth,
         maxHeight: availableHeight,
       });
     };
@@ -214,6 +218,7 @@ export function FilterSelect<T extends string | number>({
       case "Escape":
         if (isOpen) {
           event.preventDefault();
+          event.stopPropagation();
           close();
         }
         break;

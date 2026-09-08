@@ -16,6 +16,7 @@ import {
 import type {
   CreatePlanPayload,
   CreateSubscriptionPayload,
+  MembershipCurrency,
   MembershipPlan,
   UpdatePlanPayload,
   UpgradeSubscriptionPayload,
@@ -61,14 +62,14 @@ function featuresToText(features: string[]): string {
   return features.join("\n");
 }
 
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}/mes`;
+function formatPlanAmount(cents: number, currency: MembershipCurrency): string {
+  return `${new Intl.NumberFormat(currency === "PEN" ? "es-PE" : "es-MX", { style: "currency", currency, maximumFractionDigits: 2 }).format(cents / 100)}/mes`;
 }
 
 function planOptions(plans: MembershipPlan[]): ModalSelectOption[] {
   return plans.map((plan) => ({
     value: String(plan.id),
-    label: `${plan.name} — ${formatUsd(plan.monthlyPriceUsdCents)}`,
+    label: `${plan.name} — ${formatPlanAmount(plan.monthlyPriceCents, plan.currency)}`,
   }));
 }
 
@@ -78,6 +79,7 @@ function NewPlanForm({ onSubmitted, onClose }: { onSubmitted: () => void; onClos
   const [description, setDescription] = useState("");
   const [monthlyPrice, setMonthlyPrice] = useState("");
   const [annualPrice, setAnnualPrice] = useState("");
+  const [currency, setCurrency] = useState<MembershipCurrency>("USD");
   const [features, setFeatures] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +109,7 @@ function NewPlanForm({ onSubmitted, onClose }: { onSubmitted: () => void; onClos
       description: description.trim() || null,
       monthlyPriceUsd,
       annualPriceUsd,
+      currency,
       features: textToFeatures(features),
       publiclySelectable: true,
       isActive: true,
@@ -158,10 +161,11 @@ function NewPlanForm({ onSubmitted, onClose }: { onSubmitted: () => void; onClos
         value={description}
         onChange={(event) => setDescription(event.target.value)}
       />
+      <ModalSelect id="plan-currency" label="Moneda del plan" required value={currency} onChange={(value) => setCurrency(value as MembershipCurrency)} options={["USD", "MXN", "PEN"]} />
       <ModalGrid cols={2}>
         <ModalField
           id="plan-price-monthly"
-          label="Precio Mensual (USD)"
+          label={`Precio Mensual (${currency})`}
           placeholder="149"
           type="number"
           min={0}
@@ -172,7 +176,7 @@ function NewPlanForm({ onSubmitted, onClose }: { onSubmitted: () => void; onClos
         />
         <ModalField
           id="plan-price-annual"
-          label="Precio Anual (USD)"
+          label={`Precio Anual (${currency})`}
           placeholder="1490"
           type="number"
           min={0}
@@ -196,7 +200,7 @@ function NewPlanForm({ onSubmitted, onClose }: { onSubmitted: () => void; onClos
       </p>
       <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
         <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-        <ModalPrimaryButton onClick={handleCreate}>{isLoading ? "Creando..." : "Crear Plan"}</ModalPrimaryButton>
+        <ModalPrimaryButton disabled={isLoading} onClick={handleCreate}>{isLoading ? "Creando..." : "Crear Plan"}</ModalPrimaryButton>
       </div>
     </div>
   );
@@ -236,6 +240,7 @@ function EditPlanForm({ plan, onSubmitted, onClose }: { plan: MembershipPlan; on
   const [description, setDescription] = useState(plan.description ?? "");
   const [monthlyPrice, setMonthlyPrice] = useState(plan.monthlyPriceUsdCents / 100);
   const [annualPrice, setAnnualPrice] = useState(plan.annualPriceUsdCents / 100);
+  const [currency, setCurrency] = useState<MembershipCurrency>(plan.currency);
   const [features, setFeatures] = useState(featuresToText(plan.features));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -260,6 +265,7 @@ function EditPlanForm({ plan, onSubmitted, onClose }: { plan: MembershipPlan; on
       description: description.trim() || null,
       monthlyPriceUsd,
       annualPriceUsd,
+      currency,
       features: textToFeatures(features),
     };
 
@@ -298,10 +304,11 @@ function EditPlanForm({ plan, onSubmitted, onClose }: { plan: MembershipPlan; on
         value={description}
         onChange={(event) => setDescription(event.target.value)}
       />
+      <ModalSelect id="edit-currency" label="Moneda del plan" required value={currency} onChange={(value) => setCurrency(value as MembershipCurrency)} options={["USD", "MXN", "PEN"]} />
       <ModalGrid cols={2}>
         <ModalField
           id="edit-price-monthly"
-          label="Precio Mensual (USD)"
+          label={`Precio Mensual (${currency})`}
           type="number"
           min={0}
           step={0.01}
@@ -311,7 +318,7 @@ function EditPlanForm({ plan, onSubmitted, onClose }: { plan: MembershipPlan; on
         />
         <ModalField
           id="edit-price-annual"
-          label="Precio Anual (USD)"
+          label={`Precio Anual (${currency})`}
           type="number"
           min={0}
           step={0.01}
@@ -330,7 +337,7 @@ function EditPlanForm({ plan, onSubmitted, onClose }: { plan: MembershipPlan; on
       />
       <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
         <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-        <ModalPrimaryButton onClick={handleSave}>{isLoading ? "Guardando..." : "Guardar Cambios"}</ModalPrimaryButton>
+        <ModalPrimaryButton disabled={isLoading} onClick={handleSave}>{isLoading ? "Guardando..." : "Guardar Cambios"}</ModalPrimaryButton>
       </div>
     </div>
   );
@@ -464,7 +471,7 @@ function NewSubscriptionForm({
       </label>
       <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
         <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-        <ModalPrimaryButton onClick={handleCreate}>
+        <ModalPrimaryButton disabled={isLoading} onClick={handleCreate}>
           <CreditCard className="size-3.5" strokeWidth={1.9} />
           {isLoading ? "Creando..." : "Crear Suscripción"}
         </ModalPrimaryButton>
@@ -577,7 +584,7 @@ function UpgradeSubscriptionForm({
       </p>
       <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
         <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-        <ModalPrimaryButton onClick={handleUpgrade}>
+        <ModalPrimaryButton disabled={isLoading} onClick={handleUpgrade}>
           <TrendingUp className="size-3.5" strokeWidth={1.9} />
           {isLoading ? "Procesando..." : "Cambiar Plan"}
         </ModalPrimaryButton>
@@ -659,7 +666,7 @@ export function CancelSubscriptionDialog({
       confirmTone="danger"
       description={
         error ??
-        `¿Estás seguro de cancelar la suscripción de "${clinicName}"? La clínica perderá acceso al finalizar el periodo actual.`
+         `¿Estás seguro de cancelar la suscripción de "${clinicName}"? El acceso se desactivará inmediatamente.`
       }
       isLoading={isLoading}
       isOpen={isOpen}
