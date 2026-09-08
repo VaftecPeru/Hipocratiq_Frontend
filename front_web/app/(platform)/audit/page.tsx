@@ -3,15 +3,21 @@
 import {
   Activity,
   AlertTriangle,
+  Building2,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
+  FileBarChart,
   Globe2,
   History,
   KeyRound,
   Search,
   Settings2,
   ShieldCheck,
+  Siren,
+  Stethoscope,
   TicketCheck,
+  UserCog,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -35,15 +41,37 @@ const EMPTY_SUMMARY: AuditSummary = {
 
 const MODULE_META: Record<string, { label: string; icon: LucideIcon; classes: string }> = {
   authentication: { label: "Autenticación", icon: KeyRound, classes: "bg-violet-soft text-violet" },
+  access_control: { label: "Control de acceso", icon: ShieldCheck, classes: "bg-violet-soft text-violet" },
+  billing: { label: "Facturación", icon: CreditCard, classes: "bg-warning-soft text-warning" },
+  clinics: { label: "Clínicas", icon: Building2, classes: "bg-accent-soft text-accent" },
+  monitoring: { label: "Monitoreo", icon: Activity, classes: "bg-danger-soft text-danger" },
+  reports: { label: "Reportes", icon: FileBarChart, classes: "bg-success-soft text-success" },
   support: { label: "Soporte", icon: TicketCheck, classes: "bg-accent-soft text-accent" },
+  emergency: { label: "Emergencia", icon: Siren, classes: "bg-danger-soft text-danger" },
   memberships: { label: "Membresías", icon: UsersRound, classes: "bg-success-soft text-success" },
   settings: { label: "Configuración", icon: Settings2, classes: "bg-warning-soft text-warning" },
+  specialties: { label: "Especialidades", icon: Stethoscope, classes: "bg-accent-soft text-accent" },
+  users: { label: "Usuarios", icon: UserCog, classes: "bg-violet-soft text-violet" },
 };
 
 const ACTION_LABELS: Record<string, string> = {
   ticket_created: "Creó ticket",
   ticket_updated: "Actualizó ticket",
   ticket_commented: "Agregó nota al ticket",
+  clinic_created: "Creó clínica",
+  clinic_updated: "Actualizó clínica",
+  specialty_created: "Creó especialidad",
+  specialty_updated: "Actualizó especialidad",
+  user_access_updated: "Actualizó acceso de usuario",
+  user_updated: "Actualizó usuario",
+  user_status_updated: "Actualizó estado de usuario",
+  manual_payment_recorded: "Registró pago manual",
+  manual_payment_refunded: "Reembolsó pago manual",
+  billing_exported: "Exportó facturación",
+  executive_report_exported: "Exportó reporte ejecutivo",
+  incident_created: "Creó incidente",
+  incident_status_updated: "Actualizó estado del incidente",
+  incident_resolved: "Resolvió incidente",
   plan_created: "Creó plan",
   plan_updated: "Actualizó plan",
   subscription_created: "Creó suscripción",
@@ -57,6 +85,8 @@ const ACTION_LABELS: Record<string, string> = {
   password_reset: "Restableció contraseña",
   otp_failed: "OTP inválido",
   otp_verified: "OTP verificado",
+  emergency_policy_updated: "Actualizó política de emergencia",
+  emergency_policy_published: "Publicó política global de emergencia",
 };
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
@@ -71,8 +101,12 @@ function moduleMeta(module: string) {
   return MODULE_META[module] ?? { label: module, icon: Activity, classes: "bg-surface-subtle text-muted" };
 }
 
+function actionLabel(action: string): string {
+  return ACTION_LABELS[action] ?? action.replaceAll("_", " ");
+}
+
 function eventAction(event: AuditEvent): string {
-  return ACTION_LABELS[event.action] ?? event.action.replaceAll("_", " ");
+  return actionLabel(event.action);
 }
 
 function EventResource({ event }: { event: AuditEvent }) {
@@ -80,11 +114,12 @@ function EventResource({ event }: { event: AuditEvent }) {
   return <span className="block max-w-52 truncate text-2xs text-muted" title={label ?? undefined}>{label}</span>;
 }
 
-function Filters({ filters, modules, countries, onChange }: { filters: AuditFilters; modules: string[]; countries: string[]; onChange: (changes: Partial<AuditFilters>) => void }) {
+function Filters({ filters, modules, actions, countries, onChange }: { filters: AuditFilters; modules: string[]; actions: string[]; countries: string[]; onChange: (changes: Partial<AuditFilters>) => void }) {
   return (
     <section className="grid gap-3 rounded-xl border border-line bg-surface p-3 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)] md:grid-cols-2 xl:grid-cols-[minmax(15rem,1.6fr)_repeat(3,minmax(9rem,1fr))]" aria-label="Filtros de auditoría">
       <label className="grid gap-1 text-2xs font-bold text-muted"><span>Buscar usuario, recurso, acción o IP</span><span className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2" /><input className="h-9 w-full rounded-lg border border-line bg-surface-input pl-9 pr-3 text-xs outline-none focus:border-accent focus:ring-3 focus:ring-focus/40" type="search" value={filters.search ?? ""} onChange={(event) => onChange({ search: event.target.value, page: 1 })} /></span></label>
       <FilterSelect label="Módulo" value={filters.module ?? ""} options={[{ value: "", label: "Todos" }, ...modules.map((module) => ({ value: module, label: moduleMeta(module).label }))]} onChange={(module) => onChange({ module: module || undefined, page: 1 })} />
+      <FilterSelect label="Acción" value={filters.action ?? ""} options={[{ value: "", label: "Todas" }, ...actions.map((action) => ({ value: action, label: actionLabel(action) }))]} onChange={(action) => onChange({ action: action || undefined, page: 1 })} />
       <FilterSelect label="País" value={filters.countryCode ?? ""} options={[{ value: "", label: "Todos los países" }, ...countries.map((country) => ({ value: country, label: country }))]} onChange={(countryCode) => onChange({ countryCode: countryCode || undefined, page: 1 })} />
       <FilterSelect label="Severidad" value={filters.critical === undefined ? "" : filters.critical ? "critical" : "normal"} options={[{ value: "", label: "Todas" }, { value: "critical", label: "Críticos" }, { value: "normal", label: "No críticos" }]} onChange={(value) => onChange({ critical: value === "" ? undefined : value === "critical", page: 1 })} />
       <label className="grid gap-1 text-2xs font-bold text-muted"><span>Desde</span><input className="h-9 rounded-lg border border-line bg-surface px-3 text-xs" type="date" value={filters.dateFrom ?? ""} onChange={(event) => onChange({ dateFrom: event.target.value || undefined, page: 1 })} /></label>
@@ -150,7 +185,7 @@ export default function AuditPage() {
       <header><p className="text-xs font-bold tracking-[0.13em] text-accent uppercase">Supervisión global</p><h1 className="mt-0.5 text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Auditoría Global</h1><p className="mt-0.5 text-xs text-muted">Autenticación y cambios administrativos de todos los países, tenants y recursos.</p></header>
       {error ? <p className="mt-4 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger" role="alert">{error}</p> : null}
       <section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Indicadores de auditoría">{stats.map((stat, index) => <StatCard {...stat} index={index} key={stat.label} />)}</section>
-      <div className="mt-4"><Filters filters={filters} modules={data?.options.modules ?? []} countries={data?.options.countries ?? []} onChange={(changes) => setFilters((current) => ({ ...current, ...changes }))} /></div>
+       <div className="mt-4"><Filters filters={filters} modules={data?.options.modules ?? []} actions={data?.options.actions ?? []} countries={data?.options.countries ?? []} onChange={(changes) => setFilters((current) => ({ ...current, ...changes }))} /></div>
 
       <div className="mt-4 grid min-w-0 items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_21rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface" aria-labelledby="audit-log-title">

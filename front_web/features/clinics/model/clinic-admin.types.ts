@@ -2,11 +2,40 @@ import type { CountryCode } from "@/shared/ui/country-flag";
 
 export type ClinicMemberRole = "clinic_admin" | "receptionist" | "doctor";
 
+export type ClinicEmergencyPolicy = {
+  enabled: boolean;
+  visibility: "reception_doctors_admins" | "doctors_admins" | "admins_only";
+  label: string;
+  color: "#EF2F3F" | "#F97316" | "#7C3AED";
+  inheritance: "workflow_and_responsibles" | "responsibles_only" | "locked";
+  defaultChannel: "priority_push" | "internal_alert" | "email" | "sms";
+  escalationMinutes: 1 | 3 | 5 | 10;
+  responsibles: Array<{ role: string; channel: string }>;
+};
+
+export type ClinicEmergencyGlobalOverride = {
+  scope: "all";
+  force: boolean;
+  note: string | null;
+  publishedAt: string | null;
+  publishedBy: { id: number | null; name: string | null; email: string | null } | null;
+  policy: ClinicEmergencyPolicy;
+  responsibles: Array<{ role: string; channel: string }>;
+};
+
+export type ClinicEmergencyState = {
+  local: ClinicEmergencyPolicy;
+  effective: ClinicEmergencyPolicy;
+  isOverridden: boolean;
+  globalOverride: ClinicEmergencyGlobalOverride | null;
+};
+
 export type ClinicPreferences = {
   maintenance: boolean;
   audit: boolean;
   signatures: boolean;
   backups: boolean;
+  emergency: ClinicEmergencyPolicy;
 };
 
 export type ClinicAdminInfo = {
@@ -17,6 +46,7 @@ export type ClinicAdminInfo = {
   address: string;
   status: "active" | "suspended";
   preferences: ClinicPreferences;
+  emergency: ClinicEmergencyState;
 };
 
 export type ClinicTeamMember = {

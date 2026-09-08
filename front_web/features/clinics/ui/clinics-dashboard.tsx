@@ -41,6 +41,7 @@ import {
 import { updateAdminClinic } from "@/features/clinics/api/browser-clinics";
 import { notifySuperadminClinicMutation } from "@/features/platform/model/superadmin-navigation-invalidation";
 import { FilterSelect } from "@/shared/ui/filter-select";
+import { BILLING_CURRENCIES, formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
 type ClinicsDashboardProps = {
   initialData: ClinicsDashboardPageData;
@@ -125,11 +126,9 @@ const ACTIVITY_STYLES: Record<ClinicActivity["type"], { icon: typeof Building2; 
 };
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
+function formatClinicBilling(amount: number, currency: Clinic["monthlyBillingCurrency"]): string {
+  return formatBillingAmount(Math.round(amount * 100), currency);
+}
 
 function percentageOf(value: number, total: number): string {
   return total === 0 ? "0.0" : ((value / total) * 100).toFixed(1);
@@ -367,7 +366,7 @@ function ClinicsTable({
                 <td className="px-3 py-2 text-right font-mono">{numberFormatter.format(clinic.users)}</td>
                 <td className="px-3 py-2 text-right font-mono">{numberFormatter.format(clinic.patients)}</td>
                 <td className="px-3 py-2"><StatusBadge status={clinic.status} /></td>
-                <td className="px-3 py-2 text-right font-mono font-semibold">{currencyFormatter.format(clinic.monthlyBilling)}</td>
+                <td className="px-3 py-2 text-right font-mono font-semibold">{formatClinicBilling(clinic.monthlyBilling, clinic.monthlyBillingCurrency)}</td>
                 <td className="whitespace-nowrap px-3 py-2">{clinic.lastPayment ?? "—"}</td>
                 <td className="px-2 py-1.5">
                   <ClinicActions
@@ -399,7 +398,7 @@ function ClinicsTable({
               <div><dt className="text-muted">Usuarios</dt><dd className="mt-1 font-mono font-bold">{clinic.users}</dd></div>
               <div><dt className="text-muted">Pacientes</dt><dd className="mt-1 font-mono font-bold">{numberFormatter.format(clinic.patients)}</dd></div>
             </dl>
-            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{currencyFormatter.format(clinic.monthlyBilling)} / mes</p><ClinicActions clinicName={clinic.name} clinicStatus={clinic.status} onViewDetail={() => onViewDetail(clinic)} onEdit={() => onEdit(clinic)} onSuspend={() => onSuspend(clinic)} /></div>
+            <div className="mt-2 flex items-center justify-between"><p className="text-xs text-muted">{formatClinicBilling(clinic.monthlyBilling, clinic.monthlyBillingCurrency)} / mes</p><ClinicActions clinicName={clinic.name} clinicStatus={clinic.status} onViewDetail={() => onViewDetail(clinic)} onEdit={() => onEdit(clinic)} onSuspend={() => onSuspend(clinic)} /></div>
           </article>
         ))}
       </div>
@@ -412,8 +411,16 @@ function SummaryPanel({ data }: { data: ClinicsDashboardPageData }) {
     { label: "Total de clínicas", value: numberFormatter.format(data.totals.clinics), icon: Building2 },
     { label: "Total de usuarios", value: numberFormatter.format(data.totals.users), icon: Users },
     { label: "Total de pacientes", value: numberFormatter.format(data.totals.patients), icon: UserPlus },
-    { label: "Ingresos mensuales", value: currencyFormatter.format(data.totals.monthlyRevenue), icon: CircleDollarSign },
-    { label: "Ingresos anuales (YTD)", value: currencyFormatter.format(data.totals.annualRevenue), icon: TrendingUp },
+    ...BILLING_CURRENCIES.map((currency) => ({
+      label: `Ingresos mensuales · ${currency}`,
+      value: formatBillingAmount(Math.round(data.totals.monthlyRevenueByCurrency[currency] * 100), currency),
+      icon: CircleDollarSign,
+    })),
+    ...BILLING_CURRENCIES.map((currency) => ({
+      label: `Ingresos anuales · ${currency}`,
+      value: formatBillingAmount(Math.round(data.totals.annualRevenueByCurrency[currency] * 100), currency),
+      icon: TrendingUp,
+    })),
   ];
 
   return (
@@ -593,13 +600,13 @@ export function ClinicsDashboard({ initialData, initialFilters }: ClinicsDashboa
           />
           <div className="flex min-h-14 flex-col items-center justify-between gap-2 border-t border-line px-4 py-2.5 sm:flex-row">
             <p className="text-2xs text-muted">Mostrando {initialData.pagination.from ?? 0} a {initialData.pagination.to ?? 0} de {initialData.pagination.total} clínicas</p>
-            <div className="flex max-w-full flex-wrap items-center justify-center gap-1" role="navigation" aria-label="Paginación">
+             <nav className="flex max-w-full flex-wrap items-center justify-center gap-1" aria-label="Paginación">
               <button className="grid size-11 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus md:size-7" type="button" aria-label="Página anterior" disabled={currentPage === 1 || isPending} onClick={() => updateFilter({ type: "previousPage" })}><ChevronLeft className="size-3" aria-hidden="true" /></button>
               {paginationItems(currentPage, totalPages).map((item, index) => item === "ellipsis"
                 ? <span className="grid size-7 place-items-center text-xs text-muted" key={`ellipsis-${index}`} aria-hidden="true">…</span>
                 : <button className={`grid size-11 place-items-center rounded-md text-xs font-bold focus-visible:outline-3 focus-visible:outline-focus md:size-7 ${item === currentPage ? "bg-accent text-white" : "border border-line text-muted hover:bg-surface-subtle"}`} type="button" key={item} aria-label={`Página ${item}`} aria-current={item === currentPage ? "page" : undefined} disabled={isPending} onClick={() => updateFilter({ type: "page", value: item })}>{item}</button>)}
               <button className="grid size-11 place-items-center rounded-md border border-line text-muted disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-focus md:size-7" type="button" aria-label="Página siguiente" disabled={currentPage === totalPages || isPending} onClick={() => updateFilter({ type: "nextPage", totalPages })}><ChevronRight className="size-3" aria-hidden="true" /></button>
-            </div>
+             </nav>
           </div>
         </section>
         <SummaryPanel data={initialData} />

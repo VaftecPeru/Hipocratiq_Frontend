@@ -1,5 +1,7 @@
 import { ApiError, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
 import { parseApiList } from "@/shared/api/parse-api-list";
+import { invalidatePlatformData, readPlatformDataCache, writePlatformDataCache } from "@/features/platform/model/platform-data-cache";
+import { notifySuperadminNavigationMutation } from "@/features/platform/model/superadmin-navigation-invalidation";
 import type {
   CreateSupportTicketPayload,
   SupportAgent,
@@ -215,9 +217,16 @@ function queryString(filters: SupportTicketFilters): string {
 export async function getAdminSupportTickets(
   filters: SupportTicketFilters = {},
   signal?: AbortSignal,
+  options: { force?: boolean } = {},
 ): Promise<SupportTicketList> {
+  const key = queryString(filters);
+  if (!options.force) {
+    const cached = readPlatformDataCache<SupportTicketList>("support", key);
+    if (cached) return cached;
+  }
+
   const payload = await getFromApi<ApiTicketList>(
-    `/api/v1/auth/admin/support-tickets?${queryString(filters)}`,
+    `/api/v1/auth/admin/support-tickets?${key}`,
     { signal },
   );
 
@@ -225,7 +234,7 @@ export async function getAdminSupportTickets(
     throw new ApiError("El servidor devolvió una respuesta de soporte incompleta.", 502);
   }
 
-  return {
+  return writePlatformDataCache("support", key, {
     tickets: parseApiList<ApiTicket>(payload.data, "support.data").map(mapTicket),
     clinics: parseApiList<ApiClinic>(payload.filter_options.clinics, "support.filter_options.clinics").map(mapClinic).filter((clinic): clinic is SupportClinicOption => clinic !== null),
     agents: parseApiList<ApiAgent>(payload.summary.agents, "support.summary.agents").map(mapAgent),
@@ -237,7 +246,7 @@ export async function getAdminSupportTickets(
       perPage: payload.meta.per_page,
       total: payload.meta.total,
     },
-  };
+  });
 }
 
 export async function getAdminSupportTicket(ticketId: number, signal?: AbortSignal): Promise<SupportTicket> {
@@ -248,6 +257,8 @@ export async function getAdminSupportTicket(ticketId: number, signal?: AbortSign
 export async function createAdminSupportTicket(payload: CreateSupportTicketPayload): Promise<SupportTicket> {
   const response = await postToApi<{ data: ApiTicket }>("/api/v1/auth/admin/support-tickets", toSnake(payload));
   if (!response.data?.ticket_id) throw new ApiError("El servidor no devolvió el Ticket ID creado.", 502);
+  invalidatePlatformData(["support", "audit"]);
+  notifySuperadminNavigationMutation(["support", "audit"]);
   return mapTicket(response.data);
 }
 
@@ -256,6 +267,8 @@ export async function updateAdminSupportTicket(ticketId: number, payload: Update
     `/api/v1/auth/admin/support-tickets/${ticketId}`,
     toSnake(payload),
   );
+  invalidatePlatformData(["support", "audit"]);
+  notifySuperadminNavigationMutation(["support", "audit"]);
   return mapTicket(response.data);
 }
 
@@ -268,5 +281,7 @@ export async function addAdminSupportTicketComment(
     `/api/v1/auth/admin/support-tickets/${ticketId}/comments`,
     { body, is_internal: isInternal },
   );
+  invalidatePlatformData(["support", "audit"]);
+  notifySuperadminNavigationMutation(["support", "audit"]);
   return mapActivity(response.data);
 }

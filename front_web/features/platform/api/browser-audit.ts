@@ -1,6 +1,7 @@
 import { ApiError, getFromApi } from "@/shared/api/http-client";
 import { parseApiList } from "@/shared/api/parse-api-list";
 import type { AuditEvent, AuditEventList, AuditFilters, AuditSummary } from "@/features/platform/model/audit.types";
+import { readPlatformDataCache, writePlatformDataCache } from "@/features/platform/model/platform-data-cache";
 
 type ApiEvent = {
   id: string;
@@ -85,13 +86,23 @@ function queryString(filters: AuditFilters): string {
   return query.toString();
 }
 
-export async function getAdminAuditEvents(filters: AuditFilters = {}, signal?: AbortSignal): Promise<AuditEventList> {
-  const payload = await getFromApi<ApiResponse>(`/api/v1/auth/admin/audit-events?${queryString(filters)}`, { signal });
+export async function getAdminAuditEvents(
+  filters: AuditFilters = {},
+  signal?: AbortSignal,
+  options: { force?: boolean } = {},
+): Promise<AuditEventList> {
+  const key = queryString(filters);
+  if (!options.force) {
+    const cached = readPlatformDataCache<AuditEventList>("audit", key);
+    if (cached) return cached;
+  }
+
+  const payload = await getFromApi<ApiResponse>(`/api/v1/auth/admin/audit-events?${key}`, { signal });
   if (!payload.meta || !payload.summary || !payload.filter_options) {
     throw new ApiError("El servidor devolvió una respuesta de auditoría incompleta.", 502);
   }
 
-  return {
+  return writePlatformDataCache("audit", key, {
     events: parseApiList<ApiEvent>(payload.data, "audit.data").map(mapEvent),
     summary: mapSummary(payload.summary),
     options: {
@@ -105,5 +116,5 @@ export async function getAdminAuditEvents(filters: AuditFilters = {}, signal?: A
       perPage: payload.meta.per_page,
       total: payload.meta.total,
     },
-  };
+  });
 }

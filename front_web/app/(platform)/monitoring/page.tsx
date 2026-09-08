@@ -40,7 +40,7 @@ function ServicesTable({ services }: { services: AdminMonitoringData["services"]
 
 function CountryCoverage({ countries }: { countries: AdminMonitoringData["countries"] }) {
   return (
-    <article className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="regions-title">
+    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="regions-title">
       <h2 className="text-sm font-extrabold" id="regions-title">Cobertura operativa por país</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {countries.length ? countries.map((country) => <div className="rounded-xl border border-line p-4" key={country.countryCode}><div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-sm font-extrabold"><CountryFlag countryCode={country.countryCode} />{countryNames[country.countryCode] ?? country.countryCode}</h3><span className="rounded-full bg-success-soft px-2 py-1 text-2xs font-bold text-success">Activo</span></div><dl className="mt-4 grid grid-cols-2 gap-3"><div><dt className="text-2xs text-muted">Clínicas activas</dt><dd className="mt-1 font-mono text-xl font-bold">{numberFormatter.format(country.clinics)}</dd></div><div><dt className="text-2xs text-muted">Usuarios activos</dt><dd className="mt-1 font-mono text-xl font-bold">{numberFormatter.format(country.users)}</dd></div></dl></div>) : <p className="col-span-full py-8 text-center text-xs text-muted">No hay cobertura activa registrada.</p>}
@@ -51,7 +51,7 @@ function CountryCoverage({ countries }: { countries: AdminMonitoringData["countr
 
 function OperationalSignals({ signals }: { signals: AdminMonitoringData["operationalSignals"] }) {
   return (
-    <article className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="signals-title">
+    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="signals-title">
       <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold" id="signals-title">Señales críticas recientes</h2><Link className="text-2xs font-bold text-accent" href="/audit">Ver auditoría</Link></div>
       <ul className="mt-3 divide-y divide-line">{signals.length ? signals.map((signal) => <li className="flex items-center gap-3 py-3" key={signal.id}><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-danger-soft text-danger" aria-hidden="true"><ShieldAlert className="size-4" /></span><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold capitalize">{signal.action.replaceAll("_", " ")}</p><p className="mt-0.5 truncate text-2xs text-muted">{signal.resourceLabel ?? signal.module}</p><time className="mt-1 block text-2xs text-muted">{dateTimeFormatter.format(new Date(signal.occurredAt))}</time></div>{signal.countryCode ? <CountryFlag countryCode={signal.countryCode} /> : null}</li>) : <li className="py-8 text-center text-xs text-muted">No hay señales críticas registradas.</li>}</ul>
     </article>
@@ -67,7 +67,7 @@ function EventVolume({ volume }: { volume: AdminMonitoringData["eventVolume"] })
   ];
   const max = Math.max(...items.map((item) => item.value), 1);
   return (
-    <article className="rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="volume-title"><h2 className="text-sm font-extrabold" id="volume-title">Eventos de las últimas 24 horas</h2><dl className="mt-4 grid gap-4">{items.map((item) => <div key={item.label}><div className="flex items-center justify-between text-xs"><dt className="font-bold text-muted">{item.label}</dt><dd className="font-mono font-bold">{numberFormatter.format(item.value)}</dd></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-subtle"><span className={`block h-full rounded-full ${item.tone}`} style={{ width: `${Math.max(item.value ? 4 : 0, (item.value / max) * 100)}%` }} /></div></div>)}</dl></article>
+    <article className="min-w-0 rounded-xl border border-line bg-surface p-4 shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="volume-title"><h2 className="text-sm font-extrabold" id="volume-title">Eventos de las últimas 24 horas</h2><dl className="mt-4 grid gap-4">{items.map((item) => <div key={item.label}><div className="flex items-center justify-between text-xs"><dt className="font-bold text-muted">{item.label}</dt><dd className="font-mono font-bold">{numberFormatter.format(item.value)}</dd></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-subtle"><span className={`block h-full rounded-full ${item.tone}`} style={{ width: `${Math.max(item.value ? 4 : 0, (item.value / max) * 100)}%` }} /></div></div>)}</dl></article>
   );
 }
 
@@ -95,7 +95,7 @@ export default async function MonitoringPage() {
   return (
     <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6">
       <header className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start"><div><h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Monitoreo del Sistema</h1><p className="mt-0.5 text-xs text-muted">Estado verificable de backend, dependencias y operación global.</p></div><div className="flex flex-wrap items-center gap-2"><span className="flex items-center gap-1.5 text-2xs text-muted"><Clock3 className="size-3" aria-hidden="true" />{dateTimeFormatter.format(new Date(data.generatedAt))}</span><span className={`flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold ${operational ? "border-success/40 bg-success-soft text-success" : "border-warning/40 bg-warning-soft text-warning"}`}><MonitorCheck className="size-3.5" aria-hidden="true" />{operational ? "Operativo" : "Degradado"}</span><MonitoringRefreshButton /></div></header>
-      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 min-[1600px]:grid-cols-8" aria-label="Métricas operativas">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
+      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 min-[1600px]:grid-cols-9" aria-label="Métricas operativas">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
       <MonitoringIncidents incidents={data.incidents} />
       <section className="mt-4 grid gap-4 xl:grid-cols-2" aria-label="Cobertura y dependencias"><CountryCoverage countries={data.countries} /><ServicesTable services={data.services} /></section>
       <section className="mt-4 grid gap-4 xl:grid-cols-2" aria-label="Señales y eventos"><OperationalSignals signals={data.operationalSignals} /><EventVolume volume={data.eventVolume} /></section>

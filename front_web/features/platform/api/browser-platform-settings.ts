@@ -57,6 +57,14 @@ function parseValidatedList<T>(value: unknown, field: string, isValid: (item: un
   return items;
 }
 
+function nullableText(value: string | null | undefined): string | null | undefined {
+  if (value === undefined || value === null) return value;
+
+  const normalized = value.trim();
+
+  return normalized === "" ? null : normalized;
+}
+
 function mapSettings(payload: ApiPlatformSettingsResponse): PlatformSettings {
   const settings = payload.data;
 
@@ -128,7 +136,7 @@ export async function updateAdminPlatformSettings(
     await patchToApi<ApiPlatformSettingsResponse>("/api/v1/auth/admin/platform-settings", {
       ...(payload.defaultCountryCode ? { default_country_code: payload.defaultCountryCode } : {}),
       ...(payload.enabledCountryCodes ? { enabled_country_codes: payload.enabledCountryCodes } : {}),
-      ...(payload.branding ? { branding: { ...(payload.branding.platformName !== undefined ? { platform_name: payload.branding.platformName } : {}), ...(payload.branding.supportEmail !== undefined ? { support_email: payload.branding.supportEmail } : {}), ...(payload.branding.supportUrl !== undefined ? { support_url: payload.branding.supportUrl } : {}) } } : {}),
+      ...(payload.branding ? { branding: { ...(payload.branding.platformName !== undefined ? { platform_name: payload.branding.platformName } : {}), ...(payload.branding.supportEmail !== undefined ? { support_email: nullableText(payload.branding.supportEmail) } : {}), ...(payload.branding.supportUrl !== undefined ? { support_url: nullableText(payload.branding.supportUrl) } : {}) } } : {}),
       ...(payload.localization ? { localization: { ...(payload.localization.defaultLocale ? { default_locale: payload.localization.defaultLocale } : {}), ...(payload.localization.enabledLocales ? { enabled_locales: payload.localization.enabledLocales } : {}) } } : {}),
       ...(payload.ai ? { ai: { ...(payload.ai.frequency ? { frequency: payload.ai.frequency } : {}), ...(payload.ai.windowDays ? { window_days: payload.ai.windowDays } : {}), ...(payload.ai.sensitivity ? { sensitivity: payload.ai.sensitivity } : {}), ...(payload.ai.automaticAlerts !== undefined ? { automatic_alerts: payload.ai.automaticAlerts } : {}), ...(payload.ai.enabledModels ? { enabled_models: payload.ai.enabledModels } : {}) } } : {}),
     }),

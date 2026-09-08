@@ -1,8 +1,9 @@
 export default function ReportsLoading() {
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6" aria-hidden="true">
+    <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6" role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">Cargando reportes</span>
 
-      <div className="motion-safe:animate-pulse">
+      <div className="motion-safe:animate-pulse" aria-hidden="true">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <div className="h-7 w-36 rounded-lg bg-line/70" />
@@ -11,9 +12,9 @@ export default function ReportsLoading() {
         <div className="h-9 w-44 rounded-lg bg-accent-soft" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5" aria-hidden="true">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {Array.from({ length: 5 }, (_, index) => (
-          <div className={`rounded-xl border border-line bg-surface p-3.5 ${index === 4 ? "col-span-2 xl:col-span-1" : ""}`} key={index}>
+          <div className={`rounded-xl border border-line bg-surface p-3.5 ${index === 4 ? "col-span-2 sm:col-span-1" : ""}`} key={index}>
             <div className="flex items-start justify-between gap-3"><div className="h-3 w-20 rounded bg-line/60" /><div className="size-8 rounded-lg bg-accent-soft" /></div>
             <div className="mt-4 h-5 w-24 rounded bg-line/70" />
             <div className="mt-2 h-2.5 w-24 rounded bg-line/40" />

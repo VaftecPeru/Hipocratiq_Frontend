@@ -16,23 +16,24 @@ import {
   Settings,
   ShieldCheck,
   Siren,
+  Stethoscope,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
-import { getAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
-import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
+import { LocaleSwitcher } from "@/shared/ui/locale-switcher";
 import { NotificationBell } from "@/features/platform/ui/notification-bell";
+import { ThemeToggle } from "@/shared/ui/theme-toggle";
 import {
   SUPERADMIN_NAVIGATION_INVALIDATED_EVENT,
   type SuperadminNavigationScope,
 } from "@/features/platform/model/superadmin-navigation-invalidation";
 import { BrandLogo } from "@/shared/ui/brand-logo";
-import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 
 type PlatformShellProps = {
   children: React.ReactNode;
@@ -40,34 +41,50 @@ type PlatformShellProps = {
 };
 
 type NavigationItem = {
-  label: string;
+  labelKey: string;
   href: string;
   icon: LucideIcon;
   available?: boolean;
 };
 
 const navigationItems: NavigationItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, available: true },
-  { label: "Clínicas", href: "/clinics", icon: Building2, available: true },
-  { label: "Usuarios", href: "/users", icon: Users, available: true },
-  { label: "Roles y permisos", href: "/roles-permissions", icon: ShieldCheck, available: true },
-  { label: "Membresías", href: "/memberships", icon: CreditCard, available: true },
-  { label: "Facturación", href: "/billing", icon: FileText, available: true },
-  { label: "Reportes", href: "/reports", icon: BarChart3, available: true },
-  { label: "Monitoreo del sistema", href: "/monitoring", icon: Monitor, available: true },
-  { label: "Auditoría global", href: "/audit", icon: CircleAlert, available: true },
-  { label: "Emergencia", href: "/emergency", icon: Siren, available: true },
-  { label: "Soporte", href: "/support", icon: MessageSquare, available: true },
+  { labelKey: "dashboard", href: "/dashboard", icon: LayoutDashboard, available: true },
+  { labelKey: "clinics", href: "/clinics", icon: Building2, available: true },
+  { labelKey: "specialties", href: "/specialties", icon: Stethoscope, available: true },
+  { labelKey: "users", href: "/users", icon: Users, available: true },
+  { labelKey: "accessControl", href: "/roles-permissions", icon: ShieldCheck, available: true },
+  { labelKey: "memberships", href: "/memberships", icon: CreditCard, available: true },
+  { labelKey: "billing", href: "/billing", icon: FileText, available: true },
+  { labelKey: "reports", href: "/reports", icon: BarChart3, available: true },
+  { labelKey: "monitoring", href: "/monitoring", icon: Monitor, available: true },
+  { labelKey: "audit", href: "/audit", icon: CircleAlert, available: true },
+  { labelKey: "emergency", href: "/emergency", icon: Siren, available: true },
+  { labelKey: "support", href: "/support", icon: MessageSquare, available: true },
 ];
 
-type SettingsItem = { label: string; href: string; available: boolean };
+type SettingsItem = { labelKey: string; href: string; available: boolean };
 
 const NAVIGATION_SCOPE_PATHS: Record<SuperadminNavigationScope, readonly string[]> = {
   clinics: ["/dashboard", "/clinics"],
+  specialties: ["/specialties"],
   users: ["/users", "/roles-permissions"],
   "access-control": ["/users", "/roles-permissions"],
+  audit: ["/audit"],
+  emergency: ["/emergency"],
+  support: ["/support"],
 };
-const PREFETCHABLE_SUPERADMIN_PATHS = new Set(["/dashboard", "/clinics", "/users", "/roles-permissions"]);
+const PREFETCHABLE_SUPERADMIN_PATHS = new Set([
+  "/dashboard",
+  "/clinics",
+  "/specialties",
+  "/users",
+  "/roles-permissions",
+  "/reports",
+  "/monitoring",
+  "/audit",
+  "/emergency",
+  "/support",
+]);
 const PREFETCH_TTL_MS = 15_000;
 const MAX_PREFETCH_ENTRIES = 20;
 
@@ -77,12 +94,12 @@ function isRouteInScopes(key: string, scopes: readonly SuperadminNavigationScope
 }
 
 const settingsItems: SettingsItem[] = [
-  { label: "General", href: "/settings/general", available: true },
-  { label: "Idiomas y región", href: "/settings/languages", available: true },
-  { label: "Integraciones", href: "/settings/integrations", available: true },
-  { label: "IA epidemiológica", href: "/settings/ai", available: true },
-  { label: "Notificaciones", href: "/settings/notifications", available: true },
-  { label: "Respaldos", href: "/settings/backups", available: true },
+  { labelKey: "general", href: "/settings/general", available: true },
+  { labelKey: "languages", href: "/settings/languages", available: true },
+  { labelKey: "integrations", href: "/settings/integrations", available: true },
+  { labelKey: "ai", href: "/settings/ai", available: true },
+  { labelKey: "notifications", href: "/settings/notifications", available: true },
+  { labelKey: "backups", href: "/settings/backups", available: true },
 ];
 
 function getInitials(name: string) {
@@ -96,11 +113,12 @@ function getInitials(name: string) {
 
 function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; onNavigate?: () => void; onPrefetch: (href: string) => void }) {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
   const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith("/settings"));
   const settingsId = `${idPrefix}-settings`;
 
   return (
-    <nav aria-label="Navegación principal" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <nav aria-label={t("ariaLabel")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ul className="grid gap-0.5 px-2">
           {navigationItems.map((item) => {
@@ -120,16 +138,16 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                     aria-current={isActive ? "page" : undefined}
                   >
                     <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 ) : (
                   <span
                     className="flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted/70 lg:min-h-7"
                     aria-disabled="true"
-                    title="Disponible próximamente"
+                    title={t("soon")}
                   >
                     <Icon className="size-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </span>
                 )}
               </li>
@@ -146,7 +164,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
             onClick={() => setIsSettingsOpen((current) => !current)}
           >
             <Settings className="size-3.5 text-muted" strokeWidth={1.7} aria-hidden="true" />
-            <span>Configuración</span>
+            <span>{t("settings")}</span>
             <ChevronDown className={`ml-auto size-3 text-muted transition-transform ${isSettingsOpen ? "rotate-180" : ""}`} strokeWidth={1.7} aria-hidden="true" />
           </button>
           {isSettingsOpen ? (
@@ -155,7 +173,7 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                 const isActive = pathname === item.href;
 
                 return (
-                  <li key={item.label}>
+                  <li key={item.labelKey}>
                     {item.available ? (
                       <Link
                         className={"flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-focus lg:min-h-7 " + (isActive ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-subtle hover:text-ink")}
@@ -166,11 +184,11 @@ function Navigation({ idPrefix, onNavigate, onPrefetch }: { idPrefix: string; on
                         onClick={onNavigate}
                         aria-current={isActive ? "page" : undefined}
                       >
-                        {item.label}
+                        {t(item.labelKey)}
                       </Link>
                     ) : (
-                      <span className="flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title="Disponible próximamente">
-                        {item.label}
+                      <span className="flex min-h-11 items-center rounded-lg px-2.5 text-2xs font-medium text-muted/70 lg:min-h-7" aria-disabled="true" title={t("soon")}>
+                        {t(item.labelKey)}
                       </span>
                     )}
                   </li>
@@ -200,9 +218,9 @@ function Brand({ onNavigate }: { onNavigate?: () => void }) {
 export function PlatformShell({ children, userName }: PlatformShellProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("header");
   const prefetchedHrefs = useRef(new Map<string, number>());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [headerCountryCodes, setHeaderCountryCodes] = useState<CountryCode[]>(["MX"]);
 
   const prefetchOnIntent = useCallback((href: string) => {
     if (!PREFETCHABLE_SUPERADMIN_PATHS.has(href.split("?", 1)[0] ?? "")) return;
@@ -251,29 +269,6 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
     setIsMenuOpen(false);
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const refreshSettings = async () => {
-      try {
-        const settings = await getAdminPlatformSettings(controller.signal);
-        setHeaderCountryCodes([
-          settings.defaultCountryCode,
-          ...settings.headerCountryCodes.filter((countryCode) => countryCode !== settings.defaultCountryCode),
-        ]);
-      } catch {
-        // México permanece como fallback cuando la configuración no está disponible.
-      }
-    };
-
-    void refreshSettings();
-    window.addEventListener(PLATFORM_SETTINGS_UPDATED_EVENT, refreshSettings);
-
-    return () => {
-      controller.abort();
-      window.removeEventListener(PLATFORM_SETTINGS_UPDATED_EVENT, refreshSettings);
-    };
-  }, []);
-
   return (
     <div className="min-h-svh bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 hidden w-52 border-r border-line bg-surface lg:flex lg:flex-col">
@@ -287,7 +282,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
           type="button"
           aria-expanded={isMenuOpen}
           aria-controls="mobile-navigation"
-          aria-label={isMenuOpen ? "Cerrar navegación" : "Abrir navegación"}
+          aria-label={isMenuOpen ? t("closeNavigation") : t("openNavigation")}
           onClick={() => setIsMenuOpen((current) => !current)}
         >
           {isMenuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
@@ -297,33 +292,27 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
           <span className="sr-only">Hipocratiq</span>
         </div>
 
-        <form action="/clinics" className="relative hidden w-full max-w-xl md:block" role="search">
+        <form action="/clinics" method="get" className="relative hidden w-full max-w-lg md:block" role="search">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-icon-input" strokeWidth={1.7} aria-hidden="true" />
           <input
             className="h-8 w-full rounded-lg border border-line bg-paper pr-2.5 pl-8 text-xs text-ink outline-none transition-colors placeholder:text-placeholder focus:border-accent focus:ring-3 focus:ring-focus/45"
             type="search"
             name="q"
-            aria-label="Buscar en la plataforma"
-            placeholder="Buscar clínicas, usuarios, reportes..."
+            aria-label={t("searchClinicsLabel")}
+            placeholder={t("searchClinicsPlaceholder")}
           />
         </form>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center overflow-hidden rounded-lg border border-line text-2xs font-bold sm:flex" aria-label="Países administrados">
-            {headerCountryCodes.map((countryCode) => (
-              <span className="flex h-7 items-center gap-1.5 px-2.5 first:border-r first:border-line" key={countryCode}>
-                <CountryFlag countryCode={countryCode} className="h-3 w-4.5 rounded-[2px]" />
-                {countryCode}
-              </span>
-            ))}
-          </div>
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <LocaleSwitcher />
+          <ThemeToggle />
           <NotificationBell />
           <div className="hidden h-8 w-px bg-line sm:block" aria-hidden="true" />
           <div className="flex items-center gap-2">
             <span className="grid size-7 place-items-center rounded-full bg-accent text-2xs font-extrabold text-white" aria-hidden="true">{getInitials(userName)}</span>
             <div className="hidden xl:block">
               <p className="max-w-36 truncate text-xs font-extrabold">{userName}</p>
-              <p className="text-2xs text-muted">Super Administrador</p>
+              <p className="text-2xs text-muted">{t("profileRole")}</p>
             </div>
           </div>
         </div>

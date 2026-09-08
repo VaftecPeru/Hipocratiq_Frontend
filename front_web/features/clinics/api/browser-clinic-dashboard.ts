@@ -5,6 +5,9 @@ import type {
   ClinicAppointmentStatus,
   ClinicAppointmentSummary,
   ClinicDashboardData,
+  ClinicEmergencyGlobalOverride,
+  ClinicEmergencyPolicy,
+  ClinicEmergencyState,
   ClinicMemberRole,
   ClinicPatient,
   ClinicPatientAppointment,
@@ -25,7 +28,38 @@ type ApiClinic = {
   contact_phone: string;
   address: string;
   status: "active" | "suspended";
-  preferences?: Partial<ClinicPreferences> | null;
+  preferences?: Partial<ApiClinicPreferences> | null;
+  emergency?: ApiClinicEmergency | null;
+};
+
+type ApiEmergencyPolicy = {
+  enabled: boolean;
+  visibility: ClinicEmergencyPolicy["visibility"];
+  label: string;
+  color: ClinicEmergencyPolicy["color"];
+  inheritance: ClinicEmergencyPolicy["inheritance"];
+  default_channel: ClinicEmergencyPolicy["defaultChannel"];
+  escalation_minutes: ClinicEmergencyPolicy["escalationMinutes"];
+  responsibles: Array<{ role: string; channel: string }>;
+};
+
+type ApiClinicEmergency = {
+  local: ApiEmergencyPolicy;
+  effective: ApiEmergencyPolicy;
+  is_overridden: boolean;
+  global_override: {
+    scope: "all";
+    force: boolean;
+    note: string | null;
+    published_at: string | null;
+    published_by: { id: number | null; name: string | null; email: string | null } | null;
+    policy: ApiEmergencyPolicy;
+    responsibles: Array<{ role: string; channel: string }>;
+  } | null;
+};
+
+type ApiClinicPreferences = Partial<Omit<ClinicPreferences, "emergency">> & {
+  emergency?: Partial<ApiEmergencyPolicy> | null;
 };
 
 const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
@@ -33,6 +67,20 @@ const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
   audit: true,
   signatures: true,
   backups: true,
+  emergency: {
+    enabled: true,
+    visibility: "reception_doctors_admins",
+    label: "Emergencia",
+    color: "#EF2F3F",
+    inheritance: "workflow_and_responsibles",
+    defaultChannel: "priority_push",
+    escalationMinutes: 3,
+    responsibles: [
+      { role: "Administrador de clínica", channel: "Resumen de evento y auditoría" },
+      { role: "Jefe de guardia", channel: "Push prioritario" },
+      { role: "Recepción", channel: "Alerta interna inmediata" },
+    ],
+  },
 };
 
 type ApiMember = {
@@ -139,6 +187,14 @@ type ApiAppointmentsResponse = {
 type ApiClinicResponse = { data: { clinic: ApiClinic } };
 
 function mapClinic(clinic: ApiClinic): ClinicAdminInfo {
+  const preferences = mapPreferences(clinic.preferences);
+  const emergency = clinic.emergency ? mapEmergencyState(clinic.emergency) : {
+    local: preferences.emergency,
+    effective: preferences.emergency,
+    isOverridden: false,
+    globalOverride: null,
+  } satisfies ClinicEmergencyState;
+
   return {
     id: clinic.id,
     name: clinic.name,
@@ -146,10 +202,52 @@ function mapClinic(clinic: ApiClinic): ClinicAdminInfo {
     contactPhone: clinic.contact_phone,
     address: clinic.address,
     status: clinic.status,
-    preferences: {
-      ...DEFAULT_CLINIC_PREFERENCES,
-      ...(clinic.preferences ?? {}),
-    },
+    preferences,
+    emergency,
+  };
+}
+
+function mapEmergencyPolicy(policy: ApiEmergencyPolicy | Partial<ApiEmergencyPolicy> | null | undefined): ClinicEmergencyPolicy {
+  const source = policy ?? {};
+
+  return {
+    enabled: source.enabled ?? DEFAULT_CLINIC_PREFERENCES.emergency.enabled,
+    visibility: source.visibility ?? DEFAULT_CLINIC_PREFERENCES.emergency.visibility,
+    label: source.label ?? DEFAULT_CLINIC_PREFERENCES.emergency.label,
+    color: source.color ?? DEFAULT_CLINIC_PREFERENCES.emergency.color,
+    inheritance: source.inheritance ?? DEFAULT_CLINIC_PREFERENCES.emergency.inheritance,
+    defaultChannel: source.default_channel ?? DEFAULT_CLINIC_PREFERENCES.emergency.defaultChannel,
+    escalationMinutes: source.escalation_minutes ?? DEFAULT_CLINIC_PREFERENCES.emergency.escalationMinutes,
+    responsibles: source.responsibles?.length ? source.responsibles : DEFAULT_CLINIC_PREFERENCES.emergency.responsibles,
+  };
+}
+
+function mapPreferences(preferences: Partial<ApiClinicPreferences> | null | undefined): ClinicPreferences {
+  return {
+    maintenance: preferences?.maintenance ?? DEFAULT_CLINIC_PREFERENCES.maintenance,
+    audit: preferences?.audit ?? DEFAULT_CLINIC_PREFERENCES.audit,
+    signatures: preferences?.signatures ?? DEFAULT_CLINIC_PREFERENCES.signatures,
+    backups: preferences?.backups ?? DEFAULT_CLINIC_PREFERENCES.backups,
+    emergency: mapEmergencyPolicy(preferences?.emergency),
+  };
+}
+
+function mapEmergencyState(emergency: ApiClinicEmergency): ClinicEmergencyState {
+  const globalOverride: ClinicEmergencyGlobalOverride | null = emergency.global_override === null ? null : {
+    scope: "all",
+    force: emergency.global_override.force,
+    note: emergency.global_override.note,
+    publishedAt: emergency.global_override.published_at,
+    publishedBy: emergency.global_override.published_by,
+    policy: mapEmergencyPolicy(emergency.global_override.policy),
+    responsibles: emergency.global_override.responsibles,
+  };
+
+  return {
+    local: mapEmergencyPolicy(emergency.local),
+    effective: mapEmergencyPolicy(emergency.effective),
+    isOverridden: emergency.is_overridden,
+    globalOverride,
   };
 }
 
@@ -411,12 +509,31 @@ export async function getClinicSettings(signal?: AbortSignal): Promise<ClinicAdm
 
 export type UpdateClinicSettingsPayload = Partial<Pick<ClinicAdminInfo, "name" | "contactPhone" | "address" | "preferences">>;
 
+function mapPreferencesToApi(preferences: ClinicPreferences): ApiClinicPreferences {
+  return {
+    maintenance: preferences.maintenance,
+    audit: preferences.audit,
+    signatures: preferences.signatures,
+    backups: preferences.backups,
+    emergency: {
+      enabled: preferences.emergency.enabled,
+      visibility: preferences.emergency.visibility,
+      label: preferences.emergency.label,
+      color: preferences.emergency.color,
+      inheritance: preferences.emergency.inheritance,
+      default_channel: preferences.emergency.defaultChannel,
+      escalation_minutes: preferences.emergency.escalationMinutes,
+      responsibles: preferences.emergency.responsibles,
+    },
+  };
+}
+
 export async function updateClinicSettings(payload: UpdateClinicSettingsPayload): Promise<ClinicAdminInfo> {
   const response = await patchToApi<ApiClinicResponse>("/api/v1/auth/clinic/settings", {
     name: payload.name,
     contact_phone: payload.contactPhone,
     address: payload.address,
-    preferences: payload.preferences,
+    preferences: payload.preferences ? mapPreferencesToApi(payload.preferences) : undefined,
   });
   if (!response.data?.clinic) throw new ApiError("El servidor no devolvió la configuración actualizada.", 502);
   return mapClinic(response.data.clinic);
