@@ -71,8 +71,13 @@ export async function updateEmergencyPolicy(policy: EmergencyPolicy, responsible
   return updated;
 }
 
-export async function publishEmergencyPolicy(payload: { note: string }): Promise<{ affectedClinics: number; publishedAt: string }> {
-  const response = await postToApi<{ data: { affected_clinics: number; published_at: string } }>("/api/v1/auth/admin/emergency/publish", { scope: "all", force: true, note: payload.note });
+export async function publishEmergencyPolicy(payload: { note: string; idempotencyKey?: string }): Promise<{ affectedClinics: number; publishedAt: string }> {
+  const response = await postToApi<{ data: { affected_clinics: number; published_at: string } }>("/api/v1/auth/admin/emergency/publish", {
+    scope: "all",
+    force: true,
+    note: payload.note,
+    idempotency_key: payload.idempotencyKey,
+  });
   invalidatePlatformData(["emergency", "audit"]);
   notifySuperadminNavigationMutation(["emergency", "audit"]);
   return { affectedClinics: response.data.affected_clinics, publishedAt: response.data.published_at };

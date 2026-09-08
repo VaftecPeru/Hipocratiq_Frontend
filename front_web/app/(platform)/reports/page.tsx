@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, AlertTriangle, Building2, DollarSign, Download, LifeBuoy, UserRound, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getAdminDashboard } from "@/features/platform/api/server-dashboard";
 import type { AdminDashboardData } from "@/features/platform/model/admin-dashboard.types";
 import { CountryFlag } from "@/shared/ui/country-flag";
@@ -8,7 +9,10 @@ import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
 import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
 import { BILLING_CURRENCIES, formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
-export const metadata: Metadata = { title: "Reportes" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("reports") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -25,7 +29,7 @@ function ActivityReport({ data }: { data: AdminDashboardData }) {
 
 export default async function ReportsPage() {
   const result = await getAdminDashboard();
-  if (!result.ok) return <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5"><section className="rounded-2xl border border-danger/25 bg-surface p-7 text-center" role="alert"><AlertTriangle className="mx-auto size-7 text-danger" /><h1 className="mt-3 text-xl font-extrabold">Reportes no disponibles</h1><p className="mt-2 text-sm text-muted">{result.message}</p></section></main>;
+  if (!result.ok) return <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5"><section className="rounded-2xl border border-danger/25 bg-surface p-7 text-center" role="alert"><AlertTriangle className="mx-auto size-7 text-danger" aria-hidden="true" /><h1 className="mt-3 text-xl font-extrabold">Reportes no disponibles</h1><p className="mt-2 text-sm text-muted">{result.message}</p></section></main>;
   const data = result.data;
   const stats: StatCardProps[] = [
      { label: `Ingresos del mes · ${data.revenueCurrency}`, value: formatBillingAmount(data.kpis.monthlyRevenueByCurrency[data.revenueCurrency], data.revenueCurrency), change: "Pagos confirmados en la moneda base", direction: "up", icon: DollarSign, tone: "success" },

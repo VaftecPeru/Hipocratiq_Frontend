@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { LucideIcon } from "lucide-react";
 import { Activity, AlertTriangle, Boxes, Clock3, Database, Gauge, Info, KeyRound, LifeBuoy, MonitorCheck, ShieldAlert, Users } from "lucide-react";
 import { getAdminMonitoring } from "@/features/platform/api/server-dashboard";
@@ -8,7 +9,10 @@ import { MonitoringRefreshButton } from "@/features/platform/ui/monitoring-refre
 import { MonitoringIncidents } from "@/features/platform/ui/monitoring-incidents";
 import { CountryFlag } from "@/shared/ui/country-flag";
 
-export const metadata: Metadata = { title: "Monitoreo del Sistema" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("monitoring") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });

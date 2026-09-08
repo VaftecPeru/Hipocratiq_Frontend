@@ -25,9 +25,85 @@
   "header": {
     "closeNavigation": "Cerrar navegación",
     "openNavigation": "Abrir navegación",
+    "mobileNavigationLabel": "Navegación móvil",
     "searchClinicsLabel": "Buscar clínicas",
     "searchClinicsPlaceholder": "Buscar clínicas por nombre...",
     "profileRole": "Administrador de plataforma"
+  },
+  "accessibility": {
+    "skipToContent": "Saltar al contenido principal"
+  },
+  "emergency": {
+    "eyebrow": "Configuración SaaS",
+    "title": "Botón de Emergencia",
+    "description": "Política global persistente para todos los países; las publicaciones críticas quedan auditadas.",
+    "audit": "Auditoría",
+    "publish": "Publicar política",
+    "statsLabel": "Indicadores de emergencia",
+    "activeClinics": "Clínicas activas",
+    "enabledPolicy": "Política habilitada",
+    "changesToday": "Cambios hoy",
+    "publicationTitle": "Última publicación global",
+    "publicationDescription": "Toda publicación activa reemplaza temporalmente la configuración local en todas las clínicas.",
+    "activeOverride": "Override activo",
+    "noPublication": "Sin publicación",
+    "scope": "Alcance",
+    "allClinics": "Todas las clínicas",
+    "published": "Publicada",
+    "responsibles": "Responsables",
+    "responsibleCount": "{count, plural, one {# configurado} other {# configurados}}",
+    "publishHint": "Guarda una política y publícala para activar el override global.",
+    "globalPolicy": "Política global",
+    "backendConfiguration": "Configuración efectiva en backend",
+    "enabled": "Habilitada",
+    "buttonLabel": "Etiqueta del botón",
+    "visibility": "Visibilidad",
+    "color": "Color",
+    "inheritance": "Herencia",
+    "defaultChannel": "Canal predeterminado",
+    "escalationAfter": "Escalar tras",
+    "visibilityOptions": {
+      "receptionDoctorsAdmins": "Recepción, médicos y administradores",
+      "doctorsAdmins": "Médicos y administradores",
+      "adminsOnly": "Solo administradores"
+    },
+    "colorOptions": {
+      "red": "Rojo emergencia",
+      "orange": "Naranja alerta",
+      "violet": "Violeta crítico"
+    },
+    "inheritanceOptions": {
+      "workflow": "Flujo y responsables editables",
+      "responsibles": "Solo responsables editables",
+      "locked": "Política bloqueada"
+    },
+    "channelOptions": {
+      "priorityPush": "Push prioritario",
+      "internalAlert": "Alerta interna",
+      "email": "Correo",
+      "sms": "SMS"
+    },
+    "minute": "{count, plural, one {# minuto} other {# minutos}}",
+    "defaultResponsibles": "Responsables predeterminados",
+    "newClinicTemplate": "Plantilla para clínicas nuevas",
+    "role": "Rol",
+    "channelAction": "Canal / acción",
+    "saving": "Guardando...",
+    "save": "Guardar cambios",
+    "publishedForClinics": "Política publicada para {count} clínicas.",
+    "savedNotice": "Política guardada y registrada en auditoría.",
+    "saveError": "No pudimos guardar la política.",
+    "pageUnavailable": "Emergencia no disponible",
+    "publishModal": {
+      "title": "Publicar política global",
+      "description": "Registra una versión obligatoria para todas las clínicas",
+      "cancel": "Cancelar",
+      "publishing": "Publicando...",
+      "publishAll": "Publicar para todas",
+      "warning": "Esta publicación reemplaza temporalmente la política local de todas las clínicas. El alcance no puede limitarse por país.",
+      "noteLabel": "Nota de versión",
+      "error": "No pudimos publicar la política."
+    }
   },
   "localeSwitcher": {
     "label": "Idioma",
@@ -52,6 +128,23 @@
     "noOperational": "No hay notificaciones operativas.",
     "openCenter": "Abrir centro de notificaciones",
     "unread": "Sin leer"
+  },
+  "clinicalNotifications": {
+    "view": "Ver alertas clínicas",
+    "viewWithCount": "Ver alertas clínicas, {count} sin leer",
+    "title": "Alertas clínicas",
+    "unreadCount": "{count} sin leer",
+    "markAll": "Leer todas",
+    "unread": "Sin leer",
+    "loading": "Cargando alertas clínicas...",
+    "empty": "No hay alertas clínicas.",
+    "unknownClinic": "la clínica",
+    "emergency": {
+      "publishedTitle": "Emergencia global activa",
+      "publishedMessage": "Se activó una política de emergencia para {clinic}.",
+      "activatedTitle": "Emergencias habilitadas",
+      "activatedMessage": "La política de emergencias se habilitó para {clinic}."
+    }
   },
   "settings": {
     "common": {

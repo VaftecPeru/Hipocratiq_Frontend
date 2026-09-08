@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import Script from "next/script";
 import "@fontsource-variable/roboto-mono";
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#f7f9fc",
 };
 
 export default async function RootLayout({
@@ -23,13 +23,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, t] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getTranslations("accessibility"),
+  ]);
 
   return (
     <html lang={locale} className="h-full antialiased" suppressHydrationWarning>
       <body
         className="min-h-full"
       >
+        <a className="skip-link" href="#main-content">
+          {t("skipToContent")}
+        </a>
         <Script id="theme-init" strategy="beforeInteractive">
           {`(() => {
             try {

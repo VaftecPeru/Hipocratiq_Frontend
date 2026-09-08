@@ -5,6 +5,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExte
 export const THEME_STORAGE_KEY = "hipocratiq-theme";
 export type Theme = "light" | "dark" | "system";
 const THEME_CHANGED_EVENT = "hipocratiq-theme-changed";
+const THEME_COLORS = {
+  light: "#f7f9fc",
+  dark: "#0b1424",
+} as const;
 
 type ThemeContextValue = {
   theme: Theme;
@@ -40,6 +44,12 @@ function subscribeToTheme(onChange: () => void) {
   };
 }
 
+function updateThemeColor(theme: keyof typeof THEME_COLORS): void {
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.content = THEME_COLORS[theme];
+  });
+}
+
 export function ThemeProvider({ children, defaultTheme = "system" }: { children: ReactNode; defaultTheme?: Theme }) {
   const getThemeSnapshot = useCallback(() => readStoredTheme(defaultTheme), [defaultTheme]);
   const getServerThemeSnapshot = useCallback(() => defaultTheme, [defaultTheme]);
@@ -54,6 +64,7 @@ export function ThemeProvider({ children, defaultTheme = "system" }: { children:
       const resolvedTheme = preferredTheme === "system" ? (mediaQuery.matches ? "dark" : "light") : preferredTheme;
       root.classList.remove("light", "dark");
       root.classList.add(resolvedTheme);
+      updateThemeColor(resolvedTheme);
     };
 
     applyTheme();

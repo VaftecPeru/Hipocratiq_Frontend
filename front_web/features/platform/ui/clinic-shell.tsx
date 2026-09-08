@@ -22,6 +22,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
+import { ClinicalNotificationBell } from "@/features/platform/ui/clinical-notification-bell";
 
 type NavigationItem = {
   label: string;
@@ -128,9 +129,7 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
           <input className="h-9 w-full rounded-lg border border-line bg-surface-input pr-3 pl-9 text-xs outline-none placeholder:text-placeholder focus:border-accent focus:ring-3 focus:ring-focus/30" type="search" placeholder="Buscar pacientes, expedientes, facturas..." />
         </label>
         <span className="ml-auto hidden items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[0.58rem] font-extrabold tracking-wide text-success md:inline-flex"><span className="size-1.5 rounded-full bg-success" /> SINCRONIZADO</span>
-        <button className="relative grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ver notificaciones">
-          <Bell className="size-4" strokeWidth={1.7} aria-hidden="true" /><span className="absolute top-1.5 right-1.5 size-2 rounded-full border-2 border-surface bg-accent" />
-        </button>
+         <ClinicalNotificationBell />
         <div className="hidden items-center gap-2 border-l border-line pl-3 sm:flex">
           <div className="max-w-32 text-right"><p className="truncate text-2xs font-extrabold">{userName}</p><p className="text-[0.58rem] font-bold text-accent">{actorContext === "receptionist" ? "Recepción" : "Admin de Clínica"}</p></div>
           <span className="grid size-8 place-items-center rounded-full bg-ink font-mono text-[0.6rem] font-bold text-white">{userName.split(" ").slice(0, 2).map((part) => part[0]).join("")}</span>

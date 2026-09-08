@@ -25,9 +25,85 @@
   "header": {
     "closeNavigation": "Close navigation",
     "openNavigation": "Open navigation",
+    "mobileNavigationLabel": "Mobile navigation",
     "searchClinicsLabel": "Search clinics",
     "searchClinicsPlaceholder": "Search clinics by name...",
     "profileRole": "Platform administrator"
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content"
+  },
+  "emergency": {
+    "eyebrow": "SaaS configuration",
+    "title": "Emergency button",
+    "description": "Persistent global policy for every country; critical publications are audited.",
+    "audit": "Audit",
+    "publish": "Publish policy",
+    "statsLabel": "Emergency indicators",
+    "activeClinics": "Active clinics",
+    "enabledPolicy": "Enabled policy",
+    "changesToday": "Changes today",
+    "publicationTitle": "Latest global publication",
+    "publicationDescription": "Every active publication temporarily replaces the local configuration in all clinics.",
+    "activeOverride": "Active override",
+    "noPublication": "No publication",
+    "scope": "Scope",
+    "allClinics": "All clinics",
+    "published": "Published",
+    "responsibles": "Responsible roles",
+    "responsibleCount": "{count, plural, one {# configured} other {# configured}}",
+    "publishHint": "Save a policy and publish it to activate the global override.",
+    "globalPolicy": "Global policy",
+    "backendConfiguration": "Effective backend configuration",
+    "enabled": "Enabled",
+    "buttonLabel": "Button label",
+    "visibility": "Visibility",
+    "color": "Color",
+    "inheritance": "Inheritance",
+    "defaultChannel": "Default channel",
+    "escalationAfter": "Escalate after",
+    "visibilityOptions": {
+      "receptionDoctorsAdmins": "Reception, doctors, and administrators",
+      "doctorsAdmins": "Doctors and administrators",
+      "adminsOnly": "Administrators only"
+    },
+    "colorOptions": {
+      "red": "Emergency red",
+      "orange": "Alert orange",
+      "violet": "Critical violet"
+    },
+    "inheritanceOptions": {
+      "workflow": "Editable workflow and responsible roles",
+      "responsibles": "Editable responsible roles only",
+      "locked": "Locked policy"
+    },
+    "channelOptions": {
+      "priorityPush": "Priority push",
+      "internalAlert": "Internal alert",
+      "email": "Email",
+      "sms": "SMS"
+    },
+    "minute": "{count, plural, one {# minute} other {# minutes}}",
+    "defaultResponsibles": "Default responsible roles",
+    "newClinicTemplate": "Template for new clinics",
+    "role": "Role",
+    "channelAction": "Channel / action",
+    "saving": "Saving...",
+    "save": "Save changes",
+    "publishedForClinics": "Policy published for {count} clinics.",
+    "savedNotice": "Policy saved and recorded in the audit log.",
+    "saveError": "We could not save the policy.",
+    "pageUnavailable": "Emergency unavailable",
+    "publishModal": {
+      "title": "Publish global policy",
+      "description": "Register a mandatory version for all clinics",
+      "cancel": "Cancel",
+      "publishing": "Publishing...",
+      "publishAll": "Publish for all",
+      "warning": "This publication temporarily replaces the local policy for all clinics. Its scope cannot be limited by country.",
+      "noteLabel": "Version note",
+      "error": "We could not publish the policy."
+    }
   },
   "localeSwitcher": {
     "label": "Language",
@@ -52,6 +128,23 @@
     "noOperational": "No operational notifications.",
     "openCenter": "Open notification center",
     "unread": "Unread"
+  },
+  "clinicalNotifications": {
+    "view": "View clinical alerts",
+    "viewWithCount": "View clinical alerts, {count} unread",
+    "title": "Clinical alerts",
+    "unreadCount": "{count} unread",
+    "markAll": "Read all",
+    "unread": "Unread",
+    "loading": "Loading clinical alerts...",
+    "empty": "No clinical alerts.",
+    "unknownClinic": "the clinic",
+    "emergency": {
+      "publishedTitle": "Global emergency active",
+      "publishedMessage": "An emergency policy was activated for {clinic}.",
+      "activatedTitle": "Emergency intake enabled",
+      "activatedMessage": "The emergency policy was enabled for {clinic}."
+    }
   },
   "settings": {
     "common": {

@@ -142,6 +142,7 @@
   --color-focus-ring: var(--focus-ring);
   --color-focus-ring-danger: var(--focus-ring-danger);
   --color-otp-bg: var(--otp-bg);
+  --font-manrope: "Manrope", "Trebuchet MS", "Segoe UI", sans-serif;
   --font-sans: "Trebuchet MS", "Segoe UI", sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
   --font-mono: "Roboto Mono Variable", monospace;
@@ -162,6 +163,25 @@ body {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: var(--ink);
+  padding: 0.65rem 0.85rem;
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .login-role-grid-container {

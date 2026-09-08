@@ -131,7 +131,7 @@ function Filters({ filters, modules, actions, countries, onChange }: { filters: 
 function EventList({ title, events, critical = false }: { title: string; events: AuditEvent[]; critical?: boolean }) {
   return (
     <article className="min-w-0 rounded-xl border border-line bg-surface p-4">
-      <h2 className="flex items-center gap-2 text-sm font-extrabold">{critical ? <AlertTriangle className="size-4 text-danger" /> : <History className="size-4 text-accent" />}{title}</h2>
+       <h2 className="flex items-center gap-2 text-sm font-extrabold">{critical ? <AlertTriangle className="size-4 text-danger" aria-hidden="true" /> : <History className="size-4 text-accent" aria-hidden="true" />}{title}</h2>
       <ol className="mt-3 divide-y divide-line">
         {events.map((event) => <li className="py-2.5" key={event.id}><p className="truncate text-xs font-bold text-ink">{eventAction(event)}</p><p className="mt-1 truncate text-2xs text-muted">{event.actor?.name ?? "Sistema"} · {event.resource?.label ?? event.clinic?.name ?? event.countryCode ?? "Global"}</p><time className="mt-1 block text-2xs text-muted">{formatDate(event.occurredAt)}</time></li>)}
         {events.length === 0 ? <li className="py-8 text-center text-xs text-muted">Sin eventos para mostrar.</li> : null}
@@ -189,10 +189,10 @@ export default function AuditPage() {
 
       <div className="mt-4 grid min-w-0 items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_21rem]">
         <section className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface" aria-labelledby="audit-log-title">
-          <div className="flex items-center justify-between border-b border-line px-4 py-3"><div><h2 className="text-sm font-extrabold" id="audit-log-title">Registro unificado</h2><p className="mt-0.5 text-2xs text-muted">{numberFormatter.format(data?.meta.total ?? 0)} eventos</p></div>{isLoading ? <span className="text-2xs font-bold text-accent">Actualizando...</span> : null}</div>
+            <div className="flex items-center justify-between border-b border-line px-4 py-3"><div><h2 className="text-sm font-extrabold" id="audit-log-title">Registro unificado</h2><p className="mt-0.5 text-2xs text-muted">{numberFormatter.format(data?.meta.total ?? 0)} eventos</p></div>{isLoading ? <span className="text-2xs font-bold text-accent" role="status">Actualizando...</span> : null}</div>
           <div className="max-w-full overflow-x-auto">
             <table className="w-full min-w-[72rem] border-collapse text-left">
-              <thead className="bg-surface-subtle text-2xs font-bold text-muted"><tr><th className="px-4 py-2.5">Fecha y hora</th><th className="px-3 py-2.5">Usuario</th><th className="px-3 py-2.5">País / Tenant</th><th className="px-3 py-2.5">Módulo</th><th className="px-3 py-2.5">Acción</th><th className="px-3 py-2.5">Recurso</th><th className="px-4 py-2.5">IP / Detalle</th></tr></thead>
+              <thead className="bg-surface-subtle text-2xs font-bold text-muted"><tr><th className="px-4 py-2.5" scope="col">Fecha y hora</th><th className="px-3 py-2.5" scope="col">Usuario</th><th className="px-3 py-2.5" scope="col">País / Tenant</th><th className="px-3 py-2.5" scope="col">Módulo</th><th className="px-3 py-2.5" scope="col">Acción</th><th className="px-3 py-2.5" scope="col">Recurso</th><th className="px-4 py-2.5" scope="col">IP / Detalle</th></tr></thead>
               <tbody className="divide-y divide-line">
                 {(data?.events ?? []).map((event) => {
                   const meta = moduleMeta(event.module);

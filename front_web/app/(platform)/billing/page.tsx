@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, DollarSign, Download, ReceiptText, Search } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { billingQuery, getAdminBilling } from "@/features/platform/api/server-billing";
 import type { AdminBillingData, AdminBillingFilters, BillingCurrency, PaymentStatus } from "@/features/platform/model/admin-billing.types";
 import { CountryFlag } from "@/shared/ui/country-flag";
@@ -9,7 +10,10 @@ import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
 import { NewManualPaymentButton, RefundManualPaymentButton } from "@/features/platform/ui/billing-operations";
 import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
 
-export const metadata: Metadata = { title: "Facturación" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("billing") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });

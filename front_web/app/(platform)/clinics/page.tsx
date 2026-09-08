@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getClinicsDashboardData } from "@/features/clinics/api/server-clinics";
 import type {
   ClinicCountryCode,
@@ -9,10 +10,10 @@ import type {
 } from "@/features/clinics/model/clinic.types";
 import { ClinicsDashboard } from "@/features/clinics/ui/clinics-dashboard";
 
-export const metadata: Metadata = {
-  title: "Clínicas",
-  description: "Administración global de clínicas y tenants.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("clinics") };
+}
 
 type SearchParam = string | string[] | undefined;
 

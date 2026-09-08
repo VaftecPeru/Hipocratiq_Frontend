@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { Activity, Building2, Clock3, DollarSign, HeartPulse, LifeBuoy, ShieldCheck, UserRound, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { getAdminDashboard } from "@/features/platform/api/server-dashboard";
 import { DashboardUnavailable } from "@/shared/ui/dashboard-unavailable";
@@ -11,7 +12,10 @@ import { CountryFlag } from "@/shared/ui/country-flag";
 import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
 import { BILLING_CURRENCIES, formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
-export const metadata: Metadata = { title: "Panel administrativo" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("dashboard") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
 const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });

@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  AlertTriangle,
   CalendarDays,
   Check,
   ChevronDown,
@@ -27,6 +28,7 @@ import {
 } from "@/features/clinics/api/browser-clinic-dashboard";
 import type {
   ClinicAppointment,
+  ClinicEmergencyPolicy,
   ClinicPatient,
   ClinicPatientTriagePriority,
   ClinicTeamMember,
@@ -122,6 +124,8 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
   const [oxygenSaturation, setOxygenSaturation] = useState("");
   const [triagePriority, setTriagePriority] = useState("");
   const [triageNotes, setTriageNotes] = useState("");
+  const [emergencyPolicy, setEmergencyPolicy] = useState<ClinicEmergencyPolicy | null>(null);
+  const [hasGlobalEmergencyOverride, setHasGlobalEmergencyOverride] = useState(false);
   const [recentPatients, setRecentPatients] = useState<ClinicPatient[]>([]);
   const [upcoming, setUpcoming] = useState<ClinicAppointment[]>([]);
   const [doctors, setDoctors] = useState<ClinicTeamMember[]>([]);
@@ -151,6 +155,8 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
         setUpcoming(appointments.appointments.slice(0, 4));
         setDoctors(dashboard.team.filter((member) => member.role === "doctor"));
         setSpecialties(catalog.data);
+        setEmergencyPolicy(dashboard.clinic.emergency.effective);
+        setHasGlobalEmergencyOverride(dashboard.clinic.emergency.isOverridden);
       })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) showNotice(error instanceof Error ? error.message : "No pudimos cargar el registro.");
@@ -215,6 +221,10 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
     }
     if (objective.trim().length < 10) {
       showNotice("Ingresa un objetivo de al menos 10 caracteres para la futura historia clínica.");
+      return;
+    }
+    if (triagePriority === "emergency" && !emergencyPolicy?.enabled) {
+      showNotice("La política efectiva de emergencia está deshabilitada para esta clínica.");
       return;
     }
     const tC = parseRange(temperatureC);
@@ -330,10 +340,23 @@ export function ReceptionistPatientRegistration({ countryCode = "PE" }: PatientR
                 <Field label="Presión arterial sistólica (mmHg)"><input className={inputClass} type="number" inputMode="numeric" min={60} max={250} placeholder="120" value={systolicBp} onChange={(event) => setSystolicBp(event.target.value)} aria-describedby="triage-sys-help" /><span id="triage-sys-help" className="text-[0.5rem] text-muted">Rango 60–250 mmHg</span></Field>
                 <Field label="Presión arterial diastólica (mmHg)"><input className={inputClass} type="number" inputMode="numeric" min={30} max={160} placeholder="80" value={diastolicBp} onChange={(event) => setDiastolicBp(event.target.value)} aria-describedby="triage-dia-help" /><span id="triage-dia-help" className="text-[0.5rem] text-muted">Rango 30–160 mmHg</span></Field>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Saturación de oxígeno (SpO₂ %)"><input className={inputClass} type="number" inputMode="numeric" min={70} max={100} placeholder="98" value={oxygenSaturation} onChange={(event) => setOxygenSaturation(event.target.value)} aria-describedby="triage-spo2-help" /><span id="triage-spo2-help" className="text-[0.5rem] text-muted">Rango 70–100 %</span></Field>
-                <Field label="Prioridad de triaje"><div className="relative"><select className={selectClass} value={triagePriority} onChange={(event) => setTriagePriority(event.target.value)}><option value="">Seleccione prioridad (opcional)</option><option value="routine">Rutina</option><option value="urgent">Urgente</option><option value="emergency">Emergencia</option></select><ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" /></div></Field>
-              </div>
+               <div className="grid gap-3 sm:grid-cols-2">
+                 <Field label="Saturación de oxígeno (SpO₂ %)"><input className={inputClass} type="number" inputMode="numeric" min={70} max={100} placeholder="98" value={oxygenSaturation} onChange={(event) => setOxygenSaturation(event.target.value)} aria-describedby="triage-spo2-help" /><span id="triage-spo2-help" className="text-[0.5rem] text-muted">Rango 70–100 %</span></Field>
+                 <div className="grid gap-2">
+                   <Field label="Prioridad de triaje"><div className="relative"><select className={selectClass} value={triagePriority} onChange={(event) => setTriagePriority(event.target.value)}><option value="">Seleccione prioridad (opcional)</option><option value="routine">Rutina</option><option value="urgent">Urgente</option><option value="emergency">{emergencyPolicy?.label ?? "Emergencia"}</option></select><ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" /></div></Field>
+                   {emergencyPolicy?.enabled ? <button
+                     className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-[0.58rem] font-extrabold"
+                     style={{ borderColor: emergencyPolicy.color, color: emergencyPolicy.color }}
+                     type="button"
+                     aria-pressed={triagePriority === "emergency"}
+                     onClick={() => setTriagePriority((current) => current === "emergency" ? "" : "emergency")}
+                   >
+                     <AlertTriangle className="size-3.5" aria-hidden="true" />
+                     {triagePriority === "emergency" ? `${emergencyPolicy.label} activada` : `Activar ${emergencyPolicy.label}`}
+                   </button> : null}
+                   {hasGlobalEmergencyOverride ? <p className="text-[0.5rem] font-semibold text-danger" role="status">Override global activo. El evento se registra en auditoría.</p> : null}
+                 </div>
+               </div>
               <Field label="Notas de triaje"><textarea className={`${inputClass} min-h-20 py-2`} value={triageNotes} onChange={(event) => setTriageNotes(event.target.value)} placeholder="Observaciones clínicas de la valoración (opcional)" maxLength={2000} /></Field>
             </div>
             <div><p className="text-[0.58rem] font-bold text-ink-secondary">Adjuntar documento / comprobante</p><button className="mt-1.5 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-accent/35 bg-accent-soft/30 text-[0.62rem] font-bold text-accent" type="button" onClick={() => showNotice("La carga de documentos se habilitará con el expediente digital.")}><FileText className="size-4" aria-hidden="true" />Arrastra o selecciona un archivo <span className="text-[0.52rem] font-normal text-muted">PDF, JPG, PNG (Máx. 5MB)</span></button></div>

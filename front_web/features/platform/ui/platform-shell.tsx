@@ -220,6 +220,8 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
   const pathname = usePathname();
   const t = useTranslations("header");
   const prefetchedHrefs = useRef(new Map<string, number>());
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavigationRef = useRef<HTMLDialogElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const prefetchOnIntent = useCallback((href: string) => {
@@ -265,9 +267,62 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
     return () => window.removeEventListener(SUPERADMIN_NAVIGATION_INVALIDATED_EVENT, invalidateNavigationRoutes);
   }, [pathname, router]);
 
-  const handleNavigation = useCallback(() => {
+  const closeMobileNavigation = useCallback((restoreFocus: boolean) => {
     setIsMenuOpen(false);
+
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+    }
   }, []);
+
+  const handleNavigation = useCallback(() => {
+    closeMobileNavigation(false);
+  }, [closeMobileNavigation]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+
+    const drawer = mobileNavigationRef.current;
+    if (!drawer) return undefined;
+
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusableElements = Array.from(drawer.querySelectorAll<HTMLElement>(focusableSelector));
+    focusableElements[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMobileNavigation(true);
+        return;
+      }
+
+      if (event.key !== "Tab" || focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeMobileNavigation, isMenuOpen]);
+
+  const toggleMobileNavigation = useCallback(() => {
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+      return;
+    }
+
+    setIsMenuOpen(true);
+  }, [isMenuOpen]);
 
   return (
     <div className="min-h-svh bg-paper text-ink">
@@ -278,12 +333,13 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
 
       <header className="sticky top-0 z-20 flex h-13 items-center gap-2.5 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-52 lg:px-5">
         <button
+          ref={menuButtonRef}
           className="grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
           aria-expanded={isMenuOpen}
           aria-controls="mobile-navigation"
           aria-label={isMenuOpen ? t("closeNavigation") : t("openNavigation")}
-          onClick={() => setIsMenuOpen((current) => !current)}
+          onClick={toggleMobileNavigation}
         >
           {isMenuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
         </button>
@@ -320,11 +376,18 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
 
       {isMenuOpen ? (
         <>
-          <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setIsMenuOpen(false)} />
-          <aside id="mobile-navigation" className="fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden">
-            <div className="border-b border-line"><Brand onNavigate={handleNavigation} /></div>
-            <Navigation idPrefix="mobile" onNavigate={handleNavigation} onPrefetch={prefetchOnIntent} />
-          </aside>
+           <div className="fixed inset-0 z-20 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => closeMobileNavigation(true)} />
+           <dialog
+             open
+             ref={mobileNavigationRef}
+             id="mobile-navigation"
+             className="m-0 border-0 p-0 fixed inset-x-0 top-13 z-30 flex max-h-[calc(100dvh-3.25rem)] flex-col overflow-hidden border-b border-line bg-surface text-ink shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden"
+             aria-modal="true"
+             aria-label={t("mobileNavigationLabel")}
+           >
+             <div className="border-b border-line"><Brand onNavigate={handleNavigation} /></div>
+             <Navigation idPrefix="mobile" onNavigate={handleNavigation} onPrefetch={prefetchOnIntent} />
+           </dialog>
         </>
       ) : null}
 
