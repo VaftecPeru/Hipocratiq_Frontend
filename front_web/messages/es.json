@@ -135,6 +135,7 @@
     "title": "Alertas clínicas",
     "unreadCount": "{count} sin leer",
     "markAll": "Leer todas",
+    "close": "Cerrar alertas",
     "unread": "Sin leer",
     "loading": "Cargando alertas clínicas...",
     "empty": "No hay alertas clínicas.",

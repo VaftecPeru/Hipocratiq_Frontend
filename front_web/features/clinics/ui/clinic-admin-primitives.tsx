@@ -38,5 +38,5 @@ export function Notice({ message }: Readonly<{ message: string | null }>) {
 }
 
 export function Toggle({ checked, onChange, label }: Readonly<{ checked: boolean; onChange: (checked: boolean) => void; label: string }>) {
-  return <button className={`relative h-6 w-11 rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-focus ${checked ? "bg-success" : "bg-line-strong"}`} type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "left-6" : "left-1"}`} /></button>;
+  return <button className="relative h-11 w-11 shrink-0 rounded-full focus-visible:outline-3 focus-visible:outline-focus" type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span className={`absolute inset-x-0 top-1/2 h-6 -translate-y-1/2 rounded-full transition-colors ${checked ? "bg-success" : "bg-line-strong"}`}><span className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "left-6" : "left-1"}`} /></span></button>;
 }

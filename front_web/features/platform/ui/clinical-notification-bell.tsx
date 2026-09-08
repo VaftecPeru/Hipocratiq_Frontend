@@ -1,9 +1,9 @@
 "use client";
 
-import { Bell, CheckCheck, ShieldAlert } from "lucide-react";
+import { Bell, CheckCheck, ShieldAlert, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getClinicalNotifications,
   markAllClinicalNotificationsRead,
@@ -11,18 +11,51 @@ import {
 } from "@/features/platform/api/browser-notifications";
 import type { ClinicalNotificationCenterData } from "@/features/platform/model/clinical-notification.types";
 
-export function ClinicalNotificationBell() {
+type ClinicalNotificationBellProps = Readonly<{
+  isDrawerOpen?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}>;
+
+export function ClinicalNotificationBell({
+  isDrawerOpen = false,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+}: ClinicalNotificationBellProps = {}) {
   const t = useTranslations("clinicalNotifications");
   const locale = useLocale();
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const drawerOpenRef = useRef(isDrawerOpen);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = !isDrawerOpen && (controlledIsOpen ?? internalIsOpen);
   const [data, setData] = useState<ClinicalNotificationCenterData | null>(null);
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
     [locale],
   );
+
+  useEffect(() => {
+    drawerOpenRef.current = isDrawerOpen;
+  }, [isDrawerOpen]);
+
+  const setOpen = useCallback((open: boolean) => {
+    if (open && drawerOpenRef.current) return;
+    if (!isControlled) setInternalIsOpen(open);
+    onOpenChange?.(open);
+  }, [isControlled, onOpenChange]);
+
+  const closeMenu = useCallback((restoreFocus: boolean) => {
+    setOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => {
+        if (!drawerOpenRef.current) triggerRef.current?.focus();
+      });
+    }
+  }, [setOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -42,16 +75,37 @@ export function ClinicalNotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen || isDrawerOpen) return undefined;
+
+    const menu = menuRef.current;
+    if (!menu) return undefined;
+
+    const focusableSelector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const getFocusableElements = () => Array.from(menu.querySelectorAll<HTMLElement>(focusableSelector));
+    getFocusableElements()[0]?.focus();
 
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
+      if (!containerRef.current?.contains(event.target as Node)) closeMenu(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        setIsOpen(false);
-        window.requestAnimationFrame(() => triggerRef.current?.focus());
+        closeMenu(true);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) return;
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
@@ -62,9 +116,11 @@ export function ClinicalNotificationBell() {
       document.removeEventListener("mousedown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [isOpen]);
+  }, [closeMenu, isDrawerOpen, isOpen]);
 
   async function openNotification(id: string, href: string, isRead: boolean) {
+    if (isDrawerOpen) return;
+
     if (!isRead) {
       try {
         await markClinicalNotificationsRead([id]);
@@ -78,7 +134,7 @@ export function ClinicalNotificationBell() {
       }
     }
 
-    setIsOpen(false);
+    closeMenu(false);
     router.push(href);
   }
 
@@ -98,16 +154,16 @@ export function ClinicalNotificationBell() {
   const unreadCount = data?.unreadCount ?? 0;
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative shrink-0" ref={containerRef}>
       <button
         ref={triggerRef}
-        className="relative grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus"
+        className="relative grid size-11 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus sm:size-9"
         type="button"
         aria-label={unreadCount > 0 ? t("viewWithCount", { count: unreadCount }) : t("view")}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         aria-controls="clinical-notifications-menu"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => (isOpen ? closeMenu(true) : setOpen(true))}
       >
         <Bell className="size-4" strokeWidth={1.7} aria-hidden="true" />
         {unreadCount > 0 ? (
@@ -118,28 +174,44 @@ export function ClinicalNotificationBell() {
       </button>
 
       {isOpen ? (
-        <div
-          className="absolute top-[calc(100%+0.65rem)] right-0 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface text-ink shadow-[0_1rem_3rem_rgb(16_27_51/16%)]"
+        <dialog
+          open
+          ref={menuRef}
+          className="m-0 absolute top-[calc(100%+0.65rem)] right-0 left-auto z-50 w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-line bg-surface p-0 text-ink shadow-[0_1rem_3rem_rgb(16_27_51/16%)] sm:w-96 sm:max-w-[calc(100vw-2rem)]"
           id="clinical-notifications-menu"
-          role="dialog"
+          aria-modal="true"
           aria-label={t("title")}
+          onCancel={(event) => {
+            event.preventDefault();
+            closeMenu(true);
+          }}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5">
-            <div>
+          <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5">
+            <div className="min-w-0">
               <p className="text-xs font-extrabold">{t("title")}</p>
               <p className="text-2xs text-muted">{t("unreadCount", { count: unreadCount })}</p>
             </div>
-            <button
-              className="inline-flex min-h-8 items-center gap-1 rounded-lg px-2 text-2xs font-bold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-50"
-              type="button"
-              disabled={unreadCount === 0}
-              onClick={() => void markAll()}
-            >
-              <CheckCheck className="size-3" aria-hidden="true" />
-              {t("markAll")}
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-2xs font-bold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-50 sm:min-h-8"
+                type="button"
+                disabled={unreadCount === 0}
+                onClick={() => void markAll()}
+              >
+                <CheckCheck className="size-3" aria-hidden="true" />
+                {t("markAll")}
+              </button>
+              <button
+                className="grid size-11 place-items-center rounded-lg text-muted hover:bg-surface-subtle hover:text-ink focus-visible:outline-3 focus-visible:outline-focus sm:size-8"
+                type="button"
+                aria-label={t("close")}
+                onClick={() => closeMenu(true)}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
           </div>
-          <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+          <ul className="max-h-[min(20rem,calc(100dvh-9rem))] divide-y divide-line overflow-y-auto">
             {(data?.notifications.slice(0, 6) ?? []).map((notification) => {
               const isPublished = notification.eventKey === "emergency_published";
               const title = isPublished ? t("emergency.publishedTitle") : t("emergency.activatedTitle");
@@ -150,7 +222,7 @@ export function ClinicalNotificationBell() {
               return (
                 <li key={notification.id}>
                   <button
-                    className={`flex w-full items-start gap-2.5 px-3 py-3 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-inset focus-visible:outline-focus ${notification.read ? "opacity-70" : "bg-danger-soft/20"}`}
+                    className={`flex min-h-11 w-full items-start gap-2.5 px-3 py-3 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-inset focus-visible:outline-focus ${notification.read ? "opacity-70" : "bg-danger-soft/20"}`}
                     type="button"
                     onClick={() => void openNotification(notification.id, notification.href, notification.read)}
                   >
@@ -171,7 +243,7 @@ export function ClinicalNotificationBell() {
             {data?.notifications.length === 0 ? <li className="p-6 text-center text-xs text-muted">{t("empty")}</li> : null}
             {!data ? <li className="p-6 text-center text-xs text-muted" aria-live="polite">{t("loading")}</li> : null}
           </ul>
-        </div>
+        </dialog>
       ) : null}
     </div>
   );

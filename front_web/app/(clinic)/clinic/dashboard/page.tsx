@@ -332,7 +332,7 @@ export default async function ClinicDashboardPage() {
     }));
 
   return (
-    <main className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+    <div className="mx-auto w-full max-w-360 px-4 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       <header className="flex flex-col justify-between gap-5 border-b border-line pb-6 sm:flex-row sm:items-end">
         <div>
           <p className="font-mono text-[0.65rem] font-bold tracking-[0.14em] text-accent uppercase">
@@ -347,7 +347,7 @@ export default async function ClinicDashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+        <div className="grid grid-cols-1 gap-2 min-[17.5rem]:grid-cols-2 sm:flex sm:shrink-0">
           <Link
             href="/clinic/agenda"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-3.5 text-xs font-extrabold text-ink shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-4"
@@ -615,6 +615,6 @@ export default async function ClinicDashboardPage() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

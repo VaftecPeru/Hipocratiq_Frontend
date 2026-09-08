@@ -54,6 +54,7 @@ export type ClinicTeamMember = {
   name: string;
   email: string | null;
   phoneNumber: string;
+  countryCode: CountryCode | null;
   status: "pending_verification" | "active" | "suspended" | "disabled";
   role: ClinicMemberRole;
   roleName: string;

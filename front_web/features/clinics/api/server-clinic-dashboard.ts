@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import type { ClinicDashboardData, ClinicEmergencyGlobalOverride, ClinicEmergencyPolicy, ClinicEmergencyState, ClinicPreferences } from "@/features/clinics/model/clinic-admin.types";
 import { serverEnv } from "@/shared/config/server-env";
+import type { CountryCode } from "@/shared/ui/country-flag";
 
 const DASHBOARD_REQUEST_TIMEOUT_MS = 5_000;
 const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
@@ -77,7 +78,7 @@ type ApiDashboard = {
       patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
       doctor: { id: number; name: string; specialty: string | null } | null;
     }>;
-    team: Array<{ id: number; name: string; email: string | null; phone_number: string; status: "pending_verification" | "active" | "suspended" | "disabled"; role: "clinic_admin" | "receptionist" | "doctor"; role_name: string; specialty: string | null; medical_license: string | null; last_login_at: string | null }>;
+    team: Array<{ id: number; name: string; email: string | null; phone_number: string; country_code?: CountryCode | null; status: "pending_verification" | "active" | "suspended" | "disabled"; role: "clinic_admin" | "receptionist" | "doctor"; role_name: string; specialty: string | null; medical_license: string | null; last_login_at: string | null }>;
     recent_patients: Array<{ id: number; patient_code: string; name: string | null; email: string | null; phone_number: string | null; status: "pending_verification" | "active" | "suspended" | "disabled" | null; created_at: string | null; age: number | null; insurance?: string | null; is_returning_patient?: boolean; whatsapp_consent?: boolean }>;
   };
 };
@@ -196,6 +197,7 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         name: member.name,
         email: member.email,
         phoneNumber: member.phone_number,
+        countryCode: member.country_code ?? null,
         status: member.status,
         role: member.role,
         roleName: member.role_name,

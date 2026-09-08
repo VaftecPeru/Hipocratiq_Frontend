@@ -88,6 +88,7 @@ type ApiMember = {
   name: string;
   email: string | null;
   phone_number: string;
+  country_code?: CountryCode | null;
   status: ClinicTeamMember["status"];
   role: ClinicMemberRole;
   role_name: string;
@@ -251,12 +252,13 @@ function mapEmergencyState(emergency: ApiClinicEmergency): ClinicEmergencyState 
   };
 }
 
-function mapMember(member: ApiMember): ClinicTeamMember {
+function mapMember(member: ApiMember, fallbackCountryCode?: CountryCode): ClinicTeamMember {
   return {
     id: member.id,
     name: member.name,
     email: member.email,
     phoneNumber: member.phone_number,
+    countryCode: member.country_code ?? fallbackCountryCode ?? null,
     status: member.status,
     role: member.role,
     roleName: member.role_name,
@@ -365,7 +367,7 @@ export async function getClinicDashboard(signal?: AbortSignal): Promise<ClinicDa
     },
     appointmentSummary: mapAppointmentSummary(payload.appointment_summary),
     todayAppointments: payload.today_appointments.map(mapAppointment),
-    team: payload.team.map(mapMember),
+    team: payload.team.map((member) => mapMember(member)),
     recentPatients: payload.recent_patients.map(mapPatient),
   };
 }
@@ -391,7 +393,7 @@ export async function getClinicAppointments(
 export async function getClinicMembers(signal?: AbortSignal): Promise<ClinicTeamMember[]> {
   const payload = await getFromApi<{ data: ApiMember[] }>("/api/v1/auth/clinic/members", { signal });
   if (!Array.isArray(payload.data)) throw new ApiError("El servidor devolvió un equipo clínico incompleto.", 502);
-  return payload.data.map(mapMember);
+  return payload.data.map((member) => mapMember(member));
 }
 
 export type CreateClinicReceptionistPayload = {
@@ -412,7 +414,7 @@ export async function createClinicReceptionist(
   });
 
   if (!response.data) throw new ApiError("El servidor no devolvió la recepcionista creada.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function getClinicPatients(
@@ -743,7 +745,7 @@ export type UpdateClinicMemberPayload = {
   name?: string;
   email?: string | null;
   phoneNumber?: string;
-  countryCode?: string;
+  countryCode?: CountryCode;
 };
 
 export async function updateClinicMember(
@@ -761,7 +763,7 @@ export async function updateClinicMember(
     body,
   );
   if (!response.data) throw new ApiError("El servidor no devolvió el miembro actualizado.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function updateClinicMemberStatus(
@@ -803,7 +805,7 @@ export async function createClinicDoctor(
     subspecialty_id: payload.subspecialtyId,
   });
   if (!response.data) throw new ApiError("El servidor no devolvió el médico creado.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function downloadClinicPatientsExport(): Promise<void> {

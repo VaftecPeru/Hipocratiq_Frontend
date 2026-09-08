@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { AuthenticatedSession, SessionResponse } from "@/features/auth/model/auth.types";
 import { serverEnv } from "@/shared/config/server-env";
 
@@ -73,3 +74,25 @@ export const getAuthenticatedSession = cache(async (): Promise<AuthenticatedSess
     ? lastError
     : new Error("Authentication backend is unavailable.");
 });
+
+export type ClinicRole = "clinic_admin" | "receptionist";
+
+function isClinicRole(actorContext: AuthenticatedSession["actor_context"]): actorContext is ClinicRole {
+  return actorContext === "clinic_admin" || actorContext === "receptionist";
+}
+
+export async function requireClinicRoles(
+  roles: readonly ClinicRole[],
+): Promise<AuthenticatedSession> {
+  const session = await getAuthenticatedSession();
+
+  if (!session || !session.user.clinic || !isClinicRole(session.actor_context) || !roles.includes(session.actor_context)) {
+    redirect("/clinic/dashboard");
+  }
+
+  return session;
+}
+
+export async function requireClinicRole(role: ClinicRole): Promise<AuthenticatedSession> {
+  return requireClinicRoles([role]);
+}

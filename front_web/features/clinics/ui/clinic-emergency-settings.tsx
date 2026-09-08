@@ -180,13 +180,13 @@ export function ClinicEmergencySettings() {
 
   if (!settings) {
     return (
-      <main className="mx-auto grid min-h-[52vh] max-w-2xl place-items-center px-4" aria-live="polite">
+      <div className="mx-auto grid min-h-[52vh] max-w-2xl place-items-center px-4" aria-live="polite">
         <section className="w-full rounded-xl border border-danger/25 bg-surface p-6 text-center" role="alert">
           <AlertTriangle className="mx-auto size-7 text-danger" aria-hidden="true" />
           <h1 className="mt-3 text-lg font-extrabold">Configuración no disponible</h1>
           <p className="mt-2 text-sm text-muted">{error ?? "No encontramos la configuración de emergencia de esta clínica."}</p>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -199,7 +199,7 @@ export function ClinicEmergencySettings() {
       <Link className="mb-3 inline-flex min-h-11 items-center gap-1 text-xs font-bold text-accent sm:min-h-8" href="/clinic/configuracion"><ArrowLeft className="size-3.5" aria-hidden="true" />Volver a configuración</Link>
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-2xs font-extrabold tracking-[0.14em] text-danger uppercase">Configuración clínica</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Botón de Emergencia</h1>
           <p className="mt-1 max-w-2xl text-xs text-muted">Configura la versión local y consulta la política efectiva que recibe esta clínica.</p>

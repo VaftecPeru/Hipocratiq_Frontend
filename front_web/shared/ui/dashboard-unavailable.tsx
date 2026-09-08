@@ -9,7 +9,7 @@ type DashboardUnavailableProps = Readonly<{
 
 export function DashboardUnavailable({ description, retryHref, title }: DashboardUnavailableProps) {
   return (
-    <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5">
+    <div className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5">
       <section className="w-full rounded-2xl border border-danger/25 bg-surface p-7 text-center shadow-[0_0.5rem_1.5rem_rgb(16_27_51/4%)]" role="alert">
         <AlertTriangle className="mx-auto size-7 text-danger" aria-hidden="true" />
         <p className="mt-3 text-xs font-bold text-danger">Panel no disponible</p>
@@ -34,6 +34,6 @@ export function DashboardUnavailable({ description, retryHref, title }: Dashboar
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
