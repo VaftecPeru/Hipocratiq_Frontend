@@ -92,6 +92,7 @@ type ApiServerAppointment = {
   scheduled_date: string;
   time: string;
   appointment_type: string;
+  notes?: string | null;
   status: ClinicAppointment["status"];
   status_label: string;
   patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
@@ -286,6 +287,7 @@ export async function getClinicAppointmentsServer(from: string, to: string): Pro
       scheduledDate: appointment.scheduled_date,
       time: appointment.time,
       appointmentType: appointment.appointment_type,
+      notes: appointment.notes ?? null,
       status: appointment.status,
       statusLabel: appointment.status_label,
       patient: {
