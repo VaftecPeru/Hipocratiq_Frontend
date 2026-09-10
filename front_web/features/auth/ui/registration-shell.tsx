@@ -27,7 +27,7 @@ export function RegistrationShell({ children }: { children: ReactNode }) {
 
         <footer className="flex min-h-12 items-center justify-between gap-3 px-[clamp(1.25rem,5vw,3.25rem)] py-1 text-2xs text-footer-text">
           <span className="shrink-0 whitespace-nowrap">© {currentYear} Hipocratiq</span>
-          <Link href="/soporte" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
+          <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
         </footer>
       </section>
 

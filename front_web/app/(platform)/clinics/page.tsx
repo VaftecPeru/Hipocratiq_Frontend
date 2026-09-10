@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getClinicsDashboardData } from "@/features/clinics/api/server-clinics";
 import type {
   ClinicCountryCode,
@@ -9,10 +10,10 @@ import type {
 } from "@/features/clinics/model/clinic.types";
 import { ClinicsDashboard } from "@/features/clinics/ui/clinics-dashboard";
 
-export const metadata: Metadata = {
-  title: "Clínicas",
-  description: "Administración global de clínicas y tenants.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("clinics") };
+}
 
 type SearchParam = string | string[] | undefined;
 
@@ -22,6 +23,7 @@ type ClinicsPageSearchParams = {
   plan?: SearchParam;
   status?: SearchParam;
   page?: SearchParam;
+  per_page?: SearchParam;
 };
 
 function firstValue(value: SearchParam): string {
@@ -39,6 +41,7 @@ export default async function ClinicsPage({
 }) {
   const params = await searchParams;
   const rawPage = Number.parseInt(firstValue(params.page), 10);
+  const rawPerPage = Number.parseInt(firstValue(params.per_page), 10);
   const filters: ClinicsFilters = {
     search: firstValue(params.q).slice(0, 100),
     country: oneOf<ClinicCountryCode | "all">(
@@ -57,6 +60,7 @@ export default async function ClinicsPage({
       "all",
     ),
     page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    perPage: Number.isSafeInteger(rawPerPage) && rawPerPage >= 1 && rawPerPage <= 100 ? rawPerPage : 10,
   };
   const result = await getClinicsDashboardData(filters);
 
@@ -90,6 +94,7 @@ export default async function ClinicsPage({
     filters.plan,
     filters.status,
     filters.page,
+    filters.perPage,
   ].join("|");
 
   return (

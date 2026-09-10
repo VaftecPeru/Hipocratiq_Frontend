@@ -70,10 +70,10 @@ type CredentialsStepProps = {
 };
 
 const LOGIN_ROLE_OPTIONS = [
+  { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
   { value: "healthcare", label: "Profesional de salud", description: "Médicos con acceso clínico", icon: UserRound },
   { value: "receptionist", label: "Recepción", description: "Agenda y atención de clínica", icon: Building2 },
   { value: "patient", label: "Paciente", description: "Accede a tu historial clínico", icon: UsersRound },
-  { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
 ] satisfies ReadonlyArray<{ value: LoginRole; label: string; description: string; icon: typeof UserRound }>;
 
 export function CredentialsStep({

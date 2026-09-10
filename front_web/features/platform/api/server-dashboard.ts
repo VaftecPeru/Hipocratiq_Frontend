@@ -5,6 +5,8 @@ import type {
   CountryAggregate,
   SystemService,
 } from "@/features/platform/model/admin-dashboard.types";
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
+import { BILLING_CURRENCIES, isBillingCurrency } from "@/features/platform/lib/billing-currency";
 import { serverEnv } from "@/shared/config/server-env";
 import { parseApiList } from "@/shared/api/parse-api-list";
 
@@ -14,6 +16,7 @@ type LoadResult<T> = { ok: true; data: T } | { ok: false; message: string; statu
 
 type ApiService = { key: string; label: string; status: SystemService["status"]; latency_ms: number; detail: string };
 type ApiCountry = { country_code: string; clinics: number; users: number };
+type ApiRevenuePoint = { month: string; amount_cents: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -49,6 +52,25 @@ function isApiService(value: unknown): value is ApiService {
 
 function isArrayOf<T>(value: unknown, guard: (item: unknown) => item is T): value is T[] {
   return Array.isArray(value) && value.every(guard);
+}
+
+function isApiCurrencyAmountMap(value: unknown): value is Record<BillingCurrency, number> {
+  return isRecord(value) && BILLING_CURRENCIES.every((currency) => isNumber(value[currency]));
+}
+
+function isApiCurrencyRevenueMap(value: unknown): value is Record<BillingCurrency, ApiRevenuePoint[]> {
+  return isRecord(value) && BILLING_CURRENCIES.every((currency) => isArrayOf(value[currency], (item): item is ApiRevenuePoint => isRecord(item) && isString(item.month) && isNumber(item.amount_cents)));
+}
+
+function mapCurrencyAmounts(value: Record<BillingCurrency, number>): Record<BillingCurrency, number> {
+  return Object.fromEntries(BILLING_CURRENCIES.map((currency) => [currency, value[currency]])) as Record<BillingCurrency, number>;
+}
+
+function mapCurrencyRevenue(value: Record<BillingCurrency, ApiRevenuePoint[]>): Record<BillingCurrency, Array<{ month: string; amountCents: number }>> {
+  return Object.fromEntries(BILLING_CURRENCIES.map((currency) => [
+    currency,
+    value[currency].map((item) => ({ month: item.month, amountCents: item.amount_cents })),
+  ])) as Record<BillingCurrency, Array<{ month: string; amountCents: number }>>;
 }
 
 function invalidContractResult<T>(path: string): LoadResult<T> {
@@ -90,6 +112,7 @@ async function getAdminPayload<T>(path: string): Promise<LoadResult<T>> {
 
 type ApiDashboard = {
   generated_at: string;
+  revenue_currency: BillingCurrency;
   kpis: {
     active_clinics: number;
     clinics_added_this_month: number;
@@ -98,10 +121,13 @@ type ApiDashboard = {
     active_patients: number;
     monthly_revenue_cents: number;
     previous_month_revenue_cents: number;
+    monthly_revenue_cents_by_currency: Record<BillingCurrency, number>;
+    previous_month_revenue_cents_by_currency: Record<BillingCurrency, number>;
     open_support_tickets: number;
     overdue_support_tickets: number;
   };
-  revenue: Array<{ month: string; amount_cents: number }>;
+  revenue: ApiRevenuePoint[];
+  revenue_by_currency: Record<BillingCurrency, ApiRevenuePoint[]>;
   countries: ApiCountry[];
   recent_clinics: Array<{ id: number; name: string; country_code: string; address: string; created_at: string }>;
   recent_activity: Array<{ id: number; module: string; action: string; resource_label: string | null; actor_name: string | null; country_code: string | null; critical: boolean; occurred_at: string }>;
@@ -114,6 +140,7 @@ function isApiDashboard(value: unknown): value is ApiDashboard {
   const { kpis } = value;
 
   return isString(value.generated_at)
+    && isBillingCurrency(value.revenue_currency)
     && [
       kpis.active_clinics,
       kpis.clinics_added_this_month,
@@ -125,7 +152,10 @@ function isApiDashboard(value: unknown): value is ApiDashboard {
       kpis.open_support_tickets,
       kpis.overdue_support_tickets,
     ].every(isNumber)
+    && isApiCurrencyAmountMap(kpis.monthly_revenue_cents_by_currency)
+    && isApiCurrencyAmountMap(kpis.previous_month_revenue_cents_by_currency)
     && isArrayOf(value.revenue, (item): item is ApiDashboard["revenue"][number] => isRecord(item) && isString(item.month) && isNumber(item.amount_cents))
+    && isApiCurrencyRevenueMap(value.revenue_by_currency)
     && isArrayOf(value.countries, isApiCountry)
     && isArrayOf(value.recent_clinics, (item): item is ApiDashboard["recent_clinics"][number] => isRecord(item)
       && isNumber(item.id)
@@ -148,9 +178,14 @@ function isApiDashboard(value: unknown): value is ApiDashboard {
 function normalizeDashboardLists(value: unknown): unknown {
   if (!isRecord(value)) return value;
 
+  const revenueByCurrency = value.revenue_by_currency;
+
   return {
     ...value,
     revenue: parseApiList(value.revenue, "dashboard.revenue"),
+    revenue_by_currency: isRecord(revenueByCurrency)
+      ? Object.fromEntries(BILLING_CURRENCIES.map((currency) => [currency, parseApiList(revenueByCurrency[currency], `dashboard.revenue_by_currency.${currency}`)]))
+      : revenueByCurrency,
     countries: parseApiList(value.countries, "dashboard.countries"),
     recent_clinics: parseApiList(value.recent_clinics, "dashboard.recent_clinics"),
     recent_activity: parseApiList(value.recent_activity, "dashboard.recent_activity"),
@@ -171,6 +206,7 @@ export async function getAdminDashboard(): Promise<LoadResult<AdminDashboardData
 
   return { ok: true, data: {
     generatedAt: data.generated_at,
+    revenueCurrency: data.revenue_currency,
     kpis: {
       activeClinics: data.kpis.active_clinics,
       clinicsAddedThisMonth: data.kpis.clinics_added_this_month,
@@ -179,10 +215,13 @@ export async function getAdminDashboard(): Promise<LoadResult<AdminDashboardData
       activePatients: data.kpis.active_patients,
       monthlyRevenueCents: data.kpis.monthly_revenue_cents,
       previousMonthRevenueCents: data.kpis.previous_month_revenue_cents,
+      monthlyRevenueByCurrency: mapCurrencyAmounts(data.kpis.monthly_revenue_cents_by_currency),
+      previousMonthRevenueByCurrency: mapCurrencyAmounts(data.kpis.previous_month_revenue_cents_by_currency),
       openSupportTickets: data.kpis.open_support_tickets,
       overdueSupportTickets: data.kpis.overdue_support_tickets,
     },
     revenue: data.revenue.map((item) => ({ month: item.month, amountCents: item.amount_cents })),
+    revenueByCurrency: mapCurrencyRevenue(data.revenue_by_currency),
     countries: data.countries.map(mapCountry),
     recentClinics: data.recent_clinics.map((clinic) => ({ id: clinic.id, name: clinic.name, countryCode: clinic.country_code, address: clinic.address, createdAt: clinic.created_at })),
     recentActivity: data.recent_activity.map((event) => ({ id: event.id, module: event.module, action: event.action, resourceLabel: event.resource_label, actorName: event.actor_name, countryCode: event.country_code, critical: event.critical, occurredAt: event.occurred_at })),

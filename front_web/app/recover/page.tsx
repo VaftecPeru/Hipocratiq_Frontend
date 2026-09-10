@@ -1,11 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PasswordResetFlow } from "@/features/auth/ui/password-reset-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 
-export const metadata = {
-  title: "Recuperar contraseña — Hipocratiq",
+export const metadata: Metadata = {
+  title: "Recuperar contraseña",
 };
 
 export default async function RecoverPage() {
@@ -37,7 +38,7 @@ export default async function RecoverPage() {
 
         <footer className="flex min-h-12 items-center justify-between gap-3 px-[clamp(1.25rem,4vw,3rem)] py-1 text-2xs text-footer-text">
           <span className="shrink-0 whitespace-nowrap">© {currentYear} Hipocratiq</span>
-          <Link href="/soporte" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
+          <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
         </footer>
       </section>
 

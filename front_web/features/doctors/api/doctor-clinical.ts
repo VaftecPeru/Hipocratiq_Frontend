@@ -216,6 +216,165 @@ export type ConsultationPayload = {
   sections?: ConsultationSections;
 };
 
+export type DoctorPrescriptionStatus = "draft" | "active" | "renewal_due" | "completed" | "canceled";
+
+export type DoctorPrescription = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patientCode: string; name: string | null };
+  consultationId: number | null;
+  medication: string;
+  dosage: string | null;
+  frequency: string | null;
+  durationDays: number | null;
+  status: DoctorPrescriptionStatus;
+  statusLabel: string;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  notes: string | null;
+};
+
+export type DoctorPrescriptionPayload = {
+  patient_profile_id: number;
+  consultation_id?: number | null;
+  medication: string;
+  dosage?: string | null;
+  frequency?: string | null;
+  duration_days?: number | null;
+  status?: Extract<DoctorPrescriptionStatus, "draft" | "active">;
+  issued_at?: string | null;
+  expires_at?: string | null;
+  notes?: string | null;
+};
+
+export type DoctorPrescriptionMeta = {
+  total: number;
+  active: number;
+  renewal_due: number;
+  pending: number;
+};
+
+export type LaboratoryOrderStatus = "requested" | "in_progress" | "ready" | "reviewed" | "canceled";
+
+export type LaboratoryOrder = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patientCode: string; name: string | null };
+  consultationId: number | null;
+  studyName: string;
+  status: LaboratoryOrderStatus;
+  statusLabel: string;
+  priority: "normal" | "urgent";
+  isCritical: boolean;
+  orderedAt: string | null;
+  resultAt: string | null;
+  resultSummary: string | null;
+  notes: string | null;
+};
+
+export type LaboratoryOrderPayload = {
+  patient_profile_id: number;
+  consultation_id?: number | null;
+  study_name: string;
+  priority?: "normal" | "urgent";
+  notes?: string | null;
+};
+
+export type LaboratoryOrderMeta = {
+  total: number;
+  requested: number;
+  in_progress: number;
+  ready: number;
+  reviewed: number;
+  critical: number;
+};
+
+export type TeleconsultationStatus = "scheduled" | "waiting" | "in_progress" | "completed" | "canceled";
+
+export type DoctorTeleconsultation = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patientCode: string; name: string | null };
+  appointmentId: number | null;
+  consultationId: number | null;
+  status: TeleconsultationStatus;
+  statusLabel: string;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  notes: string | null;
+  connection: { status: "not_configured"; message: string; joinable: false };
+};
+
+export type DoctorTeleconsultationPayload = {
+  patient_profile_id: number;
+  appointment_id?: number | null;
+  consultation_id?: number | null;
+  scheduled_at: string;
+  notes?: string | null;
+};
+
+export type DoctorTeleconsultationMeta = {
+  total: number;
+  scheduled: number;
+  waiting: number;
+  in_progress: number;
+  completed: number;
+  connection: { status: "not_configured"; message: string };
+};
+
+export type DoctorMessage = {
+  id: number;
+  patient: { id: number; patientCode: string; name: string | null } | null;
+  sender: { id: number; name: string } | null;
+  recipient: { id: number; name: string } | null;
+  body: string;
+  isReceived: boolean;
+  readAt: string | null;
+  createdAt: string | null;
+};
+
+export type DoctorReports = {
+  period: { from: string; to: string };
+  metrics: {
+    appointments: number;
+    completedAppointments: number;
+    consultations: number;
+    completedConsultations: number;
+    signedConsultations: number;
+    patients: number;
+    prescriptions: number;
+    activePrescriptions: number;
+    teleconsultations: number;
+    completedTeleconsultations: number;
+    laboratoryOrders: number;
+    pendingLaboratoryOrders: number;
+    criticalLaboratoryOrders: number;
+  };
+  sources: Record<string, boolean>;
+  generatedAt: string;
+};
+
+export type DoctorEpidemiology = {
+  generatedAt: string;
+  periodDays: number;
+  analysisAvailable: boolean;
+  message: string;
+  metrics: {
+    monitoredPatients: number;
+    activeAlerts: number;
+    highRiskCases: number;
+    trend: "not_configured" | "stable";
+    consultations: number;
+    laboratoryOrders: number;
+    teleconsultations: number;
+    prescriptions: number;
+  };
+  cohorts: Array<{ name: string; level: number; risk: string }>;
+  alerts: Array<{ title: string; detail: string; severity: "info" | "warning" | "critical" }>;
+  sources: Record<string, { status: "available" | "no_data" | "not_configured"; label: string }>;
+};
+
 type ApiPatient = {
   id: number;
   patient_code: string;
@@ -607,5 +766,304 @@ export function consultationToPayload(consultation: Consultation): ConsultationP
     objective: consultation.objective,
     status: consultation.status,
     sections: consultation.clinicalHistory?.sections ?? {},
+  };
+}
+
+type ApiDoctorPrescription = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patient_code: string; name: string | null };
+  consultation_id: number | null;
+  medication: string;
+  dosage: string | null;
+  frequency: string | null;
+  duration_days: number | null;
+  status: DoctorPrescriptionStatus;
+  status_label: string;
+  issued_at: string | null;
+  expires_at: string | null;
+  notes: string | null;
+};
+
+type ApiLaboratoryOrder = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patient_code: string; name: string | null };
+  consultation_id: number | null;
+  study_name: string;
+  status: LaboratoryOrderStatus;
+  status_label: string;
+  priority: "normal" | "urgent";
+  is_critical: boolean;
+  ordered_at: string | null;
+  result_at: string | null;
+  result_summary: string | null;
+  notes: string | null;
+};
+
+type ApiTeleconsultation = {
+  id: number;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patient_code: string; name: string | null };
+  appointment_id: number | null;
+  consultation_id: number | null;
+  status: TeleconsultationStatus;
+  status_label: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  notes: string | null;
+  connection: { status: "not_configured"; message: string; joinable: false };
+};
+
+type ApiDoctorMessage = {
+  id: number;
+  patient: { id: number; patient_code: string; name: string | null } | null;
+  sender: { id: number; name: string } | null;
+  recipient: { id: number; name: string } | null;
+  body: string;
+  is_received: boolean;
+  read_at: string | null;
+  created_at: string | null;
+};
+
+function mapWorkspacePatient(patient: { id: number; patient_code: string; name: string | null }): { id: number; patientCode: string; name: string | null } {
+  return { id: patient.id, patientCode: patient.patient_code, name: patient.name };
+}
+
+function mapPrescription(prescription: ApiDoctorPrescription): DoctorPrescription {
+  return {
+    id: prescription.id,
+    clinic: prescription.clinic,
+    patient: mapWorkspacePatient(prescription.patient),
+    consultationId: prescription.consultation_id,
+    medication: prescription.medication,
+    dosage: prescription.dosage,
+    frequency: prescription.frequency,
+    durationDays: prescription.duration_days,
+    status: prescription.status,
+    statusLabel: prescription.status_label,
+    issuedAt: prescription.issued_at,
+    expiresAt: prescription.expires_at,
+    notes: prescription.notes,
+  };
+}
+
+function mapLaboratoryOrder(order: ApiLaboratoryOrder): LaboratoryOrder {
+  return {
+    id: order.id,
+    clinic: order.clinic,
+    patient: mapWorkspacePatient(order.patient),
+    consultationId: order.consultation_id,
+    studyName: order.study_name,
+    status: order.status,
+    statusLabel: order.status_label,
+    priority: order.priority,
+    isCritical: order.is_critical,
+    orderedAt: order.ordered_at,
+    resultAt: order.result_at,
+    resultSummary: order.result_summary,
+    notes: order.notes,
+  };
+}
+
+function mapTeleconsultation(session: ApiTeleconsultation): DoctorTeleconsultation {
+  return {
+    id: session.id,
+    clinic: session.clinic,
+    patient: mapWorkspacePatient(session.patient),
+    appointmentId: session.appointment_id,
+    consultationId: session.consultation_id,
+    status: session.status,
+    statusLabel: session.status_label,
+    scheduledAt: session.scheduled_at,
+    startedAt: session.started_at,
+    endedAt: session.ended_at,
+    notes: session.notes,
+    connection: session.connection,
+  };
+}
+
+function mapDoctorMessage(message: ApiDoctorMessage): DoctorMessage {
+  return {
+    id: message.id,
+    patient: message.patient ? mapWorkspacePatient(message.patient) : null,
+    sender: message.sender,
+    recipient: message.recipient,
+    body: message.body,
+    isReceived: message.is_received,
+    readAt: message.read_at,
+    createdAt: message.created_at,
+  };
+}
+
+export async function getDoctorPrescriptions(signal?: AbortSignal): Promise<{ items: DoctorPrescription[]; meta: DoctorPrescriptionMeta }> {
+  const response = await getFromApi<{ data: ApiDoctorPrescription[]; meta: DoctorPrescriptionMeta }>('/api/v1/auth/doctor/prescriptions', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió recetas incompletas.', 502);
+  return { items: response.data.map(mapPrescription), meta: response.meta };
+}
+
+export async function createDoctorPrescription(payload: DoctorPrescriptionPayload): Promise<DoctorPrescription> {
+  const response = await postToApi<{ data: ApiDoctorPrescription }>('/api/v1/auth/doctor/prescriptions', payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió la receta creada.', 502);
+  return mapPrescription(response.data);
+}
+
+export async function updateDoctorPrescription(
+  prescriptionId: number,
+  payload: Partial<Omit<DoctorPrescriptionPayload, 'patient_profile_id'>>,
+): Promise<DoctorPrescription> {
+  const response = await patchToApi<{ data: ApiDoctorPrescription }>(`/api/v1/auth/doctor/prescriptions/${prescriptionId}`, payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió la receta actualizada.', 502);
+  return mapPrescription(response.data);
+}
+
+export async function getDoctorLaboratory(signal?: AbortSignal): Promise<{ items: LaboratoryOrder[]; meta: LaboratoryOrderMeta }> {
+  const response = await getFromApi<{ data: ApiLaboratoryOrder[]; meta: LaboratoryOrderMeta }>('/api/v1/auth/doctor/laboratory', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió resultados de laboratorio incompletos.', 502);
+  return { items: response.data.map(mapLaboratoryOrder), meta: response.meta };
+}
+
+export async function createDoctorLaboratoryOrder(payload: LaboratoryOrderPayload): Promise<LaboratoryOrder> {
+  const response = await postToApi<{ data: ApiLaboratoryOrder }>('/api/v1/auth/doctor/laboratory', payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió la solicitud de laboratorio creada.', 502);
+  return mapLaboratoryOrder(response.data);
+}
+
+export async function updateDoctorLaboratoryStatus(orderId: number, status: LaboratoryOrderStatus, resultSummary?: string): Promise<LaboratoryOrder> {
+  const response = await patchToApi<{ data: ApiLaboratoryOrder }>(`/api/v1/auth/doctor/laboratory/${orderId}/status`, {
+    status,
+    ...(resultSummary === undefined ? {} : { result_summary: resultSummary }),
+  });
+  if (!response.data) throw new ApiError('El servidor no devolvió el resultado actualizado.', 502);
+  return mapLaboratoryOrder(response.data);
+}
+
+export async function getDoctorTeleconsultations(signal?: AbortSignal): Promise<{ items: DoctorTeleconsultation[]; meta: DoctorTeleconsultationMeta }> {
+  const response = await getFromApi<{ data: ApiTeleconsultation[]; meta: DoctorTeleconsultationMeta }>('/api/v1/auth/doctor/teleconsultations', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió teleconsultas incompletas.', 502);
+  return { items: response.data.map(mapTeleconsultation), meta: response.meta };
+}
+
+export async function createDoctorTeleconsultation(payload: DoctorTeleconsultationPayload): Promise<DoctorTeleconsultation> {
+  const response = await postToApi<{ data: ApiTeleconsultation }>('/api/v1/auth/doctor/teleconsultations', payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió la teleconsulta creada.', 502);
+  return mapTeleconsultation(response.data);
+}
+
+export async function updateDoctorTeleconsultationStatus(sessionId: number, status: TeleconsultationStatus): Promise<DoctorTeleconsultation> {
+  const response = await patchToApi<{ data: ApiTeleconsultation }>(`/api/v1/auth/doctor/teleconsultations/${sessionId}/status`, { status });
+  if (!response.data) throw new ApiError('El servidor no devolvió la teleconsulta actualizada.', 502);
+  return mapTeleconsultation(response.data);
+}
+
+export async function getDoctorMessages(signal?: AbortSignal): Promise<{ items: DoctorMessage[]; unread: number }> {
+  const response = await getFromApi<{ data: ApiDoctorMessage[]; meta: { unread: number } }>('/api/v1/auth/doctor/messages', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió mensajes incompletos.', 502);
+  return { items: response.data.map(mapDoctorMessage), unread: response.meta.unread };
+}
+
+export async function sendDoctorMessage(patientProfileId: number, body: string): Promise<DoctorMessage> {
+  const response = await postToApi<{ data: ApiDoctorMessage }>('/api/v1/auth/doctor/messages', {
+    patient_profile_id: patientProfileId,
+    body,
+  });
+  if (!response.data) throw new ApiError('El servidor no devolvió el mensaje enviado.', 502);
+  return mapDoctorMessage(response.data);
+}
+
+export async function markDoctorMessageRead(messageId: number): Promise<DoctorMessage> {
+  const response = await patchToApi<{ data: ApiDoctorMessage }>(`/api/v1/auth/doctor/messages/${messageId}/read`);
+  if (!response.data) throw new ApiError('El servidor no devolvió el mensaje actualizado.', 502);
+  return mapDoctorMessage(response.data);
+}
+
+type ApiDoctorReports = {
+  period: { from: string; to: string };
+  metrics: {
+    appointments: number;
+    completed_appointments: number;
+    consultations: number;
+    completed_consultations: number;
+    signed_consultations: number;
+    patients: number;
+    prescriptions: number;
+    active_prescriptions: number;
+    teleconsultations: number;
+    completed_teleconsultations: number;
+    laboratory_orders: number;
+    pending_laboratory_orders: number;
+    critical_laboratory_orders: number;
+  };
+  sources: Record<string, boolean>;
+  generated_at: string;
+};
+
+export async function getDoctorReports(signal?: AbortSignal): Promise<DoctorReports> {
+  const response = await getFromApi<{ data: ApiDoctorReports }>('/api/v1/auth/doctor/reports', { signal });
+  if (!response.data?.metrics) throw new ApiError('El servidor devolvió reportes incompletos.', 502);
+  return {
+    period: response.data.period,
+    metrics: {
+      appointments: response.data.metrics.appointments,
+      completedAppointments: response.data.metrics.completed_appointments,
+      consultations: response.data.metrics.consultations,
+      completedConsultations: response.data.metrics.completed_consultations,
+      signedConsultations: response.data.metrics.signed_consultations,
+      patients: response.data.metrics.patients,
+      prescriptions: response.data.metrics.prescriptions,
+      activePrescriptions: response.data.metrics.active_prescriptions,
+      teleconsultations: response.data.metrics.teleconsultations,
+      completedTeleconsultations: response.data.metrics.completed_teleconsultations,
+      laboratoryOrders: response.data.metrics.laboratory_orders,
+      pendingLaboratoryOrders: response.data.metrics.pending_laboratory_orders,
+      criticalLaboratoryOrders: response.data.metrics.critical_laboratory_orders,
+    },
+    sources: response.data.sources,
+    generatedAt: response.data.generated_at,
+  };
+}
+
+type ApiDoctorEpidemiology = {
+  generated_at: string;
+  period_days: number;
+  analysis_available: boolean;
+  message: string;
+  metrics: {
+    monitored_patients: number;
+    active_alerts: number;
+    high_risk_cases: number;
+    trend: 'not_configured' | 'stable';
+    consultations: number;
+    laboratory_orders: number;
+    teleconsultations: number;
+    prescriptions: number;
+  };
+  cohorts: Array<{ name: string; level: number; risk: string }>;
+  alerts: Array<{ title: string; detail: string; severity: 'info' | 'warning' | 'critical' }>;
+  sources: Record<string, { status: 'available' | 'no_data' | 'not_configured'; label: string }>;
+};
+
+export async function getDoctorEpidemiology(signal?: AbortSignal): Promise<DoctorEpidemiology> {
+  const response = await getFromApi<{ data: ApiDoctorEpidemiology }>('/api/v1/auth/doctor/epidemiology', { signal });
+  if (!response.data?.metrics) throw new ApiError('El servidor devolvió el análisis epidemiológico incompleto.', 502);
+  return {
+    generatedAt: response.data.generated_at,
+    periodDays: response.data.period_days,
+    analysisAvailable: response.data.analysis_available,
+    message: response.data.message,
+    metrics: {
+      monitoredPatients: response.data.metrics.monitored_patients,
+      activeAlerts: response.data.metrics.active_alerts,
+      highRiskCases: response.data.metrics.high_risk_cases,
+      trend: response.data.metrics.trend,
+      consultations: response.data.metrics.consultations,
+      laboratoryOrders: response.data.metrics.laboratory_orders,
+      teleconsultations: response.data.metrics.teleconsultations,
+      prescriptions: response.data.metrics.prescriptions,
+    },
+    cohorts: response.data.cohorts,
+    alerts: response.data.alerts,
+    sources: response.data.sources,
   };
 }

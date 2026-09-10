@@ -7,6 +7,7 @@ import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/
 import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
+import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 import { ApiError } from "@/shared/api/http-client";
 
 type FieldName = "identifier" | "password" | "code";
@@ -22,6 +23,14 @@ const LOGIN_ROLE_REQUESTS = {
   administrator: { actorContext: "staff", requestedRole: "clinic_admin" },
   support: { actorContext: "staff", requestedRole: "super_admin" },
 } satisfies Record<LoginRole, { actorContext: LoginActorContext; requestedRole: LoginRequestedRole }>;
+
+const LOGIN_CREDENTIAL_TITLES = {
+  healthcare: "Iniciar sesión — Profesional de salud",
+  receptionist: "Iniciar sesión — Recepción",
+  patient: "Iniciar sesión — Paciente",
+  administrator: "Iniciar sesión — Administrador",
+  support: "Acceso de soporte",
+} satisfies Record<LoginRole, string>;
 
 type FlowState = {
   step: AuthStep;
@@ -126,6 +135,13 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   const dashboardPath = useRef("/dashboard");
   const country = selectedCountry ?? defaultCountryCode;
   const { actorContext, requestedRole } = LOGIN_ROLE_REQUESTS[loginRole];
+  const documentTitle = flow.step === "otp"
+    ? "Verificar identidad"
+    : flow.step === "success"
+      ? "Acceso confirmado"
+      : LOGIN_CREDENTIAL_TITLES[loginRole];
+
+  useAuthDocumentTitle(documentTitle);
 
   useEffect(() => {
     if (flow.step !== "otp") {

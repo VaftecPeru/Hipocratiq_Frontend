@@ -1,3 +1,5 @@
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
+
 export type ServiceStatus = "operational" | "degraded" | "unavailable";
 export type SystemIncidentSeverity = "minor" | "major" | "critical";
 export type SystemIncidentStatus = "investigating" | "identified" | "monitoring" | "resolved";
@@ -31,6 +33,7 @@ export type CountryAggregate = {
 
 export type AdminDashboardData = {
   generatedAt: string;
+  revenueCurrency: BillingCurrency;
   kpis: {
     activeClinics: number;
     clinicsAddedThisMonth: number;
@@ -39,10 +42,13 @@ export type AdminDashboardData = {
     activePatients: number;
     monthlyRevenueCents: number;
     previousMonthRevenueCents: number;
+    monthlyRevenueByCurrency: Record<BillingCurrency, number>;
+    previousMonthRevenueByCurrency: Record<BillingCurrency, number>;
     openSupportTickets: number;
     overdueSupportTickets: number;
   };
   revenue: Array<{ month: string; amountCents: number }>;
+  revenueByCurrency: Record<BillingCurrency, Array<{ month: string; amountCents: number }>>;
   countries: CountryAggregate[];
   recentClinics: Array<{
     id: number;

@@ -1,3 +1,5 @@
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
+
 export type ClinicCountryCode = "MX" | "PE" | "US";
 export type ClinicPlan = "enterprise" | "professional" | "basic";
 export type ClinicStatus = "active" | "suspended";
@@ -13,6 +15,7 @@ export type Clinic = {
   patients: number;
   status: ClinicStatus;
   monthlyBilling: number;
+  monthlyBillingCurrency: BillingCurrency;
   lastPayment: string | null;
 };
 
@@ -40,6 +43,9 @@ export type ClinicsDashboardData = {
     patients: number;
     monthlyRevenue: number;
     annualRevenue: number;
+    revenueCurrency: BillingCurrency;
+    monthlyRevenueByCurrency: Record<BillingCurrency, number>;
+    annualRevenueByCurrency: Record<BillingCurrency, number>;
   };
   planDistribution: PlanDistribution[];
   recentActivity: ClinicActivity[];
@@ -64,4 +70,5 @@ export type ClinicsFilters = {
   plan: ClinicPlan | "all";
   status: ClinicStatus | "all";
   page: number;
+  perPage: number;
 };

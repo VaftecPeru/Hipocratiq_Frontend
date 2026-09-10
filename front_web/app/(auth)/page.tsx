@@ -1,9 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginFlow } from "@/features/auth/ui/login-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthPlatformSettingsProvider } from "@/features/auth/ui/auth-platform-settings";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
+
+export const metadata: Metadata = {
+  title: "Iniciar sesión",
+};
 
 type HomeProps = {
   searchParams: Promise<{ role?: string | string[] | undefined }>;

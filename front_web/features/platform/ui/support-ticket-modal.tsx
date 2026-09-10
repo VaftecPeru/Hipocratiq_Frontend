@@ -75,6 +75,8 @@ export function SupportTicketModal({ isOpen, onClose, clinics, onCreate }: Suppo
   };
 
   const handleCreate = async () => {
+    if (isLoading) return;
+
     if (!form.clinicId || !form.subject.trim() || !form.description.trim() || !form.contactEmail.trim()) {
       setError("Completa la clínica, el asunto, la descripción y el email de contacto.");
       return;
@@ -122,9 +124,9 @@ export function SupportTicketModal({ isOpen, onClose, clinics, onCreate }: Suppo
           </ModalPrimaryButton>
         ) : (
           <>
-            <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-            <ModalPrimaryButton onClick={handleCreate}>
-              <FileText className="size-3.5" strokeWidth={1.9} />
+            <ModalSecondaryButton onClick={onClose} disabled={isLoading}>Cancelar</ModalSecondaryButton>
+            <ModalPrimaryButton onClick={() => void handleCreate()} disabled={isLoading}>
+              <FileText className="size-3.5" strokeWidth={1.9} aria-hidden="true" />
               {isLoading ? "Creando..." : "Crear Ticket"}
             </ModalPrimaryButton>
           </>

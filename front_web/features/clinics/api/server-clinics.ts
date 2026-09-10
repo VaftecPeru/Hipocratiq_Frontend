@@ -7,10 +7,13 @@ import type {
   ClinicsDashboardPageData,
   ClinicStatus,
 } from "@/features/clinics/model/clinic.types";
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
+import { BILLING_CURRENCIES, isBillingCurrency } from "@/features/platform/lib/billing-currency";
 import { serverEnv } from "@/shared/config/server-env";
 
 type AdminClinicsQuery = {
   page?: number;
+  perPage?: number;
   search?: string;
   country?: ClinicCountryCode | "all";
   plan?: ClinicPlan | "all";
@@ -27,6 +30,7 @@ type ApiClinic = {
   patients: number;
   status: ClinicStatus;
   monthly_billing: number;
+  monthly_billing_currency: BillingCurrency;
   last_payment: string | null;
 };
 
@@ -40,6 +44,7 @@ type ApiPagination = {
 };
 
 type ApiSummary = {
+  revenue_currency: BillingCurrency;
   totals: {
     clinics: number;
     active_clinics: number;
@@ -48,6 +53,8 @@ type ApiSummary = {
     patients: number;
     monthly_revenue: number;
     annual_revenue: number;
+    monthly_revenue_cents_by_currency: Record<BillingCurrency, number>;
+    annual_revenue_cents_by_currency: Record<BillingCurrency, number>;
   };
   plan_distribution: Array<{
     plan: ClinicPlan;
@@ -86,6 +93,11 @@ const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   timeZone: "UTC",
 });
 
+function isCurrencyAmountMap(value: unknown): value is Record<BillingCurrency, number> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    && BILLING_CURRENCIES.every((currency) => typeof (value as Record<string, unknown>)[currency] === "number");
+}
+
 function formatDate(value: string | null): string | null {
   if (!value) return null;
 
@@ -104,7 +116,7 @@ function errorMessage(status: number): string {
 export async function getClinicsDashboardData(
   query: AdminClinicsQuery = {},
 ): Promise<ClinicsDashboardLoadResult> {
-  const search = new URLSearchParams({ per_page: "10" });
+  const search = new URLSearchParams({ per_page: String(query.perPage ?? 10) });
 
   if (query.page && query.page > 1) search.set("page", String(query.page));
   if (query.search?.trim()) search.set("search", query.search.trim());
@@ -133,10 +145,14 @@ export async function getClinicsDashboardData(
 
     if (
       !Array.isArray(payload.data) ||
+      !payload.data.every((clinic) => isBillingCurrency(clinic.monthly_billing_currency)) ||
       !payload.meta ||
       !payload.summary ||
-      !Array.isArray(payload.summary.plan_distribution) ||
-      !Array.isArray(payload.summary.recent_activity)
+       !Array.isArray(payload.summary.plan_distribution) ||
+       !Array.isArray(payload.summary.recent_activity) ||
+       !isBillingCurrency(payload.summary.revenue_currency) ||
+       !isCurrencyAmountMap(payload.summary.totals.monthly_revenue_cents_by_currency) ||
+       !isCurrencyAmountMap(payload.summary.totals.annual_revenue_cents_by_currency)
     ) {
       return {
         ok: false,
@@ -156,6 +172,7 @@ export async function getClinicsDashboardData(
       patients: clinic.patients,
       status: clinic.status,
       monthlyBilling: clinic.monthly_billing,
+      monthlyBillingCurrency: clinic.monthly_billing_currency,
       lastPayment: formatDate(clinic.last_payment),
     }));
 
@@ -171,6 +188,9 @@ export async function getClinicsDashboardData(
           patients: payload.summary.totals.patients,
           monthlyRevenue: payload.summary.totals.monthly_revenue,
           annualRevenue: payload.summary.totals.annual_revenue,
+          revenueCurrency: payload.summary.revenue_currency,
+          monthlyRevenueByCurrency: Object.fromEntries(BILLING_CURRENCIES.map((currency) => [currency, payload.summary.totals.monthly_revenue_cents_by_currency[currency] / 100])) as Record<BillingCurrency, number>,
+          annualRevenueByCurrency: Object.fromEntries(BILLING_CURRENCIES.map((currency) => [currency, payload.summary.totals.annual_revenue_cents_by_currency[currency] / 100])) as Record<BillingCurrency, number>,
         },
         planDistribution: payload.summary.plan_distribution,
         recentActivity: payload.summary.recent_activity.map((activity) => ({

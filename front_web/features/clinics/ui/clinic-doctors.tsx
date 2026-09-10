@@ -62,7 +62,7 @@ export function ClinicDoctors({ canManageMembers }: { canManageMembers: boolean 
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<ClinicTeamMember[]>([]);
-  const [clinicCountryCode, setClinicCountryCode] = useState<CountryCode>("MX");
+  const [clinicCountryCode, setClinicCountryCode] = useState<CountryCode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isCreateDoctorOpen, setIsCreateDoctorOpen] = useState(false);
@@ -96,6 +96,12 @@ export function ClinicDoctors({ canManageMembers }: { canManageMembers: boolean 
 
   const specialtyCount = new Set(doctors.flatMap((doctor) => doctor.specialty ? [doctor.specialty] : [])).size;
   const licensedDoctorCount = doctors.filter((doctor) => doctor.medicalLicense).length;
+  const canCreateDoctor = canManageMembers && clinicCountryCode !== null && !isLoading;
+  const countryStatusMessage = isLoading
+    ? "Cargando el país de la clínica antes de habilitar nuevas cuentas."
+    : loadError
+      ? "No se pudo confirmar el país de la clínica. Reintenta la carga antes de agregar un médico."
+      : "El país de la clínica aún no está disponible. No se puede agregar un médico todavía.";
 
   function showNotice(message: string): void {
     setNotice(message);
@@ -123,14 +129,19 @@ export function ClinicDoctors({ canManageMembers }: { canManageMembers: boolean 
           <p className="mt-1 text-xs text-muted">Consulta los perfiles médicos activos de la clínica.</p>
         </div>
         {canManageMembers ? (
-          <button
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus"
-            type="button"
-            onClick={() => setIsCreateDoctorOpen(true)}
-          >
-            <Stethoscope className="size-3.5" aria-hidden="true" />
-            Agregar médico
-          </button>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <button
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!canCreateDoctor}
+              aria-describedby={!canCreateDoctor ? "clinic-doctors-country-status" : undefined}
+              onClick={() => setIsCreateDoctorOpen(true)}
+            >
+              <Stethoscope className="size-3.5" aria-hidden="true" />
+              Agregar médico
+            </button>
+            {!canCreateDoctor ? <p className="max-w-72 text-right text-2xs text-muted" id="clinic-doctors-country-status" role={loadError ? "alert" : "status"} aria-live="polite">{countryStatusMessage}</p> : null}
+          </div>
         ) : null}
       </header>
 
@@ -217,7 +228,7 @@ export function ClinicDoctors({ canManageMembers }: { canManageMembers: boolean 
         </div>
       </section>
 
-      {canManageMembers ? (
+      {canCreateDoctor && clinicCountryCode ? (
         <CreateClinicDoctorModal
           key={`${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
           clinicCountryCode={clinicCountryCode}

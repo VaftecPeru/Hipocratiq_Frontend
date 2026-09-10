@@ -4,7 +4,12 @@ import type {
   ClinicAppointment,
   ClinicAppointmentStatus,
   ClinicAppointmentSummary,
+  ClinicBillingReport,
   ClinicDashboardData,
+  ClinicEpidemiologyData,
+  ClinicEmergencyGlobalOverride,
+  ClinicEmergencyPolicy,
+  ClinicEmergencyState,
   ClinicMemberRole,
   ClinicPatient,
   ClinicPatientAppointment,
@@ -13,7 +18,19 @@ import type {
   ClinicPatientProfile,
   ClinicPatientTriagePriority,
   ClinicPreferences,
+  ClinicMessage,
+  ClinicMessageContact,
+  ClinicMessagesData,
+  ClinicReceptionistPreferences,
+  ClinicReceptionistSettings,
+  ClinicSubscription,
+  ClinicInvoice,
+  ClinicInvoiceItem,
+  ClinicInvoicePayment,
+  ClinicInvoicesPage,
+  ClinicPaymentMethod,
   ClinicPatientsPage,
+  ClinicScheduleBlock,
   ClinicTeamMember,
 } from "@/features/clinics/model/clinic-admin.types";
 import type { CountryCode } from "@/shared/ui/country-flag";
@@ -25,7 +42,38 @@ type ApiClinic = {
   contact_phone: string;
   address: string;
   status: "active" | "suspended";
-  preferences?: Partial<ClinicPreferences> | null;
+  preferences?: Partial<ApiClinicPreferences> | null;
+  emergency?: ApiClinicEmergency | null;
+};
+
+type ApiEmergencyPolicy = {
+  enabled: boolean;
+  visibility: ClinicEmergencyPolicy["visibility"];
+  label: string;
+  color: ClinicEmergencyPolicy["color"];
+  inheritance: ClinicEmergencyPolicy["inheritance"];
+  default_channel: ClinicEmergencyPolicy["defaultChannel"];
+  escalation_minutes: ClinicEmergencyPolicy["escalationMinutes"];
+  responsibles: Array<{ role: string; channel: string }>;
+};
+
+type ApiClinicEmergency = {
+  local: ApiEmergencyPolicy;
+  effective: ApiEmergencyPolicy;
+  is_overridden: boolean;
+  global_override: {
+    scope: "all";
+    force: boolean;
+    note: string | null;
+    published_at: string | null;
+    published_by: { id: number | null; name: string | null; email: string | null } | null;
+    policy: ApiEmergencyPolicy;
+    responsibles: Array<{ role: string; channel: string }>;
+  } | null;
+};
+
+type ApiClinicPreferences = Partial<Omit<ClinicPreferences, "emergency">> & {
+  emergency?: Partial<ApiEmergencyPolicy> | null;
 };
 
 const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
@@ -33,6 +81,20 @@ const DEFAULT_CLINIC_PREFERENCES: ClinicPreferences = {
   audit: true,
   signatures: true,
   backups: true,
+  emergency: {
+    enabled: true,
+    visibility: "reception_doctors_admins",
+    label: "Emergencia",
+    color: "#EF2F3F",
+    inheritance: "workflow_and_responsibles",
+    defaultChannel: "priority_push",
+    escalationMinutes: 3,
+    responsibles: [
+      { role: "Administrador de clínica", channel: "Resumen de evento y auditoría" },
+      { role: "Jefe de guardia", channel: "Push prioritario" },
+      { role: "Recepción", channel: "Alerta interna inmediata" },
+    ],
+  },
 };
 
 type ApiMember = {
@@ -40,6 +102,7 @@ type ApiMember = {
   name: string;
   email: string | null;
   phone_number: string;
+  country_code?: CountryCode | null;
   status: ClinicTeamMember["status"];
   role: ClinicMemberRole;
   role_name: string;
@@ -101,6 +164,7 @@ type ApiDashboardResponse = {
 
 type ApiAppointmentSummary = {
   today_total: number;
+  period_total?: number;
   confirmed: number;
   pending: number;
   waiting: number;
@@ -117,8 +181,32 @@ type ApiAppointment = {
   appointment_type: string;
   status: ClinicAppointmentStatus;
   status_label: string;
-  patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
-  doctor: { id: number; name: string; specialty: string | null } | null;
+  notes: string | null;
+
+  patient: {id: number; patient_code: string; name: string | null; phone_number: string | null};
+
+  doctor: {id: number; name: string; specialty: string | null  } | null;
+};
+
+type ApiScheduleBlock = {
+  id: number;
+  starts_at: string;
+  ends_at: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string | null;
+  scope: "clinic" | "doctor";
+
+  doctor: {
+    id: number;
+    name: string;
+  } | null;
+
+  created_by: {
+    id: number;
+    name: string;
+  };
 };
 
 type ApiPatientsResponse = {
@@ -136,9 +224,196 @@ type ApiAppointmentsResponse = {
   };
 };
 
+type ApiInvoiceItem = {
+  id: number;
+  description: string;
+  quantity: number;
+  unit_amount_minor: number;
+  line_total_minor: number;
+};
+
+type ApiInvoicePayment = {
+  id: number;
+  amount_minor: number;
+  currency: string;
+  status: "confirmed" | "voided";
+  payment_method: ClinicPaymentMethod;
+  reference: string | null;
+  note: string | null;
+  paid_at: string | null;
+  recorded_by_user_id: number | null;
+  recorded_by_name: string | null;
+};
+
+type ApiInvoice = {
+  id: number;
+  invoice_number: string;
+  patient: { id: number | null; name: string | null; email: string | null; phone_number: string | null };
+  issue_date: string | null;
+  due_date: string | null;
+  currency: string;
+  total_minor: number;
+  paid_minor: number;
+  outstanding_minor: number;
+  status: ClinicInvoice["status"];
+  created_at: string | null;
+  items?: ApiInvoiceItem[];
+  payments?: ApiInvoicePayment[];
+};
+
+type ApiInvoicesResponse = {
+  data: ApiInvoice[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+};
+
+type ApiBillingReportResponse = {
+  data: {
+    clinic_id: number;
+    period: { from: string; to: string };
+    by_currency: Record<string, {
+      currency: string;
+      invoice_count: number;
+      invoiced_minor: number;
+      outstanding_minor: number;
+      payment_count: number;
+      paid_minor: number;
+    }>;
+  };
+};
+
+type ApiSubscription = {
+  id: number;
+  status: ClinicSubscription["status"];
+  billing_cycle: ClinicSubscription["billingCycle"];
+  auto_renew: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  provider: string | null;
+  plan: {
+    id: number;
+    key: string;
+    name: string;
+    description: string | null;
+    currency: string;
+    monthly_price_cents: number;
+    annual_price_cents: number;
+    features: string[];
+  } | null;
+  usage: ClinicSubscription["usage"];
+};
+
+type ApiSubscriptionResponse = { data: { subscription: ApiSubscription | null } };
+
+type ApiReceptionistPreferences = {
+  new_appointments: boolean;
+  arrivals: boolean;
+  pending_payments: boolean;
+  internal_messages: boolean;
+  documents: boolean;
+  online_reception: boolean;
+  whatsapp: boolean;
+  auto_print: boolean;
+  duplicate_tickets: boolean;
+  shift_name: string | null;
+  shift_start: string | null;
+  shift_end: string | null;
+  counter_name: string | null;
+  printer_name: string | null;
+  paper_size: "A4" | "letter" | null;
+};
+
+type ApiReceptionistSettingsResponse = {
+  data: {
+    profile: { id: number; name: string; email: string | null; phone_number: string; role: "receptionist" };
+    clinic: { id: number; name: string };
+    settings: { persisted: boolean; updated_at: string | null; preferences: ApiReceptionistPreferences };
+    operation: {
+      two_factor: { status: "not_configured"; message: string };
+      cash_register: { status: "not_configured"; message: string };
+    };
+    metrics: {
+      appointments_today: number;
+      appointments_yesterday: number;
+      appointments_change_percent: number | null;
+      unread_messages: number;
+      pending_payments: number;
+      cash_register: { status: "not_configured"; opened_at: string | null };
+    };
+  };
+};
+
+type ApiMessageContact = {
+  user_id: number;
+  kind: ClinicMessageContact["kind"];
+  name: string | null;
+  email: string | null;
+  phone_number: string | null;
+  patient_profile_id: number | null;
+  role: string | null;
+  role_name: string | null;
+  specialty: string | null;
+  status: ClinicMessageContact["status"];
+  unread: number;
+  last_message: { body: string; created_at: string | null } | null;
+};
+
+type ApiClinicMessage = {
+  id: number;
+  patient_profile_id: number | null;
+  sender: { id: number; name: string } | null;
+  recipient: { id: number; name: string } | null;
+  body: string;
+  is_received: boolean;
+  read_at: string | null;
+  created_at: string | null;
+};
+
+type ApiMessagesResponse = {
+  data: {
+    contacts: ApiMessageContact[];
+    selected_contact_id: number | null;
+    messages: ApiClinicMessage[];
+  };
+  meta: { total: number; unread: number };
+};
+
+type ApiEpidemiologyResponse = {
+  data: {
+    generated_at: string;
+    period: { from: string; to: string; days: number };
+    analysis_available: boolean;
+    message: string;
+    metrics: {
+      monitored_patients: number;
+      active_alerts: number;
+      high_risk_cases: number;
+      trend: "not_configured";
+      appointments: number;
+      consultations: number;
+      laboratory_orders: number;
+      teleconsultations: number;
+      prescriptions: number;
+    };
+    trend: Array<{ month: string; label: string; appointments: number; consultations: number; laboratory_orders: number }>;
+    forecasts: Array<Record<string, string | number>>;
+    alerts: string[];
+    recommendations: string[];
+    map: { status: "not_configured"; message: string };
+    sources: Record<string, { status: "available" | "no_data"; label: string; count: number }>;
+  };
+};
+
 type ApiClinicResponse = { data: { clinic: ApiClinic } };
 
 function mapClinic(clinic: ApiClinic): ClinicAdminInfo {
+  const preferences = mapPreferences(clinic.preferences);
+  const emergency = clinic.emergency ? mapEmergencyState(clinic.emergency) : {
+    local: preferences.emergency,
+    effective: preferences.emergency,
+    isOverridden: false,
+    globalOverride: null,
+  } satisfies ClinicEmergencyState;
+
   return {
     id: clinic.id,
     name: clinic.name,
@@ -146,19 +421,62 @@ function mapClinic(clinic: ApiClinic): ClinicAdminInfo {
     contactPhone: clinic.contact_phone,
     address: clinic.address,
     status: clinic.status,
-    preferences: {
-      ...DEFAULT_CLINIC_PREFERENCES,
-      ...(clinic.preferences ?? {}),
-    },
+    preferences,
+    emergency,
   };
 }
 
-function mapMember(member: ApiMember): ClinicTeamMember {
+function mapEmergencyPolicy(policy: ApiEmergencyPolicy | Partial<ApiEmergencyPolicy> | null | undefined): ClinicEmergencyPolicy {
+  const source = policy ?? {};
+
+  return {
+    enabled: source.enabled ?? DEFAULT_CLINIC_PREFERENCES.emergency.enabled,
+    visibility: source.visibility ?? DEFAULT_CLINIC_PREFERENCES.emergency.visibility,
+    label: source.label ?? DEFAULT_CLINIC_PREFERENCES.emergency.label,
+    color: source.color ?? DEFAULT_CLINIC_PREFERENCES.emergency.color,
+    inheritance: source.inheritance ?? DEFAULT_CLINIC_PREFERENCES.emergency.inheritance,
+    defaultChannel: source.default_channel ?? DEFAULT_CLINIC_PREFERENCES.emergency.defaultChannel,
+    escalationMinutes: source.escalation_minutes ?? DEFAULT_CLINIC_PREFERENCES.emergency.escalationMinutes,
+    responsibles: source.responsibles?.length ? source.responsibles : DEFAULT_CLINIC_PREFERENCES.emergency.responsibles,
+  };
+}
+
+function mapPreferences(preferences: Partial<ApiClinicPreferences> | null | undefined): ClinicPreferences {
+  return {
+    maintenance: preferences?.maintenance ?? DEFAULT_CLINIC_PREFERENCES.maintenance,
+    audit: preferences?.audit ?? DEFAULT_CLINIC_PREFERENCES.audit,
+    signatures: preferences?.signatures ?? DEFAULT_CLINIC_PREFERENCES.signatures,
+    backups: preferences?.backups ?? DEFAULT_CLINIC_PREFERENCES.backups,
+    emergency: mapEmergencyPolicy(preferences?.emergency),
+  };
+}
+
+function mapEmergencyState(emergency: ApiClinicEmergency): ClinicEmergencyState {
+  const globalOverride: ClinicEmergencyGlobalOverride | null = emergency.global_override === null ? null : {
+    scope: "all",
+    force: emergency.global_override.force,
+    note: emergency.global_override.note,
+    publishedAt: emergency.global_override.published_at,
+    publishedBy: emergency.global_override.published_by,
+    policy: mapEmergencyPolicy(emergency.global_override.policy),
+    responsibles: emergency.global_override.responsibles,
+  };
+
+  return {
+    local: mapEmergencyPolicy(emergency.local),
+    effective: mapEmergencyPolicy(emergency.effective),
+    isOverridden: emergency.is_overridden,
+    globalOverride,
+  };
+}
+
+function mapMember(member: ApiMember, fallbackCountryCode?: CountryCode): ClinicTeamMember {
   return {
     id: member.id,
     name: member.name,
     email: member.email,
     phoneNumber: member.phone_number,
+    countryCode: member.country_code ?? fallbackCountryCode ?? null,
     status: member.status,
     role: member.role,
     roleName: member.role_name,
@@ -219,25 +537,94 @@ function mapAppointment(appointment: ApiAppointment): ClinicAppointment {
     appointmentType: appointment.appointment_type,
     status: appointment.status,
     statusLabel: appointment.status_label,
+    notes: appointment.notes ?? null,
+
     patient: {
       id: appointment.patient.id,
       patientCode: appointment.patient.patient_code,
       name: appointment.patient.name,
       phoneNumber: appointment.patient.phone_number,
     },
+
     doctor: appointment.doctor,
+  };
+}
+
+function mapScheduleBlock(
+  block: ApiScheduleBlock,
+): ClinicScheduleBlock {
+  return {
+    id: block.id,
+    startsAt: block.starts_at,
+    endsAt: block.ends_at,
+    scheduledDate: block.scheduled_date,
+    startTime: block.start_time,
+    endTime: block.end_time,
+    reason: block.reason,
+    scope: block.scope,
+    doctor: block.doctor,
+    createdBy: block.created_by,
   };
 }
 
 function mapAppointmentSummary(summary: ApiAppointmentSummary): ClinicAppointmentSummary {
   return {
     todayTotal: summary.today_total,
+    periodTotal: summary.period_total ?? summary.today_total,
     confirmed: summary.confirmed,
     pending: summary.pending,
     waiting: summary.waiting,
     inConsultation: summary.in_consultation,
     noShow: summary.no_show,
     canceled: summary.canceled,
+  };
+}
+
+function mapInvoiceItem(item: ApiInvoiceItem): ClinicInvoiceItem {
+  return {
+    id: item.id,
+    description: item.description,
+    quantity: item.quantity,
+    unitAmountMinor: item.unit_amount_minor,
+    lineTotalMinor: item.line_total_minor,
+  };
+}
+
+function mapInvoicePayment(payment: ApiInvoicePayment): ClinicInvoicePayment {
+  return {
+    id: payment.id,
+    amountMinor: payment.amount_minor,
+    currency: payment.currency,
+    status: payment.status,
+    paymentMethod: payment.payment_method,
+    reference: payment.reference,
+    note: payment.note,
+    paidAt: payment.paid_at,
+    recordedByUserId: payment.recorded_by_user_id,
+    recordedByName: payment.recorded_by_name,
+  };
+}
+
+function mapInvoice(invoice: ApiInvoice): ClinicInvoice {
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    patient: {
+      id: invoice.patient.id,
+      name: invoice.patient.name,
+      email: invoice.patient.email,
+      phoneNumber: invoice.patient.phone_number,
+    },
+    issueDate: invoice.issue_date,
+    dueDate: invoice.due_date,
+    currency: invoice.currency,
+    totalMinor: invoice.total_minor,
+    paidMinor: invoice.paid_minor,
+    outstandingMinor: invoice.outstanding_minor,
+    status: invoice.status,
+    createdAt: invoice.created_at,
+    items: invoice.items?.map(mapInvoiceItem),
+    payments: invoice.payments?.map(mapInvoicePayment),
   };
 }
 
@@ -267,7 +654,7 @@ export async function getClinicDashboard(signal?: AbortSignal): Promise<ClinicDa
     },
     appointmentSummary: mapAppointmentSummary(payload.appointment_summary),
     todayAppointments: payload.today_appointments.map(mapAppointment),
-    team: payload.team.map(mapMember),
+    team: payload.team.map((member) => mapMember(member)),
     recentPatients: payload.recent_patients.map(mapPatient),
   };
 }
@@ -290,10 +677,232 @@ export async function getClinicAppointments(
   };
 }
 
+export async function getClinicScheduleBlocks(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ClinicScheduleBlock[]> {
+  const query = new URLSearchParams({ from, to });
+  const response = await getFromApi<{ data: ApiScheduleBlock[] }>(
+    `/api/v1/auth/clinic/schedule-blocks?${query.toString()}`,
+    { signal },
+  );
+
+  if (!Array.isArray(response.data)) {
+    throw new ApiError("El servidor devolvió los bloqueos incompletos.", 502);
+  }
+
+  return response.data.map(mapScheduleBlock);
+}
+
+export type CreateClinicScheduleBlockPayload = {
+  doctorUserId: number | null;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+};
+
+export async function createClinicScheduleBlock(
+  payload: CreateClinicScheduleBlockPayload,
+): Promise<ClinicScheduleBlock> {
+  const response = await postToApi<{ data: ApiScheduleBlock }>(
+    "/api/v1/auth/clinic/schedule-blocks",
+    {
+      doctor_user_id: payload.doctorUserId,
+      starts_at: payload.startsAt,
+      ends_at: payload.endsAt,
+      reason: payload.reason,
+    },
+  );
+
+  if (!response.data) {
+    throw new ApiError("El servidor no devolvió el bloqueo registrado.", 502);
+  }
+
+  return mapScheduleBlock(response.data);
+}
+
+export async function deleteClinicScheduleBlock(
+  id: number,
+): Promise<void> {
+  await deleteFromApi(
+    `/api/v1/auth/clinic/schedule-blocks/${id}`,
+  );
+}
+
+export type CreateClinicAppointmentPayload = {
+  patientProfileId: number;
+  doctorUserId: number | null;
+  scheduledAt: string;
+  appointmentType: "consultation" | "control";
+  notes: string | null;
+};
+
+export async function createClinicAppointment(
+  payload: CreateClinicAppointmentPayload,
+): Promise<ClinicAppointment> {
+  const response = await postToApi<{ data: ApiAppointment }>(
+    "/api/v1/auth/clinic/appointments",
+    {
+      patient_profile_id: payload.patientProfileId,
+      doctor_user_id: payload.doctorUserId,
+      scheduled_at: payload.scheduledAt,
+      appointment_type: payload.appointmentType,
+      notes: payload.notes,
+    },
+  );
+
+  if (!response.data) {
+    throw new ApiError(
+      "El servidor no devolvió la cita registrada.",
+      502,
+    );
+  }
+
+  return mapAppointment(response.data);
+}
+
 export async function getClinicMembers(signal?: AbortSignal): Promise<ClinicTeamMember[]> {
   const payload = await getFromApi<{ data: ApiMember[] }>("/api/v1/auth/clinic/members", { signal });
   if (!Array.isArray(payload.data)) throw new ApiError("El servidor devolvió un equipo clínico incompleto.", 502);
-  return payload.data.map(mapMember);
+  return payload.data.map((member) => mapMember(member));
+}
+
+export type ClinicBillingInvoiceFilters = {
+  from?: string;
+  to?: string;
+  search?: string;
+  page?: number;
+  perPage?: number;
+};
+
+export async function getClinicBillingInvoices(
+  filters: ClinicBillingInvoiceFilters = {},
+  signal?: AbortSignal,
+): Promise<ClinicInvoicesPage> {
+  const query = new URLSearchParams({
+    per_page: String(filters.perPage ?? 50),
+    page: String(filters.page ?? 1),
+  });
+  if (filters.from) query.set("date_from", filters.from);
+  if (filters.to) query.set("date_to", filters.to);
+  if (filters.search?.trim()) query.set("search", filters.search.trim());
+
+  const payload = await getFromApi<ApiInvoicesResponse>(
+    `/api/v1/auth/clinic/billing/invoices?${query.toString()}`,
+    { signal },
+  );
+  if (!Array.isArray(payload.data) || !payload.meta) {
+    throw new ApiError("El servidor devolvió facturas incompletas.", 502);
+  }
+
+  return {
+    invoices: payload.data.map(mapInvoice),
+    pagination: {
+      currentPage: payload.meta.current_page,
+      lastPage: payload.meta.last_page,
+      perPage: payload.meta.per_page,
+      total: payload.meta.total,
+    },
+  };
+}
+
+export async function getClinicBillingReport(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<ClinicBillingReport> {
+  const query = new URLSearchParams({ from, to });
+  const payload = await getFromApi<ApiBillingReportResponse>(
+    `/api/v1/auth/clinic/billing/report?${query.toString()}`,
+    { signal },
+  );
+  if (!payload.data?.period || !payload.data.by_currency) {
+    throw new ApiError("El servidor devolvió un reporte de facturación incompleto.", 502);
+  }
+
+  return {
+    clinicId: payload.data.clinic_id,
+    period: payload.data.period,
+    byCurrency: Object.fromEntries(
+      Object.entries(payload.data.by_currency).map(([currency, summary]) => [currency, {
+        currency: summary.currency,
+        invoiceCount: summary.invoice_count,
+        invoicedMinor: summary.invoiced_minor,
+        outstandingMinor: summary.outstanding_minor,
+        paymentCount: summary.payment_count,
+        paidMinor: summary.paid_minor,
+      }]),
+    ),
+  };
+}
+
+export async function getClinicInvoice(invoiceId: number, signal?: AbortSignal): Promise<ClinicInvoice> {
+  const payload = await getFromApi<{ data: ApiInvoice }>(
+    `/api/v1/auth/clinic/billing/invoices/${invoiceId}`,
+    { signal },
+  );
+  if (!payload.data) throw new ApiError("El servidor no devolvió el detalle de la factura.", 502);
+  return mapInvoice(payload.data);
+}
+
+export type CreateClinicInvoicePayload = {
+  patientId: number;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string | null;
+  currency: string;
+  items: Array<{ description: string; quantity: number; unitAmountMinor: number }>;
+};
+
+export async function createClinicInvoice(payload: CreateClinicInvoicePayload): Promise<ClinicInvoice> {
+  const response = await postToApi<{ data: ApiInvoice }>("/api/v1/auth/clinic/billing/invoices", {
+    patient_id: payload.patientId,
+    invoice_number: payload.invoiceNumber,
+    issue_date: payload.issueDate,
+    due_date: payload.dueDate,
+    currency: payload.currency,
+    items: payload.items.map((item) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_amount_minor: item.unitAmountMinor,
+    })),
+  });
+  if (!response.data) throw new ApiError("El servidor no devolvió la factura creada.", 502);
+  return mapInvoice(response.data);
+}
+
+export type RecordClinicInvoicePaymentPayload = {
+  amountMinor: number;
+  currency: string;
+  paymentMethod: ClinicPaymentMethod;
+  reference?: string | null;
+  note?: string | null;
+  paidAt?: string;
+};
+
+export async function recordClinicInvoicePayment(
+  invoiceId: number,
+  payload: RecordClinicInvoicePaymentPayload,
+): Promise<{ invoice: ClinicInvoice; payment: ClinicInvoicePayment }> {
+  const response = await postToApi<{ data: { invoice: ApiInvoice; payment: ApiInvoicePayment } }>(
+    `/api/v1/auth/clinic/billing/invoices/${invoiceId}/payments`,
+    {
+      amount_minor: payload.amountMinor,
+      currency: payload.currency,
+      payment_method: payload.paymentMethod,
+      reference: payload.reference ?? null,
+      note: payload.note ?? null,
+      paid_at: payload.paidAt,
+    },
+  );
+  if (!response.data?.invoice || !response.data.payment) {
+    throw new ApiError("El servidor no devolvió el pago registrado.", 502);
+  }
+  return {
+    invoice: mapInvoice(response.data.invoice),
+    payment: mapInvoicePayment(response.data.payment),
+  };
 }
 
 export type CreateClinicReceptionistPayload = {
@@ -314,7 +923,7 @@ export async function createClinicReceptionist(
   });
 
   if (!response.data) throw new ApiError("El servidor no devolvió la recepcionista creada.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function getClinicPatients(
@@ -411,12 +1020,31 @@ export async function getClinicSettings(signal?: AbortSignal): Promise<ClinicAdm
 
 export type UpdateClinicSettingsPayload = Partial<Pick<ClinicAdminInfo, "name" | "contactPhone" | "address" | "preferences">>;
 
+function mapPreferencesToApi(preferences: ClinicPreferences): ApiClinicPreferences {
+  return {
+    maintenance: preferences.maintenance,
+    audit: preferences.audit,
+    signatures: preferences.signatures,
+    backups: preferences.backups,
+    emergency: {
+      enabled: preferences.emergency.enabled,
+      visibility: preferences.emergency.visibility,
+      label: preferences.emergency.label,
+      color: preferences.emergency.color,
+      inheritance: preferences.emergency.inheritance,
+      default_channel: preferences.emergency.defaultChannel,
+      escalation_minutes: preferences.emergency.escalationMinutes,
+      responsibles: preferences.emergency.responsibles,
+    },
+  };
+}
+
 export async function updateClinicSettings(payload: UpdateClinicSettingsPayload): Promise<ClinicAdminInfo> {
   const response = await patchToApi<ApiClinicResponse>("/api/v1/auth/clinic/settings", {
     name: payload.name,
     contact_phone: payload.contactPhone,
     address: payload.address,
-    preferences: payload.preferences,
+    preferences: payload.preferences ? mapPreferencesToApi(payload.preferences) : undefined,
   });
   if (!response.data?.clinic) throw new ApiError("El servidor no devolvió la configuración actualizada.", 502);
   return mapClinic(response.data.clinic);
@@ -562,28 +1190,10 @@ export async function updateClinicPatientStatus(
 
 const API_PREFIX = "/backend";
 
-// --- Appointment write operations ---
-
-export type CreateClinicAppointmentPayload = {
-  patientProfileId: number;
-  doctorUserId: number;
-  scheduledAt: string;
-  appointmentType: string;
-  notes: string | null;
-};
-
-export async function createClinicAppointment(
-  payload: CreateClinicAppointmentPayload,
-): Promise<ClinicAppointment> {
-  const response = await postToApi<{ data: ApiAppointment }>("/api/v1/auth/clinic/appointments", {
-    patient_profile_id: payload.patientProfileId,
-    doctor_user_id: payload.doctorUserId,
-    scheduled_at: payload.scheduledAt,
-    appointment_type: payload.appointmentType,
-    notes: payload.notes,
-  });
-  if (!response.data) throw new ApiError("El servidor no devolvió la cita creada.", 502);
-  return mapAppointment(response.data);
+export async function deleteClinicAppointment(
+  id: number,
+): Promise<void> {
+  await deleteFromApi(`/api/v1/auth/clinic/appointments/${id}`);
 }
 
 export async function updateClinicAppointmentStatus(
@@ -626,7 +1236,7 @@ export type UpdateClinicMemberPayload = {
   name?: string;
   email?: string | null;
   phoneNumber?: string;
-  countryCode?: string;
+  countryCode?: CountryCode;
 };
 
 export async function updateClinicMember(
@@ -644,7 +1254,7 @@ export async function updateClinicMember(
     body,
   );
   if (!response.data) throw new ApiError("El servidor no devolvió el miembro actualizado.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function updateClinicMemberStatus(
@@ -686,7 +1296,7 @@ export async function createClinicDoctor(
     subspecialty_id: payload.subspecialtyId,
   });
   if (!response.data) throw new ApiError("El servidor no devolvió el médico creado.", 502);
-  return mapMember(response.data);
+  return mapMember(response.data, payload.countryCode);
 }
 
 export async function downloadClinicPatientsExport(): Promise<void> {
@@ -709,4 +1319,225 @@ export async function downloadClinicPatientsExport(): Promise<void> {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function mapSubscription(subscription: ApiSubscription | null): ClinicSubscription | null {
+  if (subscription === null) return null;
+
+  return {
+    id: subscription.id,
+    status: subscription.status,
+    billingCycle: subscription.billing_cycle,
+    autoRenew: subscription.auto_renew,
+    startsAt: subscription.starts_at,
+    endsAt: subscription.ends_at,
+    provider: subscription.provider,
+    plan: subscription.plan === null ? null : {
+      id: subscription.plan.id,
+      key: subscription.plan.key,
+      name: subscription.plan.name,
+      description: subscription.plan.description,
+      currency: subscription.plan.currency,
+      monthlyPriceCents: subscription.plan.monthly_price_cents,
+      annualPriceCents: subscription.plan.annual_price_cents,
+      features: subscription.plan.features,
+    },
+    usage: subscription.usage,
+  };
+}
+
+export async function getClinicSubscription(signal?: AbortSignal): Promise<ClinicSubscription | null> {
+  const response = await getFromApi<ApiSubscriptionResponse>('/api/v1/auth/clinic/billing/subscription', { signal });
+  if (!response.data || !Object.prototype.hasOwnProperty.call(response.data, 'subscription')) {
+    throw new ApiError('El servidor devolvió una suscripción clínica incompleta.', 502);
+  }
+
+  return mapSubscription(response.data.subscription);
+}
+
+function mapReceptionistPreferences(preferences: ApiReceptionistPreferences): ClinicReceptionistPreferences {
+  return {
+    newAppointments: preferences.new_appointments,
+    arrivals: preferences.arrivals,
+    pendingPayments: preferences.pending_payments,
+    internalMessages: preferences.internal_messages,
+    documents: preferences.documents,
+    onlineReception: preferences.online_reception,
+    whatsapp: preferences.whatsapp,
+    autoPrint: preferences.auto_print,
+    duplicateTickets: preferences.duplicate_tickets,
+    shiftName: preferences.shift_name,
+    shiftStart: preferences.shift_start,
+    shiftEnd: preferences.shift_end,
+    counterName: preferences.counter_name,
+    printerName: preferences.printer_name,
+    paperSize: preferences.paper_size,
+  };
+}
+
+function mapReceptionistSettings(payload: ApiReceptionistSettingsResponse): ClinicReceptionistSettings {
+  return {
+    profile: {
+      id: payload.data.profile.id,
+      name: payload.data.profile.name,
+      email: payload.data.profile.email,
+      phoneNumber: payload.data.profile.phone_number,
+      role: payload.data.profile.role,
+    },
+    clinic: payload.data.clinic,
+    settings: {
+      persisted: payload.data.settings.persisted,
+      updatedAt: payload.data.settings.updated_at,
+      preferences: mapReceptionistPreferences(payload.data.settings.preferences),
+    },
+    operation: {
+      twoFactor: payload.data.operation.two_factor,
+      cashRegister: payload.data.operation.cash_register,
+    },
+    metrics: {
+      appointmentsToday: payload.data.metrics.appointments_today,
+      appointmentsYesterday: payload.data.metrics.appointments_yesterday,
+      appointmentsChangePercent: payload.data.metrics.appointments_change_percent,
+      unreadMessages: payload.data.metrics.unread_messages,
+      pendingPayments: payload.data.metrics.pending_payments,
+      cashRegister: {
+        status: payload.data.metrics.cash_register.status,
+        openedAt: payload.data.metrics.cash_register.opened_at,
+      },
+    },
+  };
+}
+
+export async function getClinicReceptionistSettings(signal?: AbortSignal): Promise<ClinicReceptionistSettings> {
+  return mapReceptionistSettings(await getFromApi<ApiReceptionistSettingsResponse>('/api/v1/auth/clinic/receptionist/settings', { signal }));
+}
+
+export async function updateClinicReceptionistSettings(
+  preferences: ClinicReceptionistPreferences,
+): Promise<ClinicReceptionistSettings> {
+  const response = await patchToApi<ApiReceptionistSettingsResponse>('/api/v1/auth/clinic/receptionist/settings', {
+    preferences: {
+      new_appointments: preferences.newAppointments,
+      arrivals: preferences.arrivals,
+      pending_payments: preferences.pendingPayments,
+      internal_messages: preferences.internalMessages,
+      documents: preferences.documents,
+      online_reception: preferences.onlineReception,
+      whatsapp: preferences.whatsapp,
+      auto_print: preferences.autoPrint,
+      duplicate_tickets: preferences.duplicateTickets,
+      shift_name: preferences.shiftName,
+      shift_start: preferences.shiftStart,
+      shift_end: preferences.shiftEnd,
+      counter_name: preferences.counterName,
+      printer_name: preferences.printerName,
+      paper_size: preferences.paperSize,
+    },
+  });
+
+  return mapReceptionistSettings(response);
+}
+
+function mapClinicMessage(message: ApiClinicMessage): ClinicMessage {
+  return {
+    id: message.id,
+    patientProfileId: message.patient_profile_id,
+    sender: message.sender,
+    recipient: message.recipient,
+    body: message.body,
+    isReceived: message.is_received,
+    readAt: message.read_at,
+    createdAt: message.created_at,
+  };
+}
+
+function mapMessageContact(contact: ApiMessageContact): ClinicMessageContact {
+  return {
+    userId: contact.user_id,
+    kind: contact.kind,
+    name: contact.name,
+    email: contact.email,
+    phoneNumber: contact.phone_number,
+    patientProfileId: contact.patient_profile_id,
+    role: contact.role,
+    roleName: contact.role_name,
+    specialty: contact.specialty,
+    status: contact.status,
+    unread: contact.unread,
+    lastMessage: contact.last_message === null ? null : {
+      body: contact.last_message.body,
+      createdAt: contact.last_message.created_at,
+    },
+  };
+}
+
+function mapClinicMessages(payload: ApiMessagesResponse): ClinicMessagesData {
+  return {
+    contacts: payload.data.contacts.map(mapMessageContact),
+    selectedContactId: payload.data.selected_contact_id,
+    messages: payload.data.messages.map(mapClinicMessage),
+    unread: payload.meta.unread,
+  };
+}
+
+export async function getClinicMessages(contactUserId?: number, signal?: AbortSignal): Promise<ClinicMessagesData> {
+  const query = contactUserId === undefined ? '' : `?contact_user_id=${encodeURIComponent(String(contactUserId))}`;
+  return mapClinicMessages(await getFromApi<ApiMessagesResponse>(`/api/v1/auth/clinic/messages${query}`, { signal }));
+}
+
+export async function sendClinicMessage(payload: {
+  recipientUserId: number;
+  patientProfileId?: number | null;
+  body: string;
+}): Promise<ClinicMessage> {
+  const response = await postToApi<{ data: ApiClinicMessage }>('/api/v1/auth/clinic/messages', {
+    recipient_user_id: payload.recipientUserId,
+    patient_profile_id: payload.patientProfileId ?? undefined,
+    body: payload.body,
+  });
+  if (!response.data) throw new ApiError('El servidor no devolvió el mensaje enviado.', 502);
+  return mapClinicMessage(response.data);
+}
+
+export async function markClinicMessageRead(messageId: number): Promise<ClinicMessage> {
+  const response = await patchToApi<{ data: ApiClinicMessage }>(`/api/v1/auth/clinic/messages/${messageId}/read`);
+  if (!response.data) throw new ApiError('El servidor no devolvió el mensaje actualizado.', 502);
+  return mapClinicMessage(response.data);
+}
+
+function mapEpidemiology(payload: ApiEpidemiologyResponse): ClinicEpidemiologyData {
+  const data = payload.data;
+  return {
+    generatedAt: data.generated_at,
+    period: data.period,
+    analysisAvailable: data.analysis_available,
+    message: data.message,
+    metrics: {
+      monitoredPatients: data.metrics.monitored_patients,
+      activeAlerts: data.metrics.active_alerts,
+      highRiskCases: data.metrics.high_risk_cases,
+      trend: data.metrics.trend,
+      appointments: data.metrics.appointments,
+      consultations: data.metrics.consultations,
+      laboratoryOrders: data.metrics.laboratory_orders,
+      teleconsultations: data.metrics.teleconsultations,
+      prescriptions: data.metrics.prescriptions,
+    },
+    trend: data.trend.map((item) => ({
+      month: item.month,
+      label: item.label,
+      appointments: item.appointments,
+      consultations: item.consultations,
+      laboratoryOrders: item.laboratory_orders,
+    })),
+    forecasts: data.forecasts,
+    alerts: data.alerts,
+    recommendations: data.recommendations,
+    map: data.map,
+    sources: data.sources,
+  };
+}
+
+export async function getClinicEpidemiology(signal?: AbortSignal): Promise<ClinicEpidemiologyData> {
+  return mapEpidemiology(await getFromApi<ApiEpidemiologyResponse>('/api/v1/auth/clinic/epidemiology', { signal }));
 }

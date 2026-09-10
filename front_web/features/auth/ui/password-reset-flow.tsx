@@ -12,6 +12,7 @@ import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { Spinner } from "@/shared/ui/spinner";
 import { ApiError } from "@/shared/api/http-client";
+import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 
 type ResetStep = "identifier" | "otp" | "new-password" | "success";
 type FieldName = "identifier" | "code" | "password" | "password_confirmation";
@@ -289,6 +290,16 @@ export function PasswordResetFlow() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   const resolvedIdentifier = useRef("");
+
+  const documentTitle = flow.step === "identifier"
+    ? "Recuperar contraseña"
+    : flow.step === "otp"
+      ? "Código de recuperación"
+      : flow.step === "new-password"
+        ? "Nueva contraseña"
+        : "Contraseña actualizada";
+
+  useAuthDocumentTitle(documentTitle);
 
   useEffect(() => {
     if (flow.step !== "otp") return;
