@@ -23,7 +23,12 @@ type Props = {
 
 type AppointmentTypeValue = "consultation" | "control";
 
-export function ClinicAppointmentCreateModal({
+export function ClinicAppointmentCreateModal(props: Readonly<Props>) {
+  if (!props.open) return null;
+  return <ClinicAppointmentCreateModalContent {...props} />;
+}
+
+function ClinicAppointmentCreateModalContent({
   open,
   onClose,
   onCreated,
@@ -43,7 +48,7 @@ export function ClinicAppointmentCreateModal({
 
   const [notes, setNotes] = useState("");
 
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,19 +59,17 @@ export function ClinicAppointmentCreateModal({
 
     const controller = new AbortController();
 
-    setIsLoadingOptions(true);
-    setError(null);
-
     Promise.all([
       getClinicPatients("", 1, controller.signal),
       getClinicMembers(controller.signal),
     ])
       .then(([patientPage, members]) => {
+        if (controller.signal.aborted) return;
         setPatients(patientPage.patients);
 
         setDoctors(
           members.filter(
-            (member) => member.role === "doctor",
+            (member) => member.role === "doctor" && member.status === "active",
           ),
         );
       })

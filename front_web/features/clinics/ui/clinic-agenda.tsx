@@ -492,7 +492,12 @@ function appointmentEditFormFromAppointment(appointment: ClinicAppointment): App
 function isDateInRange(date: string, from: string, to: string): boolean {
   return date >= from && date <= to;
 }
-function AppointmentDetailModal({
+function AppointmentDetailModal(props: Parameters<typeof AppointmentDetailModalContent>[0]) {
+  if (!props.isOpen || !props.appointment) return null;
+  return <AppointmentDetailModalContent key={props.appointment.id} {...props} />;
+}
+
+function AppointmentDetailModalContent({
   appointment,
   isOpen,
   onClose,
@@ -508,12 +513,6 @@ function AppointmentDetailModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setConfirmDelete(false);
-    setDeleting(false);
-    setDeleteError(null);
-  }, [appointment?.id, isOpen]);
 
   if (!isOpen || !appointment) {
     return null;

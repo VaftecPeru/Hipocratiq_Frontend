@@ -19,7 +19,12 @@ type Props = {
   onCreated: (block: ClinicScheduleBlock) => void;
 };
 
-export function ClinicScheduleBlockCreateModal({
+export function ClinicScheduleBlockCreateModal(props: Readonly<Props>) {
+  if (!props.open) return null;
+  return <ClinicScheduleBlockCreateModalContent {...props} />;
+}
+
+function ClinicScheduleBlockCreateModalContent({
   open,
   onClose,
   onCreated,
@@ -32,7 +37,7 @@ export function ClinicScheduleBlockCreateModal({
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,13 +46,11 @@ export function ClinicScheduleBlockCreateModal({
 
     const controller = new AbortController();
 
-    setIsLoading(true);
-    setError(null);
-
     getClinicMembers(controller.signal)
       .then((members) => {
+        if (controller.signal.aborted) return;
         setDoctors(
-          members.filter((member) => member.role === "doctor"),
+          members.filter((member) => member.role === "doctor" && member.status === "active"),
         );
       })
       .catch((loadError: unknown) => {
