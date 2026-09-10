@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, AlertTriangle, Building2, DollarSign, Download, LifeBuoy, UserRound, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getAdminDashboard } from "@/features/platform/api/server-dashboard";
 import type { AdminDashboardData } from "@/features/platform/model/admin-dashboard.types";
 import { CountryFlag } from "@/shared/ui/country-flag";
 import { StatCard, type StatCardProps } from "@/shared/ui/stat-card";
 import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
+import { BILLING_CURRENCIES, formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
-export const metadata: Metadata = { title: "Reportes" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("reports") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
-const currencyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 const countryNames: Record<string, string> = { MX: "México", PE: "Perú", US: "Estados Unidos" };
 
@@ -25,15 +29,15 @@ function ActivityReport({ data }: { data: AdminDashboardData }) {
 
 export default async function ReportsPage() {
   const result = await getAdminDashboard();
-  if (!result.ok) return <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5"><section className="rounded-2xl border border-danger/25 bg-surface p-7 text-center" role="alert"><AlertTriangle className="mx-auto size-7 text-danger" /><h1 className="mt-3 text-xl font-extrabold">Reportes no disponibles</h1><p className="mt-2 text-sm text-muted">{result.message}</p></section></main>;
+  if (!result.ok) return <main className="mx-auto grid min-h-[60vh] max-w-2xl place-items-center px-5"><section className="rounded-2xl border border-danger/25 bg-surface p-7 text-center" role="alert"><AlertTriangle className="mx-auto size-7 text-danger" aria-hidden="true" /><h1 className="mt-3 text-xl font-extrabold">Reportes no disponibles</h1><p className="mt-2 text-sm text-muted">{result.message}</p></section></main>;
   const data = result.data;
   const stats: StatCardProps[] = [
-    { label: "Ingresos del mes", value: currencyFormatter.format(data.kpis.monthlyRevenueCents / 100), change: "Pagos confirmados", direction: "up", icon: DollarSign, tone: "success" },
+     { label: `Ingresos del mes · ${data.revenueCurrency}`, value: formatBillingAmount(data.kpis.monthlyRevenueByCurrency[data.revenueCurrency], data.revenueCurrency), change: "Pagos confirmados en la moneda base", direction: "up", icon: DollarSign, tone: "success" },
     { label: "Usuarios activos", value: numberFormatter.format(data.kpis.activeUsers), change: `+${data.kpis.usersAddedThisMonth} este mes`, direction: "up", icon: Users, tone: "violet" },
     { label: "Clínicas activas", value: numberFormatter.format(data.kpis.activeClinics), change: `+${data.kpis.clinicsAddedThisMonth} este mes`, direction: "up", icon: Building2, tone: "accent" },
     { label: "Pacientes activos", value: numberFormatter.format(data.kpis.activePatients), change: "Cobertura global", direction: "up", icon: UserRound, tone: "warning" },
     { label: "Tickets abiertos", value: numberFormatter.format(data.kpis.openSupportTickets), change: `${data.kpis.overdueSupportTickets} fuera de SLA`, direction: data.kpis.overdueSupportTickets ? "down" : "up", icon: LifeBuoy, tone: "danger" },
   ];
 
-  return <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6"><header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Reportes</h1><p className="mt-0.5 text-xs text-muted">Resumen ejecutivo global basado en operación, pagos y auditoría reales.</p></div><Link className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white hover:bg-accent-hover" href="/backend/api/v1/auth/admin/reports/export" prefetch={false}><Download className="size-3.5" aria-hidden="true" />Exportar reporte CSV</Link></header><section className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5" aria-label="Indicadores ejecutivos">{stats.map((stat, index) => <StatCard key={stat.label} {...stat} index={index} />)}</section><section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.65fr)]"><RevenueBarChart id="reports-revenue" eyebrow="Negocio" title="Ingresos confirmados · 12 meses" points={data.revenue.map((item) => ({ id: item.month, label: formatRevenueMonth(item.month), amountCents: item.amountCents }))} chartHeightClassName="h-56" /><CountryReport data={data} /></section><section className="mt-4"><ActivityReport data={data} /></section><footer className="mt-4 border-t border-line py-4 text-2xs text-muted">Corte de datos: {dateTimeFormatter.format(new Date(data.generatedAt))}. Los reportes exportados quedan registrados en auditoría.</footer></div>;
+  return <div className="mx-auto w-full max-w-[1560px] px-4 py-5 sm:px-5 lg:px-6"><header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h1 className="text-[clamp(1.3rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">Reportes</h1><p className="mt-0.5 text-xs text-muted">Resumen ejecutivo global basado en operación, pagos y auditoría reales.</p></div><Link className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white hover:bg-accent-hover" href="/backend/api/v1/auth/admin/reports/export?format=xlsx" prefetch={false}><Download className="size-3.5" aria-hidden="true" />Exportar Excel (.xlsx)</Link></header><section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Indicadores ejecutivos">{stats.map((stat, index) => <div className={index === stats.length - 1 ? "col-span-2 sm:col-span-1" : undefined} key={stat.label}><StatCard {...stat} index={index} /></div>)}</section><section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.65fr)]"><div className="grid min-w-0 gap-4">{BILLING_CURRENCIES.map((currency) => <RevenueBarChart key={currency} id={`reports-revenue-${currency.toLowerCase()}`} eyebrow="Negocio" title={`Ingresos confirmados · ${currency}`} description="Cada moneda conserva su propio total; no se aplican conversiones implícitas." currency={currency} points={data.revenueByCurrency[currency].map((item) => ({ id: item.month, label: formatRevenueMonth(item.month), amountCents: item.amountCents }))} chartHeightClassName="h-56" />)}</div><CountryReport data={data} /></section><section className="mt-4"><ActivityReport data={data} /></section><footer className="mt-4 border-t border-line py-4 text-2xs text-muted">Corte de datos: {dateTimeFormatter.format(new Date(data.generatedAt))}. Los reportes exportados quedan registrados en auditoría.</footer></div>;
 }

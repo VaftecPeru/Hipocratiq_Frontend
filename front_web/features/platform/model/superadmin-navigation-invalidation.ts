@@ -1,6 +1,13 @@
 export const SUPERADMIN_NAVIGATION_INVALIDATED_EVENT = "hipocratiq:superadmin-navigation-invalidated";
 
-export type SuperadminNavigationScope = "clinics" | "users" | "access-control";
+export type SuperadminNavigationScope =
+  | "clinics"
+  | "specialties"
+  | "users"
+  | "access-control"
+  | "audit"
+  | "emergency"
+  | "support";
 
 export function notifySuperadminNavigationMutation(
   scopes: readonly SuperadminNavigationScope[],

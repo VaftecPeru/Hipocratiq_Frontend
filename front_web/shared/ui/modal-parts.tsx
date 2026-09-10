@@ -42,9 +42,9 @@ export function ModalField({
   hint?: string;
   value?: string;
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
-  min?: number;
-  max?: number;
-  step?: number;
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
   minLength?: number;
   maxLength?: number;
   pattern?: string;

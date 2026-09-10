@@ -1,0 +1,342 @@
+{
+  "navigation": {
+    "ariaLabel": "Navegación principal",
+    "dashboard": "Dashboard",
+    "clinics": "Clínicas",
+    "specialties": "Especialidades",
+    "users": "Usuarios",
+    "accessControl": "Roles y permisos",
+    "memberships": "Membresías",
+    "billing": "Facturación",
+    "reports": "Reportes",
+    "monitoring": "Monitoreo del sistema",
+    "audit": "Auditoría global",
+    "emergency": "Emergencia",
+    "support": "Soporte",
+    "settings": "Configuración",
+    "general": "General",
+    "languages": "Idiomas y región",
+    "integrations": "Integraciones",
+    "ai": "IA epidemiológica",
+    "notifications": "Notificaciones",
+    "backups": "Respaldos",
+    "soon": "Disponible próximamente"
+  },
+  "header": {
+    "closeNavigation": "Cerrar navegación",
+    "openNavigation": "Abrir navegación",
+    "mobileNavigationLabel": "Navegación móvil",
+    "searchClinicsLabel": "Buscar clínicas",
+    "searchClinicsPlaceholder": "Buscar clínicas por nombre...",
+    "profileRole": "Administrador de plataforma"
+  },
+  "accessibility": {
+    "skipToContent": "Saltar al contenido principal"
+  },
+  "emergency": {
+    "eyebrow": "Configuración SaaS",
+    "title": "Botón de Emergencia",
+    "description": "Política global persistente para todos los países; las publicaciones críticas quedan auditadas.",
+    "audit": "Auditoría",
+    "publish": "Publicar política",
+    "statsLabel": "Indicadores de emergencia",
+    "activeClinics": "Clínicas activas",
+    "enabledPolicy": "Política habilitada",
+    "changesToday": "Cambios hoy",
+    "publicationTitle": "Última publicación global",
+    "publicationDescription": "Toda publicación activa reemplaza temporalmente la configuración local en todas las clínicas.",
+    "activeOverride": "Override activo",
+    "noPublication": "Sin publicación",
+    "scope": "Alcance",
+    "allClinics": "Todas las clínicas",
+    "published": "Publicada",
+    "responsibles": "Responsables",
+    "responsibleCount": "{count, plural, one {# configurado} other {# configurados}}",
+    "publishHint": "Guarda una política y publícala para activar el override global.",
+    "globalPolicy": "Política global",
+    "backendConfiguration": "Configuración efectiva en backend",
+    "enabled": "Habilitada",
+    "buttonLabel": "Etiqueta del botón",
+    "visibility": "Visibilidad",
+    "color": "Color",
+    "inheritance": "Herencia",
+    "defaultChannel": "Canal predeterminado",
+    "escalationAfter": "Escalar tras",
+    "visibilityOptions": {
+      "receptionDoctorsAdmins": "Recepción, médicos y administradores",
+      "doctorsAdmins": "Médicos y administradores",
+      "adminsOnly": "Solo administradores"
+    },
+    "colorOptions": {
+      "red": "Rojo emergencia",
+      "orange": "Naranja alerta",
+      "violet": "Violeta crítico"
+    },
+    "inheritanceOptions": {
+      "workflow": "Flujo y responsables editables",
+      "responsibles": "Solo responsables editables",
+      "locked": "Política bloqueada"
+    },
+    "channelOptions": {
+      "priorityPush": "Push prioritario",
+      "internalAlert": "Alerta interna",
+      "email": "Correo",
+      "sms": "SMS"
+    },
+    "minute": "{count, plural, one {# minuto} other {# minutos}}",
+    "defaultResponsibles": "Responsables predeterminados",
+    "newClinicTemplate": "Plantilla para clínicas nuevas",
+    "role": "Rol",
+    "channelAction": "Canal / acción",
+    "saving": "Guardando...",
+    "save": "Guardar cambios",
+    "publishedForClinics": "Política publicada para {count} clínicas.",
+    "savedNotice": "Política guardada y registrada en auditoría.",
+    "saveError": "No pudimos guardar la política.",
+    "pageUnavailable": "Emergencia no disponible",
+    "publishModal": {
+      "title": "Publicar política global",
+      "description": "Registra una versión obligatoria para todas las clínicas",
+      "cancel": "Cancelar",
+      "publishing": "Publicando...",
+      "publishAll": "Publicar para todas",
+      "warning": "Esta publicación reemplaza temporalmente la política local de todas las clínicas. El alcance no puede limitarse por país.",
+      "noteLabel": "Nota de versión",
+      "error": "No pudimos publicar la política."
+    }
+  },
+  "localeSwitcher": {
+    "label": "Idioma",
+    "current": "Idioma actual: {language}",
+    "optionEs": "Español",
+    "optionEn": "English",
+    "changed": "Idioma cambiado a {language}"
+  },
+  "theme": {
+    "label": "Tema",
+    "current": "Tema actual: {theme}",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema",
+    "changed": "Tema cambiado a {theme}"
+  },
+  "notifications": {
+    "view": "Ver notificaciones",
+    "title": "Notificaciones",
+    "unreadCount": "{count} sin leer",
+    "markAll": "Leer todas",
+    "noOperational": "No hay notificaciones operativas.",
+    "openCenter": "Abrir centro de notificaciones",
+    "unread": "Sin leer"
+  },
+  "clinicalNotifications": {
+    "view": "Ver alertas clínicas",
+    "viewWithCount": "Ver alertas clínicas, {count} sin leer",
+    "title": "Alertas clínicas",
+    "unreadCount": "{count} sin leer",
+    "markAll": "Leer todas",
+    "close": "Cerrar alertas",
+    "unread": "Sin leer",
+    "loading": "Cargando alertas clínicas...",
+    "empty": "No hay alertas clínicas.",
+    "unknownClinic": "la clínica",
+    "emergency": {
+      "publishedTitle": "Emergencia global activa",
+      "publishedMessage": "Se activó una política de emergencia para {clinic}.",
+      "activatedTitle": "Emergencias habilitadas",
+      "activatedMessage": "La política de emergencias se habilitó para {clinic}."
+    }
+  },
+  "settings": {
+    "common": {
+      "loadingConfiguration": "Cargando configuración...",
+      "configurationLoaded": "Configuración cargada desde el backend.",
+      "loadError": "Error: no se pudo cargar la configuración.",
+      "saveChanges": "Guardar cambios",
+      "saving": "Guardando...",
+      "statusError": "Error: no se pudo guardar la configuración.",
+      "loading": "Cargando configuración"
+    },
+    "general": {
+      "pageTitle": "Configuración General",
+      "pageDescription": "Administra identidad y cobertura desde una configuración global de la plataforma.",
+      "loading": "Cargando configuración general",
+      "scopeLabel": "Alcance global",
+      "scopeTitle": "Una sola configuración para toda la plataforma",
+      "scopeDescription": "Estos valores se aplican a Hipocratiq completo. No están vinculados a una clínica, tenant o usuario individual.",
+      "countryCardTitle": "Países y región",
+      "countryCardDescription": "Países habilitados y país predeterminado para la plataforma.",
+      "quickTitle": "Accesos rápidos de configuración",
+      "quickDescription": "Las capacidades restantes de la plataforma se administran desde su módulo correspondiente.",
+      "quick": {
+        "languages": { "label": "Idiomas y región", "description": "Locales y cobertura global" },
+        "integrations": { "label": "Integraciones", "description": "Capacidades conectadas del backend" },
+        "ai": { "label": "IA epidemiológica", "description": "Parámetros persistidos del motor" },
+        "notifications": { "label": "Notificaciones", "description": "Centro de alertas administrativas" },
+        "backups": { "label": "Respaldos", "description": "Estado de copias y recuperación" },
+        "support": { "label": "Soporte", "description": "Atención y seguimiento operativo" }
+      },
+      "brandingTitle": "Identidad de la plataforma",
+      "brandingDescription": "Valores globales usados por soporte y metadatos de la plataforma.",
+      "platformName": "Nombre de la plataforma",
+      "supportEmail": "Email de soporte",
+      "supportUrl": "URL de soporte",
+      "identitySaving": "Guardando identidad de plataforma...",
+      "identitySaved": "Identidad de plataforma guardada.",
+      "identityError": "Error: no se pudo guardar la identidad.",
+      "assetsTitle": "Activos visuales",
+      "assetsDescription": "Logo, favicon e imagen de acceso.",
+      "assetLogo": "Logo de Hipocratiq",
+      "assetLogoDescription": "Logo principal mostrado en la plataforma.",
+      "assetFavicon": "Favicon",
+      "assetFaviconDescription": "Ícono del navegador (32 × 32 px).",
+      "assetLogin": "Logo de inicio de sesión",
+      "assetLoginDescription": "Marca mostrada en la pantalla de autenticación.",
+      "assetUploadSoon": "Próximamente",
+      "assetUploadAria": "{title}: carga de archivos próximamente",
+      "assetUploadTitle": "Carga de archivos próximamente",
+      "assetUploadLabel": "Carga de activos:",
+      "assetApiAvailable": "la API reporta la capacidad, pero esta pantalla todavía no tiene un endpoint de carga conectado.",
+      "assetApiUnavailable": "la API global todavía no habilita esta capacidad; las acciones permanecen deshabilitadas."
+    },
+    "languagesPage": {
+      "pageTitle": "Idiomas y región",
+      "pageDescription": "Define países habilitados y el idioma predeterminado sin cambiar las URLs existentes.",
+      "loading": "Cargando configuración de idiomas y región",
+      "regionTitle": "Región de la plataforma",
+      "regionDescription": "La cobertura de países y el país predeterminado se persisten en el backend.",
+      "monetaryTitle": "Política monetaria",
+      "monetaryDescription": "Regla de visualización para clínicas, planes y agregados globales.",
+      "currencyListLabel": "Monedas admitidas por facturación",
+      "currencyNames": {
+        "USD": "Dólar estadounidense",
+        "MXN": "Peso mexicano",
+        "PEN": "Sol peruano"
+      },
+      "currencyScopes": {
+        "clinic": {
+          "label": "Por clínica",
+          "description": "Cada clínica conserva su moneda de facturación y sus importes se muestran en esa moneda."
+        },
+        "plan": {
+          "label": "Por plan",
+          "description": "Cada plan guarda su precio mensual, anual y moneda; no hereda una conversión implícita."
+        },
+        "aggregate": {
+          "label": "Agregados",
+          "description": "MRR, ARR, pagos y reportes se agrupan por USD, MXN y PEN sin sumar monedas distintas."
+        }
+      },
+      "monetaryPolicy": "La moneda global no reemplaza la configuración de una clínica ni de un plan. Los agregados se muestran separados por moneda y no se convierten implícitamente."
+    },
+    "languages": {
+      "cardTitle": "Idiomas disponibles",
+      "cardDescription": "Catálogo de locales habilitados y locale predeterminado.",
+      "enabledLocales": "Locales habilitados",
+      "defaultLocale": "Idioma predeterminado",
+      "interfaceLabel": "Interfaz actual",
+      "interfaceValue": "{language}. El selector del encabezado cambia la preferencia de esta sesión y la persiste en una cookie.",
+      "interfaceSupport": "La interfaz administrativa está disponible inicialmente en español e inglés. Los locales regionales del backend siguen siendo configurables y se pueden ampliar sin cambiar las rutas.",
+      "statusSaving": "Guardando idiomas...",
+      "statusSaved": "Idiomas guardados.",
+      "statusError": "Error: no se pudieron guardar los idiomas.",
+      "note": "Los locales quedan persistidos en el backend. La interfaz usa una cookie de preferencia y mantiene las URLs actuales sin prefijos de idioma.",
+      "localeLabels": {
+        "es-MX": "Español (México)",
+        "es-PE": "Español (Perú)",
+        "en-US": "English (US)"
+      }
+    },
+    "region": {
+      "countriesLegend": "Países habilitados",
+      "defaultCountry": "País predeterminado",
+      "base": "Base",
+      "coverageSummary": "Cobertura de países habilitada para la plataforma: {countries}",
+      "loading": "Cargando configuración global",
+      "globalLoading": "Cargando configuración global...",
+      "globalLoaded": "Configuración global cargada desde el backend.",
+      "loadError": "No se pudo cargar la configuración global.",
+      "unsaved": "Hay cambios de cobertura sin guardar.",
+      "saving": "Guardando configuración global...",
+      "saved": "Configuración global guardada.",
+      "saveError": "No se pudo guardar la configuración global.",
+      "save": "Guardar cambios",
+      "countries": {
+        "MX": { "label": "México", "description": "País base de la plataforma" },
+        "PE": { "label": "Perú", "description": "Cobertura operativa disponible" },
+        "US": { "label": "Estados Unidos", "description": "Cobertura operativa disponible" }
+      }
+    },
+    "integrations": {
+      "pageTitle": "Integraciones",
+      "pageDescription": "Inventario obtenido del backend; no expone credenciales ni presenta conexiones ficticias.",
+      "loading": "Cargando integraciones",
+      "summaryLabel": "Resumen de integraciones",
+      "detected": "Adaptadores detectados",
+      "productionReady": "Listos para producción",
+      "pending": "Pendientes",
+      "inventoryTitle": "Capacidades del backend",
+      "inventoryDescription": "El estado se deriva de los adaptadores y la configuración activa del servidor.",
+      "adapter": "Adaptador",
+      "noAdapter": "No declarado",
+      "items": {
+        "email": { "name": "Correo transaccional", "purpose": "Notificaciones de cuenta y recuperación." },
+        "sms": { "name": "SMS / OTP", "purpose": "Entrega de códigos de verificación." },
+        "billing": { "name": "Facturación", "purpose": "Compras y suscripciones de clínicas." },
+        "storage": { "name": "Almacenamiento de archivos", "purpose": "Documentos privados de la plataforma." },
+        "cache": { "name": "Cache y sesiones", "purpose": "Cache, sesiones, límites y bloqueos distribuidos." },
+        "his_ehr": { "name": "HIS / EHR", "purpose": "Intercambio de historias clínicas." },
+        "laboratory": { "name": "Laboratorio / HL7", "purpose": "Resultados y órdenes de laboratorio." },
+        "pacs": { "name": "PACS / Imágenes", "purpose": "Imágenes diagnósticas y estudios." }
+      },
+      "credentialsTitle": "Gestión de credenciales:",
+      "credentialsDescription": "se mantiene fuera de la interfaz. Debe realizarse mediante secretos del entorno y despliegue controlado.",
+      "status": {
+        "configured": "Configurado",
+        "not_configured": "No configurado",
+        "sandbox": "Simulado / pruebas",
+        "local": "Sólo local"
+      },
+      "unavailableTitle": "Integraciones no disponibles",
+      "unavailableFallback": "No pudimos cargar el inventario de integraciones."
+    },
+    "ai": {
+      "pageTitle": "IA epidemiológica",
+      "pageDescription": "Configura parámetros persistentes y muestra sólo la capacidad de inferencia verificada por el backend.",
+      "loading": "Cargando configuración de IA epidemiológica",
+      "formTitle": "Parámetros persistidos del motor",
+      "formDescription": "Estos valores se guardan para un servicio de inferencia cuando exista un proveedor conectado.",
+      "frequency": "Frecuencia",
+      "frequencyOptions": { "every_12_hours": "Cada 12 horas", "daily": "Diaria", "weekly": "Semanal" },
+      "window": "Ventana predictiva",
+      "days": "{count} días",
+      "sensitivity": "Sensibilidad",
+      "sensitivityOptions": { "low": "Baja", "medium": "Media", "high": "Alta" },
+      "automaticAlerts": "Alertas automáticas",
+      "enabled": "Activadas",
+      "disabled": "Desactivadas",
+      "models": "Modelos habilitados",
+      "modelLabels": {
+        "respiratory": "Respiratorio",
+        "dengue": "Dengue",
+        "gastrointestinal": "Gastrointestinal",
+        "hospital_occupancy": "Ocupación hospitalaria"
+      },
+      "statusSaving": "Guardando parámetros del motor...",
+      "statusSaved": "Parámetros del motor guardados.",
+      "statusError": "Error: no se pudieron guardar los parámetros.",
+      "capabilityTitle": "Capacidad operativa",
+      "capabilityDescription": "Estado reportado por el backend; no se muestran predicciones si no están verificadas.",
+      "configured": "Proveedor configurado",
+      "notConfigured": "Servicio no configurado",
+      "provider": "Proveedor: {provider}.",
+      "noProvider": "ninguno",
+      "predictions": "Predicciones verificadas: {status}.",
+      "available": "disponibles",
+      "notAvailable": "no disponibles",
+      "dataSources": "Fuentes verificadas: {sources}.",
+      "noSources": "No hay fuentes epidemiológicas conectadas ni predicciones verificadas.",
+      "noSourcesConfigured": "No hay fuentes epidemiológicas configuradas."
+    }
+  }
+}

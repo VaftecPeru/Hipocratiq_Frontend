@@ -109,6 +109,8 @@ export function SupportTicketWorkflowModal({ isOpen, ticket, agents, onClose, on
   if (!ticket) return null;
 
   const saveWorkflow = async () => {
+    if (isSaving || isCommenting) return;
+
     setIsSaving(true);
     setError(null);
     try {
@@ -128,7 +130,7 @@ export function SupportTicketWorkflowModal({ isOpen, ticket, agents, onClose, on
   };
 
   const addComment = async () => {
-    if (!comment.trim()) return;
+    if (isCommenting || isSaving || !comment.trim()) return;
     setIsCommenting(true);
     setError(null);
     try {
@@ -153,9 +155,9 @@ export function SupportTicketWorkflowModal({ isOpen, ticket, agents, onClose, on
       description={`${ticket.clinic?.name ?? "Sin clínica"} · ${ticket.clinic?.countryCode ?? "Sin país"}`}
       footer={
         <>
-          <ModalSecondaryButton onClick={onClose}>Cerrar</ModalSecondaryButton>
-          <ModalPrimaryButton onClick={saveWorkflow}>
-            <Save className="size-3.5" />{isSaving ? "Guardando..." : "Guardar workflow"}
+          <ModalSecondaryButton onClick={onClose} disabled={isSaving || isCommenting}>Cerrar</ModalSecondaryButton>
+          <ModalPrimaryButton onClick={() => void saveWorkflow()} disabled={isSaving || isCommenting}>
+            <Save className="size-3.5" aria-hidden="true" />{isSaving ? "Guardando..." : "Guardar workflow"}
           </ModalPrimaryButton>
         </>
       }
@@ -209,7 +211,7 @@ export function SupportTicketWorkflowModal({ isOpen, ticket, agents, onClose, on
               disabled={isCommenting || !comment.trim()}
               onClick={addComment}
             >
-              <MessageSquareText className="size-3.5" />{isCommenting ? "Guardando..." : "Agregar nota"}
+              <MessageSquareText className="size-3.5" aria-hidden="true" />{isCommenting ? "Guardando..." : "Agregar nota"}
             </button>
           </div>
           {error ? <p className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger" role="alert">{error}</p> : null}

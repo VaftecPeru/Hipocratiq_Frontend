@@ -1,5 +1,6 @@
 import { patchToApi, postToApi } from "@/shared/api/http-client";
 import type { Clinic, ClinicCountryCode, ClinicPlan, ClinicStatus } from "@/features/clinics/model/clinic.types";
+import type { BillingCurrency } from "@/features/platform/model/admin-billing.types";
 
 type ApiClinic = {
   id: number;
@@ -11,6 +12,7 @@ type ApiClinic = {
   patients: number;
   status: ClinicStatus;
   monthly_billing: number;
+  monthly_billing_currency: BillingCurrency;
   last_payment: string | null;
 };
 
@@ -46,6 +48,7 @@ function mapClinic(clinic: ApiClinic): Clinic {
     patients: clinic.patients,
     status: clinic.status,
     monthlyBilling: clinic.monthly_billing,
+    monthlyBillingCurrency: clinic.monthly_billing_currency,
     lastPayment: clinic.last_payment,
   };
 }

@@ -15,7 +15,7 @@ export default function AppError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6">
+    <div className="flex min-h-screen items-center justify-center bg-white px-6" role="alert">
       <div className="w-full max-w-md text-center">
         <p className="text-sm font-medium text-slate-400">Algo salió mal</p>
         <h1 className="mt-2 text-xl font-semibold text-slate-900">
@@ -41,6 +41,6 @@ export default function AppError({
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -131,7 +131,7 @@ export function ReceptionistDashboard({ dashboard, clinicName, userName }: Recep
           <h1 className="mt-1.5 text-2xl font-extrabold tracking-[-0.05em] text-ink sm:text-3xl">Inicio</h1>
           <p className="mt-1 text-xs text-muted">Resumen operativo del área de recepción para hoy.</p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
+        <div className="grid grid-cols-1 gap-2 min-[17.5rem]:grid-cols-2 sm:flex">
           <button
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-3 text-[0.68rem] font-extrabold text-ink shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-4"
             type="button"

@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
-  Bell,
   BrainCircuit,
   CalendarDays,
   ClipboardList,
@@ -25,6 +24,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
+import { ClinicalNotificationBell } from "@/features/platform/ui/clinical-notification-bell";
 
 type NavigationItem = {
   label: string;
@@ -57,7 +57,6 @@ function SidebarLink({ item, pathname, closeMenu }: Readonly<{ item: NavigationI
       <span className="flex min-h-9 items-center gap-3 rounded-lg px-3 text-[0.7rem] font-extrabold text-ink-secondary/80" aria-disabled="true" title="Disponible próximamente">
         <Icon className="size-[15px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
         {item.label}
-        {item.label === "Mensajes" ? <span className="ml-auto grid size-5 place-items-center rounded-md bg-accent text-[0.58rem] font-extrabold text-white">3</span> : null}
       </span>
     );
   }
@@ -71,12 +70,25 @@ function SidebarLink({ item, pathname, closeMenu }: Readonly<{ item: NavigationI
     >
       <Icon className="size-[15px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
       {item.label}
-      {item.label === "Mensajes" ? <span className="ml-auto grid size-5 place-items-center rounded-md bg-accent text-[0.58rem] font-extrabold text-white">3</span> : null}
     </Link>
   );
 }
 
-export function DoctorShell({ children, userName, subtitle }: { children: React.ReactNode; userName: string; subtitle: string }) {
+export function DoctorShell({
+  children,
+  userName,
+  subtitle,
+  practiceName,
+  practiceDetail,
+  currentDate,
+}: {
+  children: React.ReactNode;
+  userName: string;
+  subtitle: string;
+  practiceName: string;
+  practiceDetail: string;
+  currentDate: string;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const initials = userName.split(/\s+/).map((name) => name[0]).join("").slice(0, 2).toUpperCase() || "DR";
@@ -106,8 +118,8 @@ export function DoctorShell({ children, userName, subtitle }: { children: React.
               <Stethoscope className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[0.62rem] font-extrabold">Clínica Santa María</p>
-              <p className="truncate text-[0.55rem] font-semibold text-muted">Sede Central · CDMX</p>
+               <p className="truncate text-[0.62rem] font-extrabold">{practiceName}</p>
+               <p className="truncate text-[0.55rem] font-semibold text-muted">{practiceDetail}</p>
             </div>
             <span className="ml-auto text-muted" aria-hidden="true">›</span>
           </div>
@@ -137,22 +149,18 @@ export function DoctorShell({ children, userName, subtitle }: { children: React.
         <div className="ml-auto hidden items-center gap-3 text-[0.66rem] font-extrabold text-ink-secondary xl:flex">
           <span className="inline-flex items-center gap-2 whitespace-nowrap border-r border-line pr-5">
             <CalendarDays className="size-4 text-ink" strokeWidth={1.8} aria-hidden="true" />
-            Jueves, 16 de Mayo 2024
-          </span>
-          <button className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ver notificaciones">
-            <Bell className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-            <span className="absolute right-0 top-0 grid size-3.5 place-items-center rounded-full bg-danger text-[0.5rem] font-extrabold text-white">3</span>
-          </button>
-          <button className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ver mensajes">
-            <Mail className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-            <span className="absolute right-1 top-0 size-1.5 rounded-full bg-accent" />
-          </button>
+             {currentDate}
+           </span>
+            <Link className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" href="/doctor/mensajes" aria-label="Ver mensajes">
+             <Mail className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
+           </Link>
           <button className="grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ayuda">
             <span className="grid size-4 place-items-center rounded-full border border-current text-[0.65rem] font-extrabold">?</span>
           </button>
-        </div>
+         </div>
 
-        <button className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Abrir perfil de usuario">
+         <ClinicalNotificationBell />
+         <button className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Abrir perfil de usuario">
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-[0.6rem] font-extrabold text-white ring-2 ring-accent-soft">{initials}</span>
           <span className="hidden min-w-0 sm:block">
             <span className="block max-w-28 truncate text-[0.68rem] font-extrabold">{userName}</span>

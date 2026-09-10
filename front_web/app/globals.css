@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+
   /* ── Surfaces ── */
   --paper: #f7f9fc;
   --surface: #ffffff;
@@ -55,6 +57,53 @@
   --otp-bg: #f8faff;
 }
 
+.dark {
+  color-scheme: dark;
+
+  --paper: #0b1424;
+  --surface: #101d31;
+  --surface-subtle: #172740;
+  --surface-input: #14243b;
+
+  --ink: #eef5ff;
+  --ink-secondary: #b7c9df;
+  --muted: #9cafc8;
+  --placeholder: #7890af;
+
+  --line: #2a405e;
+  --line-strong: #3d5879;
+
+  --accent: #62a6ff;
+  --accent-hover: #86bcff;
+  --accent-soft: #173a67;
+  --accent-soft-hover: #204c82;
+  --focus: #8bc3ff;
+  --selection: #315b8c;
+
+  --success: #4fd2ad;
+  --success-soft: #153d3c;
+  --danger: #ff9aa4;
+  --danger-soft: #482a38;
+  --warning: #ffb27d;
+  --warning-soft: #4d331f;
+  --violet: #b5a3ff;
+  --violet-soft: #302950;
+
+  --plan-enterprise: #eef5ff;
+  --plan-professional: #62a6ff;
+  --plan-basic: #9cafc8;
+
+  --icon-input: #9bb4d0;
+  --icon-nav-inactive: #9bb4d0;
+  --footer-text: #8ca4c2;
+
+  --surface-hover: #1c304b;
+  --surface-focused: #1b3558;
+  --focus-ring: #79b6fb;
+  --focus-ring-danger: #f09ba6;
+  --otp-bg: #14243b;
+}
+
 @theme inline {
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
@@ -93,6 +142,7 @@
   --color-focus-ring: var(--focus-ring);
   --color-focus-ring-danger: var(--focus-ring-danger);
   --color-otp-bg: var(--otp-bg);
+  --font-manrope: "Manrope", "Trebuchet MS", "Segoe UI", sans-serif;
   --font-sans: "Trebuchet MS", "Segoe UI", sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
   --font-mono: "Roboto Mono Variable", monospace;
@@ -108,6 +158,30 @@ body {
   color: var(--ink);
   font-family: var(--font-manrope), sans-serif;
   overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: var(--ink);
+  padding: 0.65rem 0.85rem;
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .login-role-grid-container {

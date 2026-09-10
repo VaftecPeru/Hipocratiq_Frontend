@@ -1,68 +1,130 @@
+"use client";
+
+import { CheckCircle2, ClipboardCheck, Clock3, FileText, Plus, Timer } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
-  ArrowUpRight,
-  BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  ClipboardCheck,
-  FileText,
-  FolderOpen,
-  HeartPulse,
-  Pill,
-  Plus,
-  Timer,
-} from "lucide-react";
-import {
-  DoctorAvatar,
-  DoctorCard,
-  LegendDot,
-  MetricCard,
-  SectionHeading,
-  StatusBadge,
-} from "@/features/doctors/ui/doctor-primitives";
+  createDoctorPrescription,
+  getDoctorPatients,
+  getDoctorPrescriptions,
+  type DoctorPatient,
+  type DoctorPrescription,
+  type DoctorPrescriptionMeta,
+  type DoctorPrescriptionStatus,
+} from "@/features/doctors/api/doctor-clinical";
+import { DoctorAvatar, DoctorCard, MetricCard, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
+import { DoctorModuleAlert, DoctorModuleEmpty, DoctorModuleError, DoctorModuleLoading } from "@/features/doctors/ui/doctor-module-state";
 
-const metrics = [
-  { label: "Recetas emitidas", value: "7", trend: "↑ 12%", icon: ClipboardCheck, tone: "red" as const },
-  { label: "Por renovar", value: "2", icon: Clock3, tone: "orange" as const },
-  { label: "Activas", value: "18", trend: "↑ 15%", icon: CheckCircle2, tone: "green" as const },
-  { label: "Pendientes", value: "3", icon: Timer, tone: "violet" as const },
-] as const;
+const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-const prescriptions = [
-  { initials: "ML", patient: "María López", medicine: "Metformina 850mg", date: "Hoy 09:15 AM", duration: "30 días", status: "Activa", tone: "green" as const, avatarTone: "orange" as const },
-  { initials: "JP", patient: "Juan Pérez", medicine: "Losartán 50mg", date: "Hoy 08:30 AM", duration: "30 días", status: "Por renovar", tone: "orange" as const, avatarTone: "blue" as const },
-  { initials: "PG", patient: "Pedro García", medicine: "Atorvastatina 20mg", date: "Ayer 11:20 AM", duration: "60 días", status: "Pendiente", tone: "blue" as const, avatarTone: "slate" as const },
-  { initials: "AT", patient: "Ana Torres", medicine: "Paracetamol 500mg", date: "Ayer 10:05 AM", duration: "5 días", status: "Activa", tone: "green" as const, avatarTone: "violet" as const },
-  { initials: "CM", patient: "Carlos Méndez", medicine: "Aspirina 100mg", date: "14 May 04:30 PM", duration: "30 días", status: "Completada", tone: "slate" as const, avatarTone: "orange" as const },
-] as const;
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+}
 
-const templates = [
-  { title: "Control cardiológico", detail: "Evaluación y seguimiento cardiovascular" },
-  { title: "Hipertensión arterial", detail: "Manejo de hipertensión" },
-  { title: "Diabetes tipo 2", detail: "Tratamiento y control glucémico" },
-] as const;
+function initialsOf(name: string | null): string {
+  return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
+}
+
+function statusTone(status: DoctorPrescriptionStatus): "green" | "orange" | "red" | "slate" {
+  if (status === "active") return "green";
+  if (status === "renewal_due") return "orange";
+  if (status === "canceled") return "red";
+  return "slate";
+}
+
+const EMPTY_META: DoctorPrescriptionMeta = { total: 0, active: 0, renewal_due: 0, pending: 0 };
 
 export default function DoctorPrescriptionsPage() {
+  const [prescriptions, setPrescriptions] = useState<DoctorPrescription[]>([]);
+  const [patients, setPatients] = useState<DoctorPatient[]>([]);
+  const [meta, setMeta] = useState<DoctorPrescriptionMeta>(EMPTY_META);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [form, setForm] = useState({ patientId: "", medication: "", dosage: "", frequency: "", durationDays: "", notes: "" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([getDoctorPrescriptions(controller.signal), getDoctorPatients(controller.signal)])
+      .then(([prescriptionResult, patientList]) => {
+        setPrescriptions(prescriptionResult.items);
+        setMeta(prescriptionResult.meta);
+        setPatients(patientList);
+        if (patientList[0]) setForm((current) => ({ ...current, patientId: String(patientList[0].id) }));
+        setError(null);
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) setError(caught instanceof Error ? caught.message : "No pudimos cargar las recetas.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const created = await createDoctorPrescription({
+        patient_profile_id: Number(form.patientId),
+        medication: form.medication.trim(),
+        dosage: form.dosage.trim() || null,
+        frequency: form.frequency.trim() || null,
+        duration_days: form.durationDays ? Number(form.durationDays) : null,
+        notes: form.notes.trim() || null,
+      });
+      setPrescriptions((current) => [created, ...current]);
+      setMeta((current) => ({ ...current, total: current.total + 1, active: current.active + 1 }));
+      setForm((current) => ({ ...current, medication: "", dosage: "", frequency: "", durationDays: "", notes: "" }));
+      setSuccess("Receta registrada correctamente.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos registrar la receta.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const metrics = [
+    { label: "Recetas registradas", value: String(meta.total), icon: ClipboardCheck, tone: "blue" as const },
+    { label: "Por renovar", value: String(meta.renewal_due), icon: Clock3, tone: "orange" as const },
+    { label: "Activas", value: String(meta.active), icon: CheckCircle2, tone: "green" as const },
+    { label: "Pendientes", value: String(meta.pending), icon: Timer, tone: "violet" as const },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Recetas</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Administra recetas médicas, renovaciones y seguimiento farmacológico.</p></div><div className="flex gap-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button"><Plus className="size-3.5" aria-hidden="true" />Nueva receta</button><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><BookOpen className="size-3.5" aria-hidden="true" />Plantillas</button></div></header>
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Recetas</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Registra indicaciones farmacológicas y renovaciones dentro de tu práctica.</p></div>
+        <span className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg border border-line bg-surface px-3 text-[0.62rem] font-extrabold text-ink-secondary sm:self-auto"><FileText className="size-3.5 text-accent" aria-hidden="true" />Datos persistidos</span>
+      </header>
 
+      {error && prescriptions.length > 0 ? <DoctorModuleAlert>{error}</DoctorModuleAlert> : null}
+      {success ? <DoctorModuleAlert tone="success">{success}</DoctorModuleAlert> : null}
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Resumen de recetas">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</section>
 
-      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.95fr)]" aria-label="Gestión de recetas">
-        <DoctorCard className="min-w-0 overflow-hidden"><div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.82rem] font-extrabold">Recetas recientes</h2><button className="inline-flex items-center gap-1 text-[0.61rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver todas <ChevronRight className="size-3" aria-hidden="true" /></button></div><div className="overflow-x-auto"><table className="w-full min-w-[700px] border-collapse text-left"><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Paciente</th><th className="px-3 py-2.5 font-extrabold">Medicamento</th><th className="px-3 py-2.5 font-extrabold">Fecha</th><th className="px-3 py-2.5 font-extrabold">Duración</th><th className="px-3 py-2.5 font-extrabold">Estado</th></tr></thead><tbody>{prescriptions.map((prescription) => <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={`${prescription.patient}-${prescription.medicine}`}><td className="px-3 py-2.5 sm:px-4"><div className="flex items-center gap-2"><DoctorAvatar initials={prescription.initials} tone={prescription.avatarTone} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{prescription.patient}</span></div></td><td className="px-3 py-2.5 text-[0.59rem] font-extrabold">{prescription.medicine}</td><td className="px-3 py-2.5 whitespace-nowrap text-[0.58rem] font-extrabold">{prescription.date}</td><td className="px-3 py-2.5 whitespace-nowrap text-[0.58rem] font-extrabold">{prescription.duration}</td><td className="px-3 py-2.5"><StatusBadge tone={prescription.tone}><span className={`mr-1.5 inline-block size-1.5 rounded-full ${prescription.tone === "green" ? "bg-success" : prescription.tone === "orange" ? "bg-warning" : prescription.tone === "blue" ? "bg-accent" : "bg-muted"}`} aria-hidden="true" />{prescription.status}</StatusBadge></td></tr>)}</tbody></table></div></DoctorCard>
+      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]" aria-label="Gestión de recetas">
+        <DoctorCard className="min-w-0 overflow-hidden">
+          <div className="border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.86rem] font-extrabold">Recetas recientes</h2></div>
+          {loading ? <DoctorModuleLoading label="Cargando recetas…" /> : error && prescriptions.length === 0 ? <DoctorModuleError message={error} /> : prescriptions.length === 0 ? <DoctorModuleEmpty message="Aún no hay recetas registradas para tus pacientes." /> : (
+            <div className="overflow-x-auto"><table className="w-full min-w-[680px] border-collapse text-left"><caption className="sr-only">Recetas registradas</caption><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Paciente</th><th className="px-3 py-2.5 font-extrabold">Medicamento</th><th className="px-3 py-2.5 font-extrabold">Fecha</th><th className="px-3 py-2.5 font-extrabold">Estado</th></tr></thead><tbody>{prescriptions.map((prescription) => <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={prescription.id}><td className="px-3 py-2.5 sm:px-4"><div className="flex items-center gap-2"><DoctorAvatar initials={initialsOf(prescription.patient.name)} tone={prescription.id % 2 === 0 ? "blue" : "orange"} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{prescription.patient.name ?? prescription.patient.patientCode}</span></div></td><td className="px-3 py-2.5"><p className="text-[0.6rem] font-extrabold">{prescription.medication}</p><p className="mt-0.5 text-[0.55rem] font-bold text-ink-secondary">{[prescription.dosage, prescription.frequency].filter(Boolean).join(" · ") || "Sin indicación adicional"}</p></td><td className="px-3 py-2.5 whitespace-nowrap text-[0.58rem] font-bold text-ink-secondary">{formatDate(prescription.issuedAt)}</td><td className="px-3 py-2.5"><StatusBadge tone={statusTone(prescription.status)}>{prescription.statusLabel}</StatusBadge></td></tr>)}</tbody></table></div>
+          )}
+        </DoctorCard>
 
-        <aside className="grid gap-4"><DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line px-4 py-3"><h2 className="text-[0.82rem] font-extrabold">Paciente seleccionado</h2></div><div className="grid gap-3 p-4 sm:grid-cols-[1fr_1.15fr]"><div className="flex items-center gap-3"><DoctorAvatar initials="ML" tone="orange" size="lg" /><div><h3 className="text-[0.82rem] font-extrabold">María López</h3><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">Control cardiológico</p><p className="mt-2 text-[0.57rem] font-extrabold">Alergias</p><p className="mt-0.5 text-[0.55rem] font-bold text-ink-secondary">Penicilina, Ibuprofeno</p></div></div><div className="flex flex-col gap-2"><button className="inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border border-line text-[0.59rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button"><FolderOpen className="size-3.5" aria-hidden="true" />Ver expediente</button><button className="inline-flex min-h-8 items-center justify-center gap-2 rounded-lg bg-accent text-[0.59rem] font-extrabold text-white focus-visible:outline-3 focus-visible:outline-focus" type="button"><Pill className="size-3.5" aria-hidden="true" />Emitir receta</button></div></div></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Plantillas frecuentes" action="Ver todas" /><ul className="mt-3 grid gap-1.5">{templates.map((template) => <li key={template.title}><button className="flex w-full items-center gap-2.5 rounded-lg border border-line px-2.5 py-2 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><span className="grid size-6 shrink-0 place-items-center rounded-md bg-accent-soft text-accent"><FileText className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[0.59rem] font-extrabold">{template.title}</span><span className="mt-0.5 block truncate text-[0.53rem] font-bold text-ink-secondary">{template.detail}</span></span><ChevronRight className="size-3 shrink-0 text-muted" aria-hidden="true" /></button></li>)}</ul></DoctorCard></aside>
-      </section>
-
-      <section className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.9fr_0.95fr]" aria-label="Analítica de recetas">
-        <DoctorCard className="min-w-0 p-4"><div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.82rem] font-extrabold">Seguimiento farmacológico</h2><div className="mt-2 flex gap-4 text-[0.56rem] font-bold text-ink-secondary"><span className="inline-flex items-center gap-1.5"><LegendDot tone="blue" />Renovaciones</span><span className="inline-flex items-center gap-1.5"><LegendDot tone="green" />Adherencia promedio (%)</span></div></div><button className="rounded-lg border border-line px-2.5 py-1.5 text-[0.58rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button">Este mes⌄</button></div><svg className="mt-2 h-auto w-full overflow-visible" viewBox="0 0 390 165" role="img" aria-label="Renovaciones y adherencia promedio durante el mes"><line x1="30" y1="25" x2="372" y2="25" className="stroke-line" /><line x1="30" y1="55" x2="372" y2="55" className="stroke-line" /><line x1="30" y1="85" x2="372" y2="85" className="stroke-line" /><line x1="30" y1="115" x2="372" y2="115" className="stroke-line" /><line x1="30" y1="145" x2="372" y2="145" className="stroke-line" /><text x="5" y="29" className="fill-ink-secondary text-[9px]">40</text><text x="5" y="59" className="fill-ink-secondary text-[9px]">30</text><text x="5" y="89" className="fill-ink-secondary text-[9px]">20</text><text x="5" y="119" className="fill-ink-secondary text-[9px]">10</text><text x="9" y="149" className="fill-ink-secondary text-[9px]">0</text>{["1 May", "8 May", "16 May", "24 May", "31 May"].map((label, index) => <text key={label} x={[45, 122, 199, 276, 353][index]} y="162" textAnchor="middle" className="fill-ink-secondary text-[9px]">{label}</text>)}{[[45, 123], [82, 114], [119, 108], [156, 93], [193, 100], [230, 83], [267, 94], [304, 88], [341, 96], [367, 82]].map(([x, y]) => <rect key={`${x}-${y}`} x={x - 4} y={y} width="8" height={145 - y} className="fill-accent" />)}<polyline points="45,91 82,71 119,80 156,61 193,72 230,59 267,71 304,60 341,66 367,53" className="fill-none stroke-success" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg></DoctorCard>
-
-        <DoctorCard className="min-w-0 p-4"><h2 className="text-[0.82rem] font-extrabold">Medicamentos más recetados</h2><div className="mt-3 grid grid-cols-[145px_1fr] items-center gap-2"><div className="relative grid place-items-center"><svg className="col-start-1 row-start-1 size-32 -rotate-90" viewBox="0 0 120 120" role="img" aria-label="Medicamentos más recetados"><circle cx="60" cy="60" r="43" className="fill-none stroke-surface-subtle" strokeWidth="14" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-accent" strokeWidth="14" strokeDasharray="35 65" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-success" strokeWidth="14" strokeDasharray="25 75" strokeDashoffset="-35" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-warning" strokeWidth="14" strokeDasharray="15 85" strokeDashoffset="-60" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-violet" strokeWidth="14" strokeDasharray="15 85" strokeDashoffset="-75" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-muted" strokeWidth="14" strokeDasharray="10 90" strokeDashoffset="-90" /></svg><div className="col-start-1 row-start-1 text-center"><strong className="block font-mono text-2xl tracking-[-0.07em]">72</strong><span className="text-[0.55rem] font-bold text-muted">Total</span></div></div><ul className="grid gap-3 text-[0.57rem] font-extrabold"><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="blue" />Antihipertensivos</span>35%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="green" />Analgésicos</span>25%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="orange" />Antibióticos</span>15%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="violet" />Antidiabéticos</span>15%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="slate" />Otros</span>10%</li></ul></div></DoctorCard>
-
-        <div className="grid gap-4"><DoctorCard className="p-4"><div className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><HeartPulse className="size-4" aria-hidden="true" /></span><h2 className="text-[0.82rem] font-extrabold">IA Epidemiológica</h2></div><div className="mt-3 grid grid-cols-[1fr_1.1fr] gap-2"><div className="rounded-lg border border-line bg-surface-subtle p-2.5"><p className="text-[0.54rem] font-bold text-ink-secondary">Riesgo actual</p><strong className="mt-0.5 block text-lg font-extrabold text-success">Bajo</strong><p className="text-[0.53rem] font-bold text-ink-secondary">Tendencia estable</p></div><div className="grid gap-2"><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><AlertTriangle className="size-3 text-danger" aria-hidden="true" /><span className="text-[0.55rem] font-extrabold">2 alertas activas</span><span className="ml-auto text-muted">›</span></div><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><CalendarDays className="size-3 text-accent" aria-hidden="true" /><span className="text-[0.53rem] font-bold text-ink-secondary">Hoy, 10:30 AM</span><span className="ml-auto text-muted">›</span></div></div></div><button className="mt-2 inline-flex items-center gap-1 text-[0.57rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver IA <ArrowUpRight className="size-3" aria-hidden="true" /></button></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Alertas y renovaciones" action="Ver todas" /><ul className="mt-3 grid gap-2"><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><span className="grid size-6 place-items-center rounded-md bg-warning-soft text-warning">⌁</span><span className="flex-1 text-[0.56rem] font-extrabold">2 recetas por renovar</span><small className="text-[0.52rem] font-bold text-ink-secondary">Requieren tu atención</small><ChevronRight className="size-3 text-muted" /></li><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><AlertTriangle className="size-3.5 text-danger" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">1 interacción a revisar</span><small className="text-[0.52rem] font-bold text-ink-secondary">Losartán + AINEs</small><ChevronRight className="size-3 text-muted" /></li></ul></DoctorCard></div>
+        <DoctorCard className="p-4">
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.86rem] font-extrabold">Nueva receta</h2><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">Se vincula al paciente y al médico autenticado.</p></div><Plus className="size-4 text-accent" aria-hidden="true" /></div>
+          <form className="mt-4 grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
+            <label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Paciente<select className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60" required value={form.patientId} onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))} disabled={patients.length === 0 || pending}><option value="">Selecciona un paciente</option>{patients.map((patient) => <option key={patient.id} value={String(patient.id)}>{patient.name ?? patient.patientCode}</option>)}</select></label>
+            <label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Medicamento<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" required minLength={2} maxLength={180} value={form.medication} onChange={(event) => setForm((current) => ({ ...current, medication: event.target.value }))} disabled={pending} /></label>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Dosis<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.dosage} onChange={(event) => setForm((current) => ({ ...current, dosage: event.target.value }))} disabled={pending} /></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Frecuencia<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" placeholder="Cada 12 horas" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))} disabled={pending} /></label></div>
+            <label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Duración en días<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="number" min="1" max="3650" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} disabled={pending} /></label>
+            <label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Notas<textarea className="min-h-20 rounded-lg border border-line bg-surface-input px-2 py-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} disabled={pending} /></label>
+            <button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.62rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={pending || patients.length === 0}>{pending ? "Guardando…" : "Registrar receta"}</button>
+            {patients.length === 0 && !loading ? <p className="text-[0.58rem] font-bold text-ink-secondary">Primero registra o vincula un paciente para emitir una receta.</p> : null}
+          </form>
+        </DoctorCard>
       </section>
     </div>
   );

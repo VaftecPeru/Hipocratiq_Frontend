@@ -3,17 +3,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { Activity, Building2, Clock3, DollarSign, HeartPulse, LifeBuoy, ShieldCheck, UserRound, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { getAdminDashboard } from "@/features/platform/api/server-dashboard";
 import { DashboardUnavailable } from "@/shared/ui/dashboard-unavailable";
 import type { AdminDashboardData, ServiceStatus } from "@/features/platform/model/admin-dashboard.types";
 import { CountryFlag } from "@/shared/ui/country-flag";
 import { formatRevenueMonth, RevenueBarChart } from "@/features/platform/ui/revenue-bar-chart";
+import { BILLING_CURRENCIES, formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
-export const metadata: Metadata = { title: "Panel administrativo" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("navigation");
+  return { title: t("dashboard") };
+}
 
 const numberFormatter = new Intl.NumberFormat("es-MX");
-const currencyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 const countryNames: Record<string, string> = { MX: "México", PE: "Perú", US: "Estados Unidos" };
 
@@ -103,7 +107,7 @@ export default async function DashboardPage() {
     { label: "Clínicas activas", value: numberFormatter.format(data.kpis.activeClinics), helper: `+${data.kpis.clinicsAddedThisMonth} este mes`, icon: Building2, tone: "bg-accent-soft text-accent" },
     { label: "Usuarios activos", value: numberFormatter.format(data.kpis.activeUsers), helper: `+${data.kpis.usersAddedThisMonth} este mes`, icon: Users, tone: "bg-violet-soft text-violet" },
     { label: "Pacientes activos", value: numberFormatter.format(data.kpis.activePatients), helper: "Perfiles con acceso activo", icon: UserRound, tone: "bg-success-soft text-success" },
-    { label: "Ingresos del mes", value: currencyFormatter.format(data.kpis.monthlyRevenueCents / 100), helper: percentChange(data.kpis.monthlyRevenueCents, data.kpis.previousMonthRevenueCents), icon: DollarSign, tone: "bg-warning-soft text-warning" },
+     { label: `Ingresos del mes · ${data.revenueCurrency}`, value: formatBillingAmount(data.kpis.monthlyRevenueByCurrency[data.revenueCurrency], data.revenueCurrency), helper: percentChange(data.kpis.monthlyRevenueByCurrency[data.revenueCurrency], data.kpis.previousMonthRevenueByCurrency[data.revenueCurrency]), icon: DollarSign, tone: "bg-warning-soft text-warning" },
     { label: "Tickets abiertos", value: numberFormatter.format(data.kpis.openSupportTickets), helper: `${data.kpis.overdueSupportTickets} fuera de SLA`, icon: LifeBuoy, tone: "bg-danger-soft text-danger", alert: data.kpis.overdueSupportTickets > 0 },
   ];
 
@@ -111,7 +115,7 @@ export default async function DashboardPage() {
     <div className="mx-auto w-full max-w-[1560px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <header className="flex flex-col gap-3 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-mono text-2xs font-semibold tracking-[0.16em] text-accent uppercase">Super Administración</p><h1 className="mt-2 text-[clamp(1.65rem,4vw,2.45rem)] font-extrabold leading-none tracking-[-0.045em]">Panel de Control Global</h1><p className="mt-2 max-w-2xl text-xs leading-5 text-muted sm:text-sm">Hola, {session.user.name.split(" ")[0]}. Supervisa todos los países, tenants y operaciones de la plataforma.</p></div><p className="flex items-center gap-2 text-2xs font-semibold text-muted"><span className="size-2 rounded-full bg-success" aria-hidden="true" />Datos del backend · {dateTimeFormatter.format(new Date(data.generatedAt))}</p></header>
       <section className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-5" aria-label="Indicadores clave">{kpis.map((item) => <KpiCard item={item} key={item.label} />)}</section>
-       <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]" aria-label="Resumen financiero y regional"><RevenueBarChart id="dashboard-revenue" eyebrow="Rendimiento financiero" title="Pagos confirmados · últimos 12 meses" points={data.revenue.map((item) => ({ id: item.month, label: formatRevenueMonth(item.month), amountCents: item.amountCents }))} chartHeightClassName="h-56" /><CountryDistribution countries={data.countries} /></section>
+       <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]" aria-label="Resumen financiero y regional"><div className="grid min-w-0 gap-4">{BILLING_CURRENCIES.map((currency) => <RevenueBarChart key={currency} id={`dashboard-revenue-${currency.toLowerCase()}`} eyebrow="Rendimiento financiero" title={`Pagos confirmados · ${currency}`} description="Los importes se muestran sin convertir y no se suman entre monedas." currency={currency} points={data.revenueByCurrency[currency].map((item) => ({ id: item.month, label: formatRevenueMonth(item.month), amountCents: item.amountCents }))} chartHeightClassName="h-56" />)}</div><CountryDistribution countries={data.countries} /></section>
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Operación global"><RecentClinics data={data} /><RecentActivity activity={data.recentActivity} /><div className="md:col-span-2 xl:col-span-1"><SystemHealth services={data.system} /></div></section>
       <footer className="mt-8 flex flex-col gap-2 border-t border-line py-5 text-2xs text-muted sm:flex-row sm:items-center sm:justify-between"><p>Fuente: base transaccional, pagos, soporte y auditoría administrativa.</p><p className="flex items-center gap-1.5"><Clock3 className="size-3" aria-hidden="true" />Sin métricas simuladas</p></footer>
     </div>

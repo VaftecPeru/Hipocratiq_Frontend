@@ -123,9 +123,6 @@ export function ConsultationForm({
     if (chiefComplaint.trim().length < 5) {
       nextErrors.chiefComplaint = "El motivo de consulta es obligatorio.";
     }
-    if (objective.trim() === "") {
-      nextErrors.objective = "El objetivo de la consulta es obligatorio.";
-    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -168,12 +165,13 @@ export function ConsultationForm({
               ) : null}
             </label>
             <label className="grid gap-1 text-[0.58rem] font-bold text-ink-secondary">
-              Objetivo
+              Objetivo (opcional)
               <input
                 className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none placeholder:text-placeholder focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60"
                 value={objective}
                 onChange={(event) => setObjective(event.target.value)}
                 placeholder="Objetivo de la consulta"
+                maxLength={2000}
                 aria-describedby={errors.objective ? "objective-err" : undefined}
                 aria-invalid={errors.objective ? "true" : undefined}
               />
@@ -225,7 +223,7 @@ export function ConsultationForm({
             </label>
             <p className="mt-3 text-[0.56rem] font-bold leading-4 text-ink-secondary">
               Los valores de los 15 apartados se guardan como historia clínica vinculada a esta consulta. Si no escribes
-              un objetivo, se conserva el de la admisión clínica del paciente.
+               un objetivo, se conserva el de la admisión clínica del paciente cuando existe.
             </p>
           </DoctorCard>
 

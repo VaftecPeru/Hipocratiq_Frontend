@@ -15,6 +15,7 @@ import {
 } from "@/shared/ui/modal-parts";
 import type { Clinic } from "@/features/clinics/model/clinic.types";
 import { createAdminClinic, updateAdminClinic } from "@/features/clinics/api/browser-clinics";
+import { formatBillingAmount } from "@/features/platform/lib/billing-currency";
 
 const PLAN_LABELS: Record<Clinic["plan"], "Básico" | "Profesional" | "Enterprise"> = {
   basic: "Básico",
@@ -200,11 +201,7 @@ export function ClinicDetailModal({
           <ModalDetailRow label="Usuarios">{clinic.users}</ModalDetailRow>
           <ModalDetailRow label="Pacientes activos">{clinic.patients}</ModalDetailRow>
           <ModalDetailRow label="Facturación mensual">
-            {new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 0,
-            }).format(clinic.monthlyBilling)}
+            {formatBillingAmount(Math.round(clinic.monthlyBilling * 100), clinic.monthlyBillingCurrency)}
           </ModalDetailRow>
           <ModalDetailRow label="Último pago">{clinic.lastPayment ?? "—"}</ModalDetailRow>
         </dl>
