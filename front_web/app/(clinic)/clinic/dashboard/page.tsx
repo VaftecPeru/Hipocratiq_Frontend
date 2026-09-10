@@ -12,12 +12,12 @@ import {
   Eye,
   ShieldAlert,
   Stethoscope,
-  TrendingUp,
   UserPlus,
   UsersRound,
 } from "lucide-react";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
-import { getClinicDashboardServer } from "@/features/clinics/api/server-clinic-dashboard";
+import { getClinicAppointmentsServer, getClinicBillingReportServer, getClinicDashboardServer } from "@/features/clinics/api/server-clinic-dashboard";
+import type { ClinicBillingReport } from "@/features/clinics/model/clinic-admin.types";
 import { ReceptionistDashboard } from "@/features/clinics/ui/receptionist-dashboard";
 import { DashboardUnavailable } from "@/shared/ui/dashboard-unavailable";
 
@@ -36,7 +36,7 @@ type WeeklyDay = {
   day: string;
   fullDay: string;
   appointments: number;
-  occupancy: number;
+  barHeight: number;
 };
 
 type DoctorStatus = "En consulta" | "Disponible" | "Descanso";
@@ -50,50 +50,49 @@ type Doctor = {
   status: DoctorStatus;
 };
 
+const SHORT_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("es-MX", { weekday: "short" });
+const LONG_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("es-MX", { weekday: "long" });
+
+function dateKey(value: Date): string {
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const date = String(value.getDate()).padStart(2, "0");
+  return `${value.getFullYear()}-${month}-${date}`;
+}
+
 const metrics = [
   {
     label: "Citas programadas",
-    value: "42",
-    helper: "de 50 espacios",
-    badge: "Hoy",
+    value: "—",
+    helper: "Sin datos",
+    badge: "",
     icon: CalendarDays,
     tone: "accent",
   },
   {
     label: "Médicos en turno",
-    value: "18",
-    helper: "en planta",
-    badge: "Activos",
+    value: "—",
+    helper: "Sin datos",
+    badge: "",
     icon: Stethoscope,
     tone: "violet",
   },
   {
     label: "Facturación mensual",
-    value: "$124,500",
-    helper: "MXN",
-    badge: "+8.4%",
+    value: "—",
+    helper: "Sin datos",
+    badge: "",
     icon: CircleDollarSign,
     tone: "success",
   },
   {
     label: "Pacientes atendidos",
-    value: "86",
-    helper: "de 110 estimados",
-    badge: "78%",
+    value: "—",
+    helper: "Sin datos",
+    badge: "",
     icon: UsersRound,
     tone: "warning",
   },
 ] satisfies readonly Metric[];
-
-const weeklyAgenda = [
-  { day: "Lun", fullDay: "Lunes", appointments: 38, occupancy: 76 },
-  { day: "Mar", fullDay: "Martes", appointments: 45, occupancy: 90 },
-  { day: "Mié", fullDay: "Miércoles", appointments: 42, occupancy: 84 },
-  { day: "Jue", fullDay: "Jueves", appointments: 47, occupancy: 94 },
-  { day: "Vie", fullDay: "Viernes", appointments: 44, occupancy: 88 },
-  { day: "Sáb", fullDay: "Sábado", appointments: 29, occupancy: 58 },
-  { day: "Dom", fullDay: "Domingo", appointments: 18, occupancy: 36 },
-] satisfies readonly WeeklyDay[];
 
 const metricToneClasses: Record<MetricTone, { icon: string; badge: string }> = {
   accent: {
@@ -172,7 +171,11 @@ function CardHeading({
   );
 }
 
-function WeeklyAgendaChart() {
+function WeeklyAgendaChart({ weeklyAgenda, available }: Readonly<{ weeklyAgenda: readonly WeeklyDay[]; available: boolean }>) {
+  if (!available) {
+    return <p className="mt-6 rounded-xl bg-warning-soft px-3 py-4 text-xs font-semibold text-warning" role="status">La agenda semanal no está disponible en este momento.</p>;
+  }
+
   return (
     <figure className="mt-6" aria-labelledby="weekly-agenda-caption">
       <div
@@ -190,7 +193,7 @@ function WeeklyAgendaChart() {
             <span className="flex h-[78%] w-full max-w-9 items-end overflow-hidden rounded-t-lg bg-surface-subtle">
               <span
                 className="block w-full rounded-t-lg bg-accent transition-[height] duration-500"
-                style={{ height: `${item.occupancy}%` }}
+                 style={{ height: `${item.barHeight}%` }}
               />
             </span>
             <span className="pb-2 text-[0.58rem] font-semibold text-muted sm:text-2xs">
@@ -200,7 +203,7 @@ function WeeklyAgendaChart() {
         ))}
       </div>
       <figcaption className="sr-only" id="weekly-agenda-caption">
-        Citas confirmadas esta semana: {weeklyAgenda.map((item) =>
+         Citas registradas esta semana: {weeklyAgenda.map((item) =>
           `${item.fullDay}, ${item.appointments}`
         ).join("; ")}.
       </figcaption>
@@ -208,80 +211,15 @@ function WeeklyAgendaChart() {
   );
 }
 
-function BillingChart() {
-  return (
-    <figure className="mt-5" aria-labelledby="billing-chart-caption">
-      <div className="h-48 w-full sm:h-52">
-        <svg
-          className="h-full w-full overflow-visible"
-          viewBox="0 0 620 210"
-          preserveAspectRatio="none"
-          role="img"
-          aria-labelledby="billing-chart-title billing-chart-description"
-        >
-          <title id="billing-chart-title">Ingresos y gastos mensuales</title>
-          <desc id="billing-chart-description">
-            Los ingresos subieron de 78 mil a 124 mil 580 pesos entre enero y junio.
-            Los gastos variaron entre 45 mil y 67 mil 300 pesos.
-          </desc>
-          {[24, 68, 112, 156].map((y) => (
-            <line
-              key={y}
-              x1="0"
-              y1={y}
-              x2="620"
-              y2={y}
-              stroke="var(--line)"
-              strokeWidth="1"
-              strokeDasharray="4 7"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-          <path
-            d="M8 160 C45 154 76 143 110 146 S178 124 214 126 S283 104 316 108 S385 76 418 83 S488 58 520 64 S580 33 612 37"
-            fill="none"
-            stroke="var(--accent)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d="M8 177 C48 173 75 163 110 166 S180 151 214 156 S282 141 316 144 S383 128 418 134 S486 115 520 122 S576 105 612 109"
-            fill="none"
-            stroke="var(--warning)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="7 6"
-            vectorEffect="non-scaling-stroke"
-          />
-          <g fill="var(--surface)" stroke="var(--accent)" strokeWidth="2">
-            <circle cx="8" cy="160" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="110" cy="146" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="214" cy="126" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="316" cy="108" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="418" cy="83" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="520" cy="64" r="4" vectorEffect="non-scaling-stroke" />
-            <circle cx="612" cy="37" r="4" vectorEffect="non-scaling-stroke" />
-          </g>
-        </svg>
-      </div>
-      <div
-        className="mt-2 grid grid-cols-6 text-center text-[0.58rem] font-semibold text-muted sm:text-2xs"
-        aria-hidden="true"
-      >
-        {(["Ene", "Feb", "Mar", "Abr", "May", "Jun"] as const).map(
-          (month) => (
-            <span key={month}>{month}</span>
-          ),
-        )}
-      </div>
-      <figcaption className="sr-only" id="billing-chart-caption">
-        Comparativa de ingresos y gastos de enero a junio.
-      </figcaption>
-    </figure>
-  );
+function formatMoney(minor: number, currency: string): string {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 2 }).format(minor / 100);
+}
+
+function BillingSummary({ report }: Readonly<{ report: ClinicBillingReport | null }>) {
+  const summary = Object.values(report?.byCurrency ?? {}).find((item) => item.currency === "MXN") ?? Object.values(report?.byCurrency ?? {})[0];
+  if (!summary) return <p className="mt-5 rounded-xl bg-warning-soft px-3 py-4 text-xs font-semibold text-warning" role="status">El reporte de facturación no está disponible en este momento.</p>;
+
+  return <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-line bg-surface-subtle p-3"><p className="text-[0.62rem] font-bold text-muted">Cobrado en el periodo</p><p className="mt-1 font-mono text-lg font-bold text-ink">{formatMoney(summary.paidMinor, summary.currency)}</p><p className="mt-1 text-[0.58rem] text-muted">{summary.paymentCount} pagos registrados</p></div><div className="rounded-xl border border-line bg-surface-subtle p-3"><p className="text-[0.62rem] font-bold text-muted">Pendiente de cobro</p><p className="mt-1 font-mono text-lg font-bold text-ink">{formatMoney(summary.outstandingMinor, summary.currency)}</p><p className="mt-1 text-[0.58rem] text-muted">{summary.invoiceCount} facturas del periodo</p></div></div>;
 }
 
 function StatusBadge({ status }: { status: DoctorStatus }) {
@@ -311,24 +249,53 @@ export default async function ClinicDashboardPage() {
       />
     );
   }
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  const day = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const [weeklyAppointments, billingReport] = await Promise.all([
+    getClinicAppointmentsServer(dateKey(weekStart), dateKey(weekEnd)),
+    getClinicBillingReportServer(dateKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), dateKey(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0))),
+  ]);
+  const weeklyCounts = Array.from({ length: 7 }, (_, index) => {
+    const currentDay = new Date(weekStart);
+    currentDay.setDate(weekStart.getDate() + index);
+    const key = dateKey(currentDay);
+    return {
+      date: currentDay,
+      count: weeklyAppointments?.filter((appointment) => appointment.scheduledDate === key).length ?? 0,
+    };
+  });
+  const maxWeeklyCount = Math.max(...weeklyCounts.map((item) => item.count), 1);
+  const weeklyAgenda: readonly WeeklyDay[] = weeklyCounts.map(({ date, count }) => ({
+    day: SHORT_WEEKDAY_FORMATTER.format(date).replace(".", "").slice(0, 3),
+    fullDay: LONG_WEEKDAY_FORMATTER.format(date),
+    appointments: count,
+    barHeight: count > 0 ? Math.max(8, Math.round((count / maxWeeklyCount) * 100)) : 2,
+  }));
   const clinicName = dashboard.clinic.name ?? session?.user.clinic?.name ?? "Tu clínica";
   const liveMetrics: readonly Metric[] = metrics.map((metric) => {
-    if (metric.label === "Citas programadas") return { ...metric, value: "—", helper: "Agenda aún no configurada", badge: "Sin datos" };
-    if (metric.label === "Facturación mensual") return { ...metric, value: "—", helper: "Facturación aún no configurada", badge: "Sin datos" };
+    if (metric.label === "Citas programadas") return { ...metric, value: String(dashboard.appointmentSummary.todayTotal), helper: "agenda de hoy", badge: "Hoy" };
+    if (metric.label === "Facturación mensual") {
+      const summary = Object.values(billingReport?.byCurrency ?? {}).find((item) => item.currency === "MXN") ?? Object.values(billingReport?.byCurrency ?? {})[0];
+      return { ...metric, value: summary ? formatMoney(summary.paidMinor, summary.currency) : "—", helper: summary ? `${summary.currency} cobrado` : "Reporte no disponible", badge: summary ? "Real" : "Sin datos" };
+    }
     if (metric.label === "Médicos en turno") return { ...metric, value: String(dashboard.metrics.doctorsTotal), helper: "membresías activas" };
     if (metric.label === "Pacientes atendidos") return { ...metric, value: String(dashboard.metrics.patientsTotal), helper: "perfiles registrados" };
     return metric;
   });
   const liveDoctors: readonly Doctor[] = dashboard.team
-    .filter((member) => member.role === "doctor")
+    .filter((member) => member.role === "doctor" && member.status === "active")
     .slice(0, 4)
     .map((member) => ({
       name: member.name,
       initials: member.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase(),
       specialty: member.specialty ?? "Medicina general",
       office: "Sin asignar",
-      pendingAppointments: 0,
-      status: "Disponible",
+      pendingAppointments: dashboard.todayAppointments.filter((appointment) => appointment.doctor?.id === member.id && ["pending", "confirmed", "waiting"].includes(appointment.status)).length,
+      status: dashboard.todayAppointments.some((appointment) => appointment.doctor?.id === member.id && appointment.status === "in_consultation") ? "En consulta" : "Disponible",
     }));
 
   return (
@@ -382,51 +349,25 @@ export default async function ClinicDashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <CardHeading
               title="Agenda Semanal"
-              description="Citas confirmadas y nivel de ocupación diario"
+              description="Citas registradas por día en la semana actual"
             />
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 text-[0.65rem] font-extrabold text-accent">
               <Activity className="size-3" strokeWidth={2} aria-hidden="true" />
-              263 citas
+               {weeklyAppointments?.length ?? "—"} citas
             </span>
           </div>
-          <WeeklyAgendaChart />
+           <WeeklyAgendaChart weeklyAgenda={weeklyAgenda} available={weeklyAppointments !== null} />
         </article>
 
         <article className="rounded-2xl border border-line bg-surface p-4 shadow-[0_0.5rem_1.5rem_rgb(16_27_51/0.035)] sm:p-5 xl:col-span-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <CardHeading
               title="Facturación y Gastos"
-              description="Evolución financiera de los últimos seis meses"
+              description="Cobros y saldo pendiente del mes actual"
             />
-            <div
-              className="flex items-center gap-3 text-[0.62rem] font-bold text-muted"
-              aria-label="Leyenda del gráfico"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded-full bg-accent" aria-hidden="true" />
-                Ingresos
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  className="h-0.5 w-4 border-t-2 border-dashed border-warning"
-                  aria-hidden="true"
-                />
-                Gastos
-              </span>
-            </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 border-y border-line py-3">
-            <div>
-              <p className="text-[0.62rem] font-bold text-muted">Ingresos en junio</p>
-              <p className="mt-1 font-mono text-sm font-bold text-ink">$124,580</p>
-            </div>
-            <div className="border-l border-line pl-3">
-              <p className="text-[0.62rem] font-bold text-muted">Gastos en junio</p>
-              <p className="mt-1 font-mono text-sm font-bold text-ink">$67,340</p>
-            </div>
-          </div>
-          <BillingChart />
+           <BillingSummary report={billingReport} />
         </article>
 
         <article className="flex flex-col rounded-2xl border border-line bg-surface p-4 shadow-[0_0.5rem_1.5rem_rgb(16_27_51/0.035)] sm:p-5 xl:col-span-3">
@@ -443,54 +384,15 @@ export default async function ClinicDashboardPage() {
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-line bg-surface-subtle p-3">
-              <div className="flex items-center gap-2 text-muted">
-                <ShieldAlert className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-                <p className="text-[0.62rem] font-bold">Alertas activas</p>
-              </div>
-              <p className="mt-2 font-mono text-xl font-bold text-ink">3</p>
-            </div>
-            <div className="rounded-xl border border-line bg-warning-soft p-3">
-              <div className="flex items-center gap-2 text-warning">
-                <TrendingUp className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-                <p className="text-[0.62rem] font-bold">Riesgo actual</p>
-              </div>
-              <p className="mt-2 text-sm font-extrabold text-warning">Moderado</p>
-            </div>
-          </div>
-
-          <div className="mt-4 divide-y divide-line border-y border-line">
-            <div className="flex gap-3 py-3">
-              <span
-                className="mt-1 size-2 shrink-0 rounded-full bg-warning"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-xs font-extrabold text-ink">Infecciones respiratorias</p>
-                <p className="mt-1 text-2xs leading-relaxed text-muted">
-                  Incremento de 14.2% en consultas durante siete días.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 py-3">
-              <span
-                className="mt-1 size-2 shrink-0 rounded-full bg-accent"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-xs font-extrabold text-ink">Gastroenteritis localizada</p>
-                <p className="mt-1 text-2xs leading-relaxed text-muted">
-                  Seis casos vinculados a la misma zona postal.
-                </p>
-              </div>
-            </div>
-          </div>
+           <div className="mt-5 rounded-xl border border-line bg-surface-subtle p-3 text-xs text-muted" role="status">
+             <div className="flex items-center gap-2 text-warning"><ShieldAlert className="size-3.5" strokeWidth={1.8} aria-hidden="true" /><p className="font-bold">Datos epidemiológicos no disponibles</p></div>
+             <p className="mt-2 leading-relaxed">Este panel se habilitará cuando exista una fuente clínica de epidemiología para la clínica.</p>
+           </div>
 
           <div className="mt-auto pt-4">
             <p className="flex items-center gap-2 text-[0.62rem] font-semibold text-muted">
               <Clock3 className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-              Actualizado hoy, 10:32 AM
+               Fuente: datos operativos de la clínica
             </p>
             <Link
               href="/clinic/reportes"

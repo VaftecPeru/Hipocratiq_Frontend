@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import type { ClinicDashboardData, ClinicEmergencyGlobalOverride, ClinicEmergencyPolicy, ClinicEmergencyState, ClinicPreferences } from "@/features/clinics/model/clinic-admin.types";
+import type { ClinicAppointment, ClinicBillingReport, ClinicDashboardData, ClinicEmergencyGlobalOverride, ClinicEmergencyPolicy, ClinicEmergencyState, ClinicPreferences } from "@/features/clinics/model/clinic-admin.types";
 import { serverEnv } from "@/shared/config/server-env";
 import type { CountryCode } from "@/shared/ui/country-flag";
 
@@ -60,6 +60,7 @@ type ApiDashboard = {
     metrics: { staff_total: number; doctors_total: number; receptionists_total: number; patients_total: number };
     appointment_summary: {
       today_total: number;
+      period_total?: number;
       confirmed: number;
       pending: number;
       waiting: number;
@@ -80,6 +81,35 @@ type ApiDashboard = {
     }>;
     team: Array<{ id: number; name: string; email: string | null; phone_number: string; country_code?: CountryCode | null; status: "pending_verification" | "active" | "suspended" | "disabled"; role: "clinic_admin" | "receptionist" | "doctor"; role_name: string; specialty: string | null; medical_license: string | null; last_login_at: string | null }>;
     recent_patients: Array<{ id: number; patient_code: string; name: string | null; email: string | null; phone_number: string | null; status: "pending_verification" | "active" | "suspended" | "disabled" | null; created_at: string | null; age: number | null; insurance?: string | null; is_returning_patient?: boolean; whatsapp_consent?: boolean }>;
+  };
+};
+
+type ApiServerAppointment = {
+  id: number;
+  scheduled_at: string;
+  scheduled_date: string;
+  time: string;
+  appointment_type: string;
+  status: ClinicAppointment["status"];
+  status_label: string;
+  patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
+  doctor: { id: number; name: string; specialty: string | null } | null;
+};
+
+type ApiServerAppointments = { data: ApiServerAppointment[] };
+
+type ApiServerBillingReport = {
+  data: {
+    clinic_id: number;
+    period: { from: string; to: string };
+    by_currency: Record<string, {
+      currency: string;
+      invoice_count: number;
+      invoiced_minor: number;
+      outstanding_minor: number;
+      payment_count: number;
+      paid_minor: number;
+    }>;
   };
 };
 
@@ -169,6 +199,7 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
       },
       appointmentSummary: {
         todayTotal: data.appointment_summary.today_total,
+        periodTotal: data.appointment_summary.period_total ?? data.appointment_summary.today_total,
         confirmed: data.appointment_summary.confirmed,
         pending: data.appointment_summary.pending,
         waiting: data.appointment_summary.waiting,
@@ -220,6 +251,74 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         lastAppointment: null,
         nextAppointment: null,
       })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function serverApiFetch(path: string): Promise<Response> {
+  return fetch(`${serverEnv.backendUrl}${path}`, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      Cookie: (await cookies()).toString(),
+      Origin: serverEnv.appUrl,
+    },
+    signal: AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
+  });
+}
+
+export async function getClinicAppointmentsServer(from: string, to: string): Promise<ClinicAppointment[] | null> {
+  try {
+    const query = new URLSearchParams({ from, to });
+    const response = await serverApiFetch(`/api/v1/auth/clinic/appointments?${query.toString()}`);
+    if (!response.ok) return null;
+    const payload = (await response.json()) as ApiServerAppointments;
+    if (!Array.isArray(payload.data)) return null;
+
+    return payload.data.map((appointment) => ({
+      id: appointment.id,
+      scheduledAt: appointment.scheduled_at,
+      scheduledDate: appointment.scheduled_date,
+      time: appointment.time,
+      appointmentType: appointment.appointment_type,
+      status: appointment.status,
+      statusLabel: appointment.status_label,
+      patient: {
+        id: appointment.patient.id,
+        patientCode: appointment.patient.patient_code,
+        name: appointment.patient.name,
+        phoneNumber: appointment.patient.phone_number,
+      },
+      doctor: appointment.doctor,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+export async function getClinicBillingReportServer(from: string, to: string): Promise<ClinicBillingReport | null> {
+  try {
+    const query = new URLSearchParams({ from, to });
+    const response = await serverApiFetch(`/api/v1/auth/clinic/billing/report?${query.toString()}`);
+    if (!response.ok) return null;
+    const payload = (await response.json()) as ApiServerBillingReport;
+    if (!payload.data?.period || !payload.data.by_currency) return null;
+
+    return {
+      clinicId: payload.data.clinic_id,
+      period: payload.data.period,
+      byCurrency: Object.fromEntries(
+        Object.entries(payload.data.by_currency).map(([currency, summary]) => [currency, {
+          currency: summary.currency,
+          invoiceCount: summary.invoice_count,
+          invoicedMinor: summary.invoiced_minor,
+          outstandingMinor: summary.outstanding_minor,
+          paymentCount: summary.payment_count,
+          paidMinor: summary.paid_minor,
+        }]),
+      ),
     };
   } catch {
     return null;

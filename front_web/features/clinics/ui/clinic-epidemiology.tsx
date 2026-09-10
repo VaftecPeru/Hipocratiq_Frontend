@@ -1,32 +1,127 @@
 "use client";
 
-import { Activity, AlarmClock, ArrowUpRight, Bell, BrainCircuit, Database, Download, FlaskConical, MapPin, ShieldAlert, Stethoscope, Users } from "lucide-react";
-import { Notice, SectionCard, useNotice } from "./clinic-admin-primitives";
+import { Activity, AlertTriangle, Database, FlaskConical, MapPin, Stethoscope, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getClinicEpidemiology } from "@/features/clinics/api/browser-clinic-dashboard";
+import type { ClinicEpidemiologyData } from "@/features/clinics/model/clinic-admin.types";
+import { ClinicModuleLoading } from "@/shared/ui/clinic-module-loading";
+import { SectionCard } from "./clinic-admin-primitives";
 
-const forecasts = [
-  ["CDMX Norte","Enfermedades respiratorias","Alto","Hoy 09:15","Activa"],
-  ["CDMX Centro","Gastrointestinal","Medio","Hoy 08:40","Activa"],
-  ["Naucalpan","Dengue","Bajo","Hoy 08:10","En observación"],
-  ["Ecatepec","Ocupación hospitalaria","Medio","Hoy 07:55","Activa"],
-  ["Tlalnepantla","Influenza estacional","Bajo","Hoy 07:30","Estable"],
-] as const;
-
-function TrendChart() {
-  return <figure className="mt-3" aria-label="Tendencia de casos respiratorios y gastrointestinales"><svg className="h-42 w-full" viewBox="0 0 520 190" preserveAspectRatio="none"><g stroke="var(--line)">{[30,75,120,165].map((y) => <line x1="0" x2="520" y1={y} y2={y} strokeDasharray="4 7" key={y} />)}</g><path d="M8 145 C80 130 100 112 160 93 S230 42 276 91 S355 112 393 79 S472 58 512 28" fill="none" stroke="var(--accent)" strokeWidth="3" vectorEffect="non-scaling-stroke"/><path d="M8 171 C65 159 118 142 160 120 S222 126 276 151 S350 142 393 116 S472 96 512 72" fill="none" stroke="var(--success)" strokeWidth="3" vectorEffect="non-scaling-stroke"/></svg><div className="flex justify-center gap-5 text-[0.52rem] font-bold text-muted"><span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-accent" />Casos respiratorios</span><span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-success" />Gastrointestinales</span></div></figure>;
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
-function LocalMap() {
-  return <figure className="mt-3"><div className="relative h-48 overflow-hidden rounded-lg bg-[linear-gradient(115deg,#e6eee8_0_38%,#d7e6dd_38%_45%,#eaf0e8_45%_100%)]"><svg className="absolute inset-0 h-full w-full opacity-60" viewBox="0 0 500 230" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 180 C80 130 140 178 225 112 S390 80 540 35" fill="none" stroke="white" strokeWidth="22"/><path d="M45 -20 C60 65 75 110 130 255 M330 -20 C300 70 340 145 300 250" fill="none" stroke="#cbd9d3" strokeWidth="3"/></svg>{[[35,58,"Tlalnepantla","bg-warning"],[50,70,"Ecatepec","bg-success"],[57,67,"CDMX","bg-warning"],[34,73,"Naucalpan","bg-success"],[70,78,"Chalco","bg-danger"]].map(([left,top,label,color]) => <span className="absolute" style={{left:`${left}%`,top:`${top}%`}} key={String(label)}><i className={`block size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-[0_0_0_10px_rgb(239_68_68/10%)] ${color}`} /><small className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[0.48rem] font-bold text-ink-secondary">{label}</small></span>)}</div><figcaption className="mt-2 flex gap-4 text-[0.52rem] font-bold text-muted"><span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-success" />Bajo</span><span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-warning" />Medio</span><span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-danger" />Alto</span></figcaption></figure>;
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function TrendChart({ trend }: Readonly<{ trend: ClinicEpidemiologyData["trend"] }>) {
+  const maximum = Math.max(1, ...trend.flatMap((item) => [item.appointments, item.consultations, item.laboratoryOrders]));
+  const hasActivity = trend.some((item) => item.appointments + item.consultations + item.laboratoryOrders > 0);
+
+  if (!hasActivity) {
+    return <p className="mt-5 rounded-lg border border-dashed border-line-strong p-5 text-center text-[0.58rem] font-semibold text-muted">No hay eventos clínicos internos en los últimos 90 días.</p>;
+  }
+
+  return (
+    <figure className="mt-4" aria-labelledby="clinic-epidemiology-trend-title">
+      <div className="flex h-40 items-end gap-2 border-b border-l border-line px-2 pb-0" role="img" aria-label="Actividad clínica interna por mes">
+        {trend.map((item) => (
+          <div className="flex min-w-0 flex-1 items-end justify-center gap-0.5 self-stretch" key={item.month}>
+            <span className="w-full rounded-t bg-accent" style={{ height: `${(item.appointments / maximum) * 100}%` }} title={`${item.label}: ${item.appointments} citas`} />
+            <span className="w-full rounded-t bg-violet" style={{ height: `${(item.consultations / maximum) * 100}%` }} title={`${item.label}: ${item.consultations} consultas`} />
+            <span className="w-full rounded-t bg-success" style={{ height: `${(item.laboratoryOrders / maximum) * 100}%` }} title={`${item.label}: ${item.laboratoryOrders} órdenes de laboratorio`} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between gap-2 text-[0.48rem] font-bold text-muted">{trend.map((item) => <span key={item.month}>{item.label}</span>)}</div>
+      <figcaption className="mt-3 flex flex-wrap gap-4 text-[0.52rem] font-bold text-muted" id="clinic-epidemiology-trend-title">
+        <span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-accent" aria-hidden="true" />Citas</span>
+        <span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-violet" aria-hidden="true" />Consultas</span>
+        <span className="flex items-center gap-1"><i className="size-1.5 rounded-full bg-success" aria-hidden="true" />Laboratorio</span>
+      </figcaption>
+    </figure>
+  );
+}
+
+function SourceList({ sources }: Readonly<{ sources: ClinicEpidemiologyData["sources"] }>) {
+  return (
+    <ul className="mt-3 grid gap-2">
+      {Object.entries(sources).map(([key, source]) => (
+        <li className="flex items-center gap-2 text-[0.55rem]" key={key}>
+          <Database className="size-3 text-ink-secondary" aria-hidden="true" />
+          <span className="flex-1 font-semibold">{source.label}</span>
+          <span className={`rounded-md px-2 py-1 font-bold ${source.status === "available" ? "bg-success-soft text-success" : "bg-surface-subtle text-muted"}`}>
+            {source.status === "available" ? `${source.count} eventos` : "Sin datos"}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function ClinicEpidemiology() {
-  const { notice, showNotice } = useNotice();
-  return <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7"><Notice message={notice} />
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-violet uppercase">Vigilancia predictiva</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">IA Epidemiológica</h1><p className="mt-1 text-xs text-muted">Monitoreo clínico, alertas y apoyo predictivo para la toma de decisiones.</p></div><div className="flex flex-wrap gap-2"><button className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover" type="button" onClick={() => showNotice("Configuración de alertas abierta")}><Bell className="size-3.5" />Configurar alertas</button><button className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white hover:bg-accent-hover" type="button" onClick={() => showNotice("Reporte de IA preparado")}><Download className="size-3.5" />Ver reporte IA</button></div></header>
-    <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[[ShieldAlert,"Alertas activas","3","+1 vs. ayer","bg-danger-soft text-danger"],[Users,"Pacientes en vigilancia","18","Monitoreo activo","bg-violet-soft text-violet"],[MapPin,"Zonas en seguimiento","4","CDMX y área cercana","bg-accent-soft text-accent"],[BrainCircuit,"Riesgo actual","Moderado","Tendencia estable","bg-warning-soft text-warning"]].map(([Icon,label,value,helper,tone]) => {const MetricIcon=Icon as typeof Activity; return <SectionCard className="p-4" key={String(label)}><div className="flex gap-3"><span className={`grid size-10 place-items-center rounded-full ${tone}`}><MetricIcon className="size-4" /></span><div><p className="text-[0.58rem] font-bold text-muted">{String(label)}</p><strong className="mt-1 block font-mono text-lg">{String(value)}</strong><p className={`mt-1 text-[0.52rem] font-bold ${tone}`}>{String(helper)}</p></div></div></SectionCard>})}</section>
-    <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]"><div className="min-w-0 space-y-4"><div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"><SectionCard className="p-4"><div className="flex items-start justify-between"><div><h2 className="text-xs font-extrabold">Mapa epidemiológico local</h2><p className="mt-1 text-[0.54rem] text-muted">Cobertura clínica: Clínica Santa María</p></div><MapPin className="size-4 text-accent" /></div><LocalMap /></SectionCard><SectionCard className="p-4"><h2 className="text-xs font-extrabold">Tendencia de casos</h2><p className="mt-1 text-[0.54rem] text-muted">Últimos 6 meses</p><TrendChart /></SectionCard></div>
-      <SectionCard className="overflow-hidden"><div className="border-b border-line p-4"><h2 className="text-xs font-extrabold">Predicciones y vigilancia</h2></div><div className="overflow-x-auto"><table className="w-full min-w-190 text-left"><thead className="bg-surface-subtle text-[0.5rem] font-bold text-muted"><tr>{["Región","Evento","Riesgo","Fecha","Estado"].map((h)=><th className="px-4 py-2.5" key={h}>{h}</th>)}</tr></thead><tbody className="divide-y divide-line">{forecasts.map((item)=><tr className="text-[0.56rem]" key={item[0]}><th className="px-4 py-3 font-extrabold">{item[0]}</th><td className="px-4 font-semibold">{item[1]}</td><td className="px-4"><span className={`rounded-md px-2 py-1 font-bold ${item[2] === "Alto" ? "bg-danger-soft text-danger" : item[2] === "Medio" ? "bg-warning-soft text-warning" : "bg-success-soft text-success"}`}>{item[2]}</span></td><td className="px-4 font-mono font-bold">{item[3]}</td><td className="px-4"><span className={`rounded-md px-2 py-1 font-bold ${item[4] === "Activa" ? "bg-success-soft text-success" : "bg-accent-soft text-accent"}`}>{item[4]}</span></td></tr>)}</tbody></table></div></SectionCard>
-      <SectionCard className="grid gap-3 p-4 sm:grid-cols-3">{[[Stethoscope,"Consultas probables","128","+12% vs. semana pasada","text-accent"],[FlaskConical,"Pruebas sugeridas","86","+8% vs. semana pasada","text-violet"],[Users,"Personal requerido","14","+2 vs. semana pasada","text-warning"]].map(([Icon,label,value,helper,tone])=>{const CardIcon=Icon as typeof Activity;return <div className="flex items-center gap-3 border-line sm:border-r sm:last:border-r-0" key={String(label)}><CardIcon className={`size-7 ${tone}`} /><div><p className="text-[0.52rem] text-muted">{String(label)}</p><strong className="font-mono text-base">{String(value)}</strong><p className="text-[0.48rem] font-bold text-success">{String(helper)}</p></div></div>})}</SectionCard></div>
-      <aside className="grid gap-3"><SectionCard className="p-4"><h2 className="flex items-center gap-2 text-xs font-extrabold"><Bell className="size-3.5 text-danger" />Alertas de hoy</h2><ul className="mt-3 grid gap-2 text-[0.56rem] font-bold">{["Aumento de cuadros respiratorios","2 pacientes con fiebre en seguimiento","Mayor demanda en consulta general"].map((a)=><li className="flex gap-2" key={a}><i className="mt-1 size-1.5 rounded-full bg-danger" />{a}</li>)}</ul></SectionCard><SectionCard className="p-4"><h2 className="flex items-center gap-2 text-xs font-extrabold"><BrainCircuit className="size-3.5 text-violet" />Recomendación IA</h2><ul className="mt-3 grid gap-2 text-[0.56rem] text-ink-secondary">{["Reforzar triaje respiratorio","Aumentar stock de pruebas rápidas","Monitorear pediatría"].map((a)=><li className="flex gap-2" key={a}><i className="mt-1 size-1.5 rounded-full bg-muted" />{a}</li>)}</ul><button className="mt-3 inline-flex items-center gap-1 text-[0.56rem] font-bold text-accent" type="button" onClick={()=>showNotice("Protocolo sugerido abierto")}>Ver protocolo sugerido <ArrowUpRight className="size-3" /></button></SectionCard><SectionCard className="p-4"><h2 className="text-xs font-extrabold">Fuentes clínicas</h2><ul className="mt-3 grid gap-2">{[[Database,"HIS / EHR","Conectado"],[FlaskConical,"Laboratorio","Conectado"],[AlarmClock,"Emergencias","Conectado"],[Activity,"Reportes manuales","Parcial"]].map(([Icon,label,status])=>{const SourceIcon=Icon as typeof Activity;return <li className="flex items-center gap-2 text-[0.55rem]" key={String(label)}><SourceIcon className="size-3 text-ink-secondary"/><span className="flex-1 font-semibold">{String(label)}</span><span className={`rounded-md px-2 py-1 font-bold ${status === "Conectado" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>{String(status)}</span></li>})}</ul></SectionCard></aside></div>
-  </div>;
+  const [data, setData] = useState<ClinicEpidemiologyData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getClinicEpidemiology(controller.signal)
+      .then((next) => {
+        setData(next);
+        setError(null);
+      })
+      .catch((reason: unknown) => {
+        if (!isAbortError(reason)) setError(reason instanceof Error ? reason.message : "No pudimos cargar la vigilancia clínica.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  if (isLoading && data === null) return <ClinicModuleLoading title="vigilancia clínica" description="Consultando eventos clínicos internos." variant="report" />;
+
+  if (error !== null && data === null) {
+    return <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7"><div role="alert"><SectionCard className="p-6"><h1 className="text-xl font-extrabold">No pudimos cargar vigilancia clínica</h1><p className="mt-2 text-sm text-muted">{error}</p><button className="mt-4 min-h-10 rounded-lg bg-accent px-4 text-xs font-extrabold text-white hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-focus" type="button" onClick={() => { setError(null); setIsLoading(true); setReloadKey((current) => current + 1); }}>Reintentar</button></SectionCard></div></div>;
+  }
+
+  if (data === null) return null;
+
+  const metricCards = [
+    { icon: AlertTriangle, label: "Alertas calculadas", value: String(data.metrics.activeAlerts), helper: data.analysisAvailable ? "Motor conectado" : "No calculadas sin motor predictivo", tone: "bg-danger-soft text-danger" },
+    { icon: Users, label: "Pacientes con actividad", value: String(data.metrics.monitoredPatients), helper: "Eventos internos · 90 días", tone: "bg-violet-soft text-violet" },
+    { icon: Stethoscope, label: "Casos de prioridad alta", value: String(data.metrics.highRiskCases), helper: "Según triaje registrado", tone: "bg-warning-soft text-warning" },
+    { icon: Activity, label: "Eventos clínicos", value: String(data.metrics.appointments + data.metrics.consultations + data.metrics.laboratoryOrders), helper: `${data.metrics.teleconsultations} teleconsultas · ${data.metrics.prescriptions} recetas`, tone: "bg-accent-soft text-accent" },
+  ] as const;
+
+  return (
+    <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0"><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-violet uppercase">Vigilancia clínica</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Epidemiología</h1><p className="mt-1 text-xs text-muted">Actividad clínica interna y disponibilidad de fuentes para esta clínica.</p></div>
+        <span className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-[0.6rem] font-extrabold ${data.analysisAvailable ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}><span className="size-1.5 rounded-full bg-current" aria-hidden="true" />{data.analysisAvailable ? "Motor predictivo conectado" : "Motor predictivo no configurado"}</span>
+      </header>
+
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen epidemiológico">
+        {metricCards.map(({ icon: Icon, label, value, helper, tone }) => <SectionCard className="p-4" key={label}><div className="flex gap-3"><span className={`grid size-10 place-items-center rounded-full ${tone}`}><Icon className="size-4" aria-hidden="true" /></span><div><p className="text-[0.58rem] font-bold text-muted">{label}</p><strong className="mt-1 block font-mono text-lg">{value}</strong><p className="mt-1 text-[0.52rem] font-bold text-muted">{helper}</p></div></div></SectionCard>)}
+      </section>
+
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0 space-y-4">
+          <SectionCard className="p-4"><div className="flex items-start justify-between"><div><h2 className="text-xs font-extrabold">Actividad clínica interna</h2><p className="mt-1 text-[0.54rem] text-muted">Citas, consultas y órdenes registradas entre {data.period.from} y {data.period.to}.</p></div><Activity className="size-4 text-accent" aria-hidden="true" /></div><TrendChart trend={data.trend} /></SectionCard>
+          <SectionCard className="p-4"><div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-warning-soft text-warning"><AlertTriangle className="size-4" aria-hidden="true" /></span><div><h2 className="text-xs font-extrabold">Análisis predictivo no disponible</h2><p className="mt-1 text-[0.58rem] leading-5 text-muted">{data.message}</p><p className="mt-2 text-[0.52rem] font-semibold text-muted">Actualizado: {formatDate(data.generatedAt)}</p></div></div></SectionCard>
+          <SectionCard className="overflow-hidden"><div className="border-b border-line p-4"><h2 className="text-xs font-extrabold">Predicciones y alertas</h2></div><div className="p-4 text-[0.58rem] font-semibold text-muted">{data.forecasts.length > 0 || data.alerts.length > 0 ? "Hay resultados disponibles para revisar." : "No hay predicciones ni alertas calculadas para esta clínica."}</div></SectionCard>
+        </div>
+
+        <aside className="grid gap-3">
+          <SectionCard className="p-4"><h2 className="flex items-center gap-2 text-xs font-extrabold"><MapPin className="size-3.5 text-accent" aria-hidden="true" />Mapa territorial</h2><p className="mt-3 rounded-lg border border-dashed border-line-strong p-3 text-[0.56rem] leading-5 text-muted">{data.map.message}</p></SectionCard>
+          <SectionCard className="p-4"><h2 className="flex items-center gap-2 text-xs font-extrabold"><FlaskConical className="size-3.5 text-violet" aria-hidden="true" />Fuentes clínicas</h2><SourceList sources={data.sources} /></SectionCard>
+          <SectionCard className="p-4"><h2 className="text-xs font-extrabold">Recomendaciones</h2><p className="mt-3 text-[0.56rem] leading-5 text-muted">{data.recommendations.length > 0 ? data.recommendations.join(" ") : "No hay recomendaciones automáticas porque el motor predictivo no está configurado."}</p></SectionCard>
+        </aside>
+      </div>
+    </div>
+  );
 }

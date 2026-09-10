@@ -1,69 +1,133 @@
+"use client";
+
+import { CheckCircle2, Clock3, Plus, ShieldOff, Users, Video } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  ArrowUpRight,
-  CalendarDays,
-  Camera,
-  CheckCircle2,
-  ChevronRight,
-  CircleAlert,
-  Clock3,
-  FileText,
-  FolderOpen,
-  HeartPulse,
-  History,
-  Paperclip,
-  Plus,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Video,
-} from "lucide-react";
-import {
-  DoctorAvatar,
-  DoctorCard,
-  MetricCard,
-  SectionHeading,
-  StatusBadge,
-} from "@/features/doctors/ui/doctor-primitives";
+  createDoctorTeleconsultation,
+  getDoctorPatients,
+  getDoctorTeleconsultations,
+  updateDoctorTeleconsultationStatus,
+  type DoctorPatient,
+  type DoctorTeleconsultation,
+  type DoctorTeleconsultationMeta,
+  type TeleconsultationStatus,
+} from "@/features/doctors/api/doctor-clinical";
+import { DoctorAvatar, DoctorCard, MetricCard, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
+import { DoctorModuleAlert, DoctorModuleEmpty, DoctorModuleError, DoctorModuleLoading } from "@/features/doctors/ui/doctor-module-state";
 
-const metrics = [
-  { label: "Teleconsultas hoy", value: "3", trend: "↑ 25%", icon: Video, tone: "violet" as const },
-  { label: "En sala de espera", value: "2", icon: Users, tone: "orange" as const },
-  { label: "Finalizadas", value: "8", trend: "↑ 14%", icon: CheckCircle2, tone: "green" as const },
-  { label: "Pendientes", value: "1", trend: "↓ 20%", trendTone: "red" as const, icon: Clock3, tone: "orange" as const },
-] as const;
+const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-const sessions = [
-  { time: "09:00", initials: "ML", patient: "María López", reason: "Control cardiológico", status: "Finalizada", tone: "green" as const, avatarTone: "orange" as const },
-  { time: "11:30", initials: "JP", patient: "Juan Pérez", reason: "Seguimiento hipertensión", status: "En sala", tone: "orange" as const, avatarTone: "blue" as const },
-  { time: "14:00", initials: "AT", patient: "Ana Torres", reason: "Control prenatal", status: "Programada", tone: "blue" as const, avatarTone: "violet" as const },
-  { time: "16:00", initials: "PG", patient: "Pedro García", reason: "Revisión postoperatoria", status: "Pendiente", tone: "slate" as const, avatarTone: "slate" as const },
-] as const;
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+}
 
-const upcoming = [
-  { time: "Mañana, 09:00", initials: "ML", name: "María López", reason: "Control cardiológico", avatarTone: "orange" as const },
-  { time: "Mañana, 11:30", initials: "AT", name: "Ana Torres", reason: "Control prenatal", avatarTone: "violet" as const },
-  { time: "Viernes, 16:00", initials: "PG", name: "Pedro García", reason: "Revisión postoperatoria", avatarTone: "slate" as const },
-] as const;
+function initialsOf(name: string | null): string {
+  return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
+}
 
-const sharedFiles = [
-  { title: "Electrocardiograma adjunto", detail: "Compartido por Juan Pérez · Hoy, 08:45 AM", type: "PDF", tone: "red" as const },
-  { title: "Nota de evolución", detail: "Registrada por Dr. Carlos Ruiz · Ayer, 11:20 AM", type: "DOCX", tone: "blue" as const },
-  { title: "Receta enviada", detail: "Enviada por Dr. Carlos Ruiz · Ayer, 11:25 AM", type: "PDF", tone: "green" as const },
-] as const;
+function statusTone(status: TeleconsultationStatus): "blue" | "green" | "orange" | "red" | "violet" | "slate" {
+  if (status === "completed") return "green";
+  if (status === "waiting" || status === "in_progress") return "orange";
+  if (status === "canceled") return "red";
+  return "blue";
+}
+
+function nextStatus(status: TeleconsultationStatus): { value: TeleconsultationStatus; label: string } | null {
+  if (status === "scheduled") return { value: "waiting", label: "Abrir sala" };
+  if (status === "waiting") return { value: "in_progress", label: "Iniciar" };
+  if (status === "in_progress") return { value: "completed", label: "Finalizar" };
+  return null;
+}
+
+const EMPTY_META: DoctorTeleconsultationMeta = { total: 0, scheduled: 0, waiting: 0, in_progress: 0, completed: 0, connection: { status: "not_configured", message: "", } };
 
 export default function DoctorTelemedicinePage() {
+  const [sessions, setSessions] = useState<DoctorTeleconsultation[]>([]);
+  const [patients, setPatients] = useState<DoctorPatient[]>([]);
+  const [meta, setMeta] = useState<DoctorTeleconsultationMeta>(EMPTY_META);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [form, setForm] = useState({ patientId: "", scheduledAt: "", notes: "" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([getDoctorTeleconsultations(controller.signal), getDoctorPatients(controller.signal)])
+      .then(([sessionResult, patientList]) => {
+        setSessions(sessionResult.items);
+        setMeta(sessionResult.meta);
+        setPatients(patientList);
+        if (patientList[0]) setForm((current) => ({ ...current, patientId: String(patientList[0].id) }));
+        setError(null);
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) setError(caught instanceof Error ? caught.message : "No pudimos cargar las teleconsultas.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  async function handleCreate(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const created = await createDoctorTeleconsultation({ patient_profile_id: Number(form.patientId), scheduled_at: new Date(form.scheduledAt).toISOString(), notes: form.notes.trim() || null });
+      setSessions((current) => [...current, created].sort((left, right) => (left.scheduledAt ?? "").localeCompare(right.scheduledAt ?? "")));
+      setMeta((current) => ({ ...current, total: current.total + 1, scheduled: current.scheduled + 1 }));
+      setForm((current) => ({ ...current, scheduledAt: "", notes: "" }));
+      setSuccess("Teleconsulta programada. La conexión de video permanece deshabilitada hasta configurar un proveedor.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos programar la teleconsulta.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleStatus(session: DoctorTeleconsultation): Promise<void> {
+    const next = nextStatus(session.status);
+    if (!next) return;
+    setPending(true);
+    setError(null);
+    try {
+      const updated = await updateDoctorTeleconsultationStatus(session.id, next.value);
+      setSessions((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setMeta((current) => {
+        const nextMeta = { ...current };
+        if (session.status === "scheduled" || session.status === "waiting" || session.status === "in_progress" || session.status === "completed") nextMeta[session.status] = Math.max(0, nextMeta[session.status] - 1);
+        if (next.value === "scheduled" || next.value === "waiting" || next.value === "in_progress" || next.value === "completed") nextMeta[next.value] += 1;
+        return nextMeta;
+      });
+      setSuccess("Estado de la teleconsulta actualizado.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos actualizar la teleconsulta.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const metrics = [
+    { label: "Teleconsultas programadas", value: String(meta.total), icon: Video, tone: "violet" as const },
+    { label: "En sala de espera", value: String(meta.waiting), icon: Users, tone: "orange" as const },
+    { label: "Finalizadas", value: String(meta.completed), icon: CheckCircle2, tone: "green" as const },
+    { label: "En curso", value: String(meta.in_progress), icon: Clock3, tone: "blue" as const },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Telemedicina</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Gestiona videoconsultas, seguimientos remotos y atención virtual.</p></div><div className="flex gap-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><History className="size-3.5" aria-hidden="true" />Ver historial</button><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button"><Plus className="size-3.5" aria-hidden="true" />Nueva teleconsulta</button></div></header>
-
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Telemedicina</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Programa y controla sesiones remotas. No se habilita una videollamada ficticia.</p></div><span className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg border border-warning/30 bg-warning-soft px-3 text-[0.62rem] font-extrabold text-warning sm:self-auto"><ShieldOff className="size-3.5" aria-hidden="true" />Video no configurado</span></header>
+      {error && sessions.length > 0 ? <DoctorModuleAlert>{error}</DoctorModuleAlert> : null}
+      {success ? <DoctorModuleAlert tone="success">{success}</DoctorModuleAlert> : null}
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Resumen de telemedicina">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</section>
 
-      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,1.2fr)_250px]" aria-label="Operación de telemedicina">
-        <div className="grid gap-4"><DoctorCard className="min-w-0 overflow-hidden"><div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.82rem] font-extrabold">Sesiones del día</h2><button className="inline-flex items-center gap-1 text-[0.61rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver agenda completa <ChevronRight className="size-3" aria-hidden="true" /></button></div><div className="overflow-x-auto"><table className="w-full min-w-[550px] border-collapse text-left"><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Hora</th><th className="px-3 py-2.5 font-extrabold">Paciente</th><th className="px-3 py-2.5 font-extrabold">Motivo</th><th className="px-3 py-2.5 font-extrabold">Estado</th></tr></thead><tbody>{sessions.map((session) => <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={`${session.time}-${session.patient}`}><td className="px-3 py-2.5 sm:px-4"><span className={`mr-2 inline-block size-2 rounded-full ${session.tone === "green" ? "bg-success" : session.tone === "orange" ? "bg-warning" : session.tone === "blue" ? "bg-accent" : "bg-muted"}`} aria-hidden="true" /><span className="font-mono text-[0.62rem] font-extrabold">{session.time}</span></td><td className="px-3 py-2.5"><div className="flex items-center gap-2"><DoctorAvatar initials={session.initials} tone={session.avatarTone} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{session.patient}</span></div></td><td className="px-3 py-2.5 text-[0.59rem] font-extrabold">{session.reason}</td><td className="px-3 py-2.5"><StatusBadge tone={session.tone}>{session.status}{session.status === "Finalizada" ? "  ◉" : session.status === "En sala" ? "  ◷" : ""}</StatusBadge></td></tr>)}</tbody></table></div></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Notas y archivos compartidos" action="Ver todos los archivos" /><ul className="mt-3 grid gap-1.5">{sharedFiles.map((file) => <li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2" key={file.title}><span className={`grid size-6 shrink-0 place-items-center rounded-md ${file.tone === "red" ? "bg-danger-soft text-danger" : file.tone === "green" ? "bg-success-soft text-success" : "bg-accent-soft text-accent"}`}><FileText className="size-3.5" aria-hidden="true" /></span><span className="min-w-0 flex-1"><b className="block truncate text-[0.57rem] font-extrabold">{file.title}</b><small className="mt-0.5 block truncate text-[0.53rem] font-bold text-ink-secondary">{file.detail}</small></span><StatusBadge tone="blue">{file.type}</StatusBadge><ChevronRight className="size-3 text-muted" /></li>)}</ul></DoctorCard></div>
+      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]" aria-label="Operación de telemedicina">
+        <DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.86rem] font-extrabold">Sesiones registradas</h2></div>{loading ? <DoctorModuleLoading label="Cargando teleconsultas…" /> : error && sessions.length === 0 ? <DoctorModuleError message={error} /> : sessions.length === 0 ? <DoctorModuleEmpty message="Aún no hay teleconsultas programadas." /> : <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left"><caption className="sr-only">Teleconsultas registradas</caption><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Fecha</th><th className="px-3 py-2.5 font-extrabold">Paciente</th><th className="px-3 py-2.5 font-extrabold">Estado</th><th className="px-3 py-2.5 font-extrabold">Acción</th></tr></thead><tbody>{sessions.map((session) => { const next = nextStatus(session.status); return <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={session.id}><td className="px-3 py-2.5 whitespace-nowrap text-[0.59rem] font-extrabold sm:px-4">{formatDate(session.scheduledAt)}</td><td className="px-3 py-2.5"><div className="flex items-center gap-2"><DoctorAvatar initials={initialsOf(session.patient.name)} tone={session.id % 2 === 0 ? "blue" : "violet"} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{session.patient.name ?? session.patient.patientCode}</span></div></td><td className="px-3 py-2.5"><StatusBadge tone={statusTone(session.status)}>{session.statusLabel}</StatusBadge></td><td className="px-3 py-2.5">{session.connection.joinable ? <button className="rounded-md bg-accent px-2 py-1.5 text-[0.56rem] font-extrabold text-white focus-visible:outline-3 focus-visible:outline-focus" type="button">Unirse</button> : next ? <button className="rounded-md border border-accent/20 px-2 py-1.5 text-[0.56rem] font-extrabold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="button" disabled={pending} onClick={() => void handleStatus(session)}>{next.label}</button> : <span className="text-[0.56rem] font-bold text-muted">Sin acciones</span>}</td></tr>; })}</tbody></table></div>}</DoctorCard>
 
-        <div className="grid gap-4"><DoctorCard className="p-4"><SectionHeading title="Próximas teleconsultas" action="Ver agenda completa" /><ul className="mt-3 divide-y divide-line">{upcoming.map((consultation) => <li className="grid grid-cols-[100px_28px_minmax(0,1fr)_auto] items-center gap-2 py-2 first:pt-0 last:pb-0" key={consultation.name}><span className="text-[0.55rem] font-extrabold text-ink-secondary">{consultation.time}</span><DoctorAvatar initials={consultation.initials} tone={consultation.avatarTone} size="sm" /><span className="min-w-0"><b className="block truncate text-[0.59rem] font-extrabold">{consultation.name}</b><small className="block truncate text-[0.53rem] font-bold text-ink-secondary">{consultation.reason}</small></span><StatusBadge tone="blue">Programada</StatusBadge></li>)}</ul></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Pacientes frecuentes" action="Ver todos" /><ul className="mt-3 divide-y divide-line">{sessions.slice(0, 3).map((session, index) => <li className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0" key={session.patient}><DoctorAvatar initials={session.initials} tone={session.avatarTone} size="sm" /><span className="min-w-0 flex-1"><b className="block truncate text-[0.59rem] font-extrabold">{session.patient}</b><small className="block truncate text-[0.53rem] font-bold text-ink-secondary">{session.reason}</small></span><span className="shrink-0 rounded-md border border-accent/15 px-2 py-1 text-[0.55rem] font-extrabold text-accent">{index + 1} {index === 0 ? "cita" : "citas"}</span></li>)}</ul></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Alertas y recordatorios" action="Ver todas" /><ul className="mt-3 grid gap-2"><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><CircleAlert className="size-3.5 text-warning" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">1 paciente no completó formulario previo</span><ChevronRight className="size-3 text-muted" /></li><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><Sparkles className="size-3.5 text-violet" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">Capacitación disponible</span><ChevronRight className="size-3 text-muted" /></li><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><Clock3 className="size-3.5 text-warning" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">2 resultados pendientes por comentar</span><ChevronRight className="size-3 text-muted" /></li></ul></DoctorCard><DoctorCard className="p-4"><div className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><HeartPulse className="size-4" aria-hidden="true" /></span><h2 className="text-[0.82rem] font-extrabold">IA Epidemiológica</h2></div><div className="mt-3 grid grid-cols-[1fr_1.1fr] gap-2"><div className="rounded-lg border border-line bg-surface-subtle p-2.5"><p className="text-[0.54rem] font-bold text-ink-secondary">Riesgo actual</p><strong className="mt-0.5 block text-lg font-extrabold text-success">Bajo</strong><p className="text-[0.53rem] font-bold text-ink-secondary">Tendencia estable</p></div><div className="grid gap-2"><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><CircleAlert className="size-3 text-danger" aria-hidden="true" /><span className="flex-1 text-[0.55rem] font-extrabold">1 alerta activa</span><ChevronRight className="size-3 text-muted" /></div><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><CalendarDays className="size-3 text-accent" aria-hidden="true" /><span className="flex-1 text-[0.53rem] font-bold text-ink-secondary">Hoy, 10:30 AM</span><ChevronRight className="size-3 text-muted" /></div></div></div><button className="mt-2 inline-flex w-full items-center justify-center gap-1 text-[0.57rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver IA Epidemiológica <ArrowUpRight className="size-3" aria-hidden="true" /></button></DoctorCard></div>
-
-        <DoctorCard className="min-w-0 p-4"><div className="flex items-center justify-between gap-2"><h2 className="text-[0.82rem] font-extrabold">Videoconsulta actual</h2><span className="grid size-8 place-items-center rounded-full border border-line text-muted"><Video className="size-4" aria-hidden="true" /></span></div><div className="mt-4 flex items-center gap-3"><DoctorAvatar initials="JP" tone="blue" size="lg" /><div><h3 className="text-[0.82rem] font-extrabold">Juan Pérez</h3><p className="mt-1 text-[0.56rem] font-bold text-ink-secondary">45 años <span className="mx-1">·</span> Masculino</p></div></div><p className="mt-4 text-[0.57rem] font-extrabold">Motivo</p><p className="mt-1 text-[0.59rem] font-bold text-ink-secondary">Seguimiento hipertensión</p><button className="mt-4 inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-lg bg-accent text-[0.59rem] font-extrabold text-white focus-visible:outline-3 focus-visible:outline-focus" type="button"><Camera className="size-3.5" aria-hidden="true" />Unirse a videollamada</button><button className="mt-2 inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-lg border border-line text-[0.59rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button"><FolderOpen className="size-3.5" aria-hidden="true" />Ver expediente</button><ul className="mt-3 divide-y divide-line rounded-lg border border-line"><li className="flex items-center gap-2 px-2.5 py-2 text-[0.56rem] font-extrabold"><ShieldCheck className="size-3.5 text-success" aria-hidden="true" />Conexión verificada <CheckCircle2 className="ml-auto size-3.5 text-success" /></li><li className="flex items-center gap-2 px-2.5 py-2 text-[0.56rem] font-extrabold"><Paperclip className="size-3.5 text-accent" aria-hidden="true" />Archivos compartidos <span className="ml-auto text-accent">2</span></li><li className="flex items-center gap-2 px-2.5 py-2 text-[0.56rem] font-extrabold"><Clock3 className="size-3.5 text-accent" aria-hidden="true" />Próxima sesión en <span className="ml-auto text-accent">15 min</span></li></ul></DoctorCard>
+        <DoctorCard className="p-4"><div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.86rem] font-extrabold">Nueva teleconsulta</h2><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">El registro queda listo para conectar un proveedor aprobado.</p></div><Plus className="size-4 text-accent" aria-hidden="true" /></div><form className="mt-4 grid gap-3" onSubmit={(event) => void handleCreate(event)}><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Paciente<select className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60" required value={form.patientId} onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))} disabled={pending || patients.length === 0}><option value="">Selecciona un paciente</option>{patients.map((patient) => <option key={patient.id} value={String(patient.id)}>{patient.name ?? patient.patientCode}</option>)}</select></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Fecha y hora<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="datetime-local" required value={form.scheduledAt} onChange={(event) => setForm((current) => ({ ...current, scheduledAt: event.target.value }))} disabled={pending} /></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Notas<textarea className="min-h-20 rounded-lg border border-line bg-surface-input px-2 py-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} disabled={pending} /></label><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.62rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={pending || patients.length === 0}>{pending ? "Guardando…" : "Programar teleconsulta"}</button></form><div className="mt-4 rounded-lg border border-warning/30 bg-warning-soft p-3"><p className="text-[0.59rem] font-extrabold text-warning">Conexión no disponible</p><p className="mt-1 text-[0.56rem] font-bold text-ink-secondary">{meta.connection.message || "Configura un proveedor de video antes de habilitar el acceso."}</p></div></DoctorCard>
       </section>
     </div>
   );

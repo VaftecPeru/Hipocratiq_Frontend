@@ -329,7 +329,7 @@ function EditAppointmentModal({
     getClinicMembers(controller.signal)
       .then((members) => {
         if (controller.signal.aborted) return;
-        setDoctors(members.filter((member) => member.role === "doctor"));
+         setDoctors(members.filter((member) => member.role === "doctor" && member.status === "active"));
       })
       .catch((requestError: unknown) => {
         if (controller.signal.aborted || isAbortError(requestError)) return;
@@ -496,6 +496,8 @@ function CreateAppointmentModal({
   onCreated: (appointment: ClinicAppointment) => void;
 }) {
   const [doctors, setDoctors] = useState<ClinicTeamMember[]>([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorsError, setDoctorsError] = useState<string | null>(null);
   const [patientQuery, setPatientQuery] = useState("");
   const [patientResults, setPatientResults] = useState<ClinicPatient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<ClinicPatient | null>(null);
@@ -513,14 +515,26 @@ function CreateAppointmentModal({
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setDoctorsLoading(true);
+      setDoctorsError(null);
+    });
     getClinicMembers(controller.signal)
       .then((members) => {
         const doctorMembers = members.filter((m) => m.role === "doctor");
-        setDoctors(doctorMembers);
-        if (doctorMembers.length > 0) setDoctorUserId(String(doctorMembers[0].id));
+        const activeDoctorMembers = doctorMembers.filter((member) => member.status === "active");
+        setDoctors(activeDoctorMembers);
+        if (activeDoctorMembers.length > 0) setDoctorUserId(String(activeDoctorMembers[0].id));
       })
-      .catch(() => { /* non-blocking */ });
-    return () => controller.abort();
+      .catch((requestError: unknown) => {
+        if (!controller.signal.aborted) setDoctorsError(requestError instanceof Error ? requestError.message : "No pudimos cargar los médicos activos.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDoctorsLoading(false);
+      });
+    return () => { active = false; controller.abort(); };
   }, [isOpen]);
 
   // Debounced patient search
@@ -537,7 +551,7 @@ function CreateAppointmentModal({
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()) return;
+    if (!selectedPatient || doctors.length === 0 || !doctorUserId || !date || !time || !appointmentType.trim()) return;
     setSaving(true);
     setError(null);
     try {
@@ -555,7 +569,7 @@ function CreateAppointmentModal({
     } finally {
       setSaving(false);
     }
-  }, [selectedPatient, doctorUserId, date, time, appointmentType, notes, onCreated]);
+  }, [doctors.length, selectedPatient, doctorUserId, date, time, appointmentType, notes, onCreated]);
 
   const doctorOptions = doctors.map((d) => ({
     value: String(d.id),
@@ -573,11 +587,11 @@ function CreateAppointmentModal({
         <>
           <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
           <ModalPrimaryButton
-            disabled={saving || !selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()}
+            disabled={saving || doctorsLoading || Boolean(doctorsError) || doctors.length === 0 || !selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()}
             onClick={() => { document.getElementById("create-appt-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-            {saving ? "Guardando..." : "Crear cita"}
+             {saving ? "Guardando..." : "Crear cita"}
           </ModalPrimaryButton>
         </>
       }
@@ -633,7 +647,10 @@ function CreateAppointmentModal({
         </div>
 
         {/* Doctor */}
-        {doctorOptions.length > 0 ? (
+        {doctorsLoading ? <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs font-semibold text-accent" role="status">Cargando médicos activos...</p> : null}
+        {doctorsError ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs font-semibold text-danger" role="alert">{doctorsError}</p> : null}
+        {!doctorsLoading && !doctorsError && doctorOptions.length === 0 ? <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs font-semibold text-warning" role="alert">No hay médicos activos disponibles para asignar esta cita.</p> : null}
+        {!doctorsLoading && !doctorsError && doctorOptions.length > 0 ? (
           <ModalSelect
             id="appt-doctor"
             label="Médico"
@@ -642,9 +659,7 @@ function CreateAppointmentModal({
             onChange={setDoctorUserId}
             required
           />
-        ) : (
-          <ModalField id="appt-doctor-id" label="ID del médico" value={doctorUserId} onChange={(e) => setDoctorUserId(e.target.value)} required />
-        )}
+        ) : null}
 
         <ModalGrid>
           <ModalField id="appt-date" label="Fecha" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
