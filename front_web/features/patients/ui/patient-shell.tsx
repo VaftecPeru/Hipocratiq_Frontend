@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bell,
   BrainCircuit,
   CalendarDays,
   CreditCard,
@@ -10,8 +9,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   Menu,
-  MessageCircle,
-  Plus,
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
@@ -19,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 
 type NavigationItem = {
@@ -28,6 +25,19 @@ type NavigationItem = {
   icon: typeof LayoutDashboard;
   enabled: boolean;
 };
+
+const FOCUSABLE_ELEMENT_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex=\"-1\"])",
+].join(",");
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENT_SELECTOR));
+}
 
 function PatientAvatar({ userName }: { userName: string }) {
   const initials = userName
@@ -41,7 +51,7 @@ function PatientAvatar({ userName }: { userName: string }) {
   return (
     <span className="patient-avatar" aria-hidden="true">
       <span className="patient-avatar__hair" />
-      <span className="patient-avatar__face">{initials || "AM"}</span>
+      <span className="patient-avatar__face">{initials || "P"}</span>
       <span className="patient-avatar__shirt" />
     </span>
   );
@@ -53,8 +63,7 @@ function pageMeta(pathname: string, userName: string) {
   if (pathname.includes("/citas")) {
     return {
       title: "Mis Citas",
-      subtitle: "Administra tus próximas citas, historial y teleconsultas.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Consulta las citas registradas y sus datos de atención.",
     };
   }
 
@@ -62,47 +71,41 @@ function pageMeta(pathname: string, userName: string) {
     return {
       title: "Dashboard Paciente · Triaje",
       subtitle: "Completa tus signos vitales y motivo de consulta antes de la atención.",
-      action: "Enviar Triaje",
     };
   }
 
   if (pathname.includes("/resultados")) {
     return {
       title: "Resultados",
-      subtitle: "Consulta tus estudios, análisis y documentos médicos.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Consulta los estudios de laboratorio vinculados a tu perfil.",
     };
   }
 
   if (pathname.includes("/historial")) {
     return {
       title: "Historial Clínico",
-      subtitle: "Revisa tus atenciones, diagnósticos y evolución médica.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Revisa las consultas finalizadas o firmadas disponibles.",
     };
   }
 
   if (pathname.includes("/recetas")) {
     return {
       title: "Recetas",
-      subtitle: "Gestiona tus medicamentos, renovaciones y tratamientos.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Consulta las recetas registradas por tus profesionales.",
     };
   }
 
   if (pathname.includes("/ia")) {
     return {
       title: "IA Epidemiológica",
-      subtitle: "Monitorea el riesgo epidemiológico en tu zona y recibe recomendaciones para cuidarte.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Consulta si existe una fuente epidemiológica vinculada a tu cuenta.",
     };
   }
 
   if (pathname.includes("/membresia")) {
     return {
       title: "Membresía",
-      subtitle: "Administra tu plan MEDIQ, beneficios, pagos y cobertura familiar.",
-      action: "Agendar Nueva Cita",
+      subtitle: "Consulta si existe una membresía individual persistida para tu cuenta.",
     };
   }
 
@@ -110,37 +113,97 @@ function pageMeta(pathname: string, userName: string) {
     return {
       title: "Mi Perfil",
       subtitle: "Gestiona tu información personal, datos de contacto y preferencias.",
-      action: "Agendar Nueva Cita",
     };
   }
 
   return {
     title: `Bienvenida de nuevo, ${firstName}`,
     subtitle: "Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.",
-    action: "Agendar Nueva Cita",
   };
 }
 
 export function PatientShell({
   children,
   userName,
-  patientId,
 }: {
   children: React.ReactNode;
   userName: string;
-  patientId?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const menuWasOpenRef = useRef(false);
   const pathname = usePathname();
   const meta = pageMeta(pathname, userName);
-  const showTriage = pathname.includes("/triaje");
+
+  useEffect(() => {
+    if (!menuOpen) {
+      if (menuWasOpenRef.current) {
+        menuWasOpenRef.current = false;
+        menuButtonRef.current?.focus();
+      }
+      return;
+    }
+
+    const sidebar = sidebarRef.current;
+    if (sidebar === null) return;
+    const drawer: HTMLElement = sidebar;
+
+    menuWasOpenRef.current = true;
+
+    function focusFirstElement() {
+      const [firstElement] = getFocusableElements(drawer);
+      (firstElement ?? drawer).focus();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusableElements = getFocusableElements(drawer);
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        drawer.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements.at(-1);
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement?.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      if (event.target instanceof Node && !drawer.contains(event.target)) {
+        focusFirstElement();
+      }
+    }
+
+    focusFirstElement();
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [menuOpen]);
 
   const navigation: NavigationItem[] = [
     { label: "Mi Panel", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
     { label: "Mis Citas", href: "/patient/citas", icon: CalendarDays, enabled: true },
-    ...(showTriage
-      ? [{ label: "Triaje", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true }]
-      : []),
+    { label: "Triaje", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true },
     { label: "Resultados", href: "/patient/resultados", icon: FlaskConical, enabled: true },
     { label: "Historial Clínico", href: "/patient/historial", icon: FileText, enabled: true },
     { label: "Recetas", href: "/patient/recetas", icon: HeartPulse, enabled: true },
@@ -155,7 +218,12 @@ export function PatientShell({
 
   return (
     <div className="patient-shell">
-      <aside className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}>
+      <aside
+        ref={sidebarRef}
+        id="patient-mobile-navigation"
+        className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
+        tabIndex={-1}
+      >
         <div className="patient-brand" aria-label="MEDIQ">
           <span className="patient-brand__mark">
             <ShieldCheck className="size-5" strokeWidth={2.2} aria-hidden="true" />
@@ -166,8 +234,8 @@ export function PatientShell({
         <div className="patient-user-card">
           <PatientAvatar userName={userName} />
           <div className="patient-user-card__copy">
-            <p>{userName || "Ana Martínez"}</p>
-            <span>Paciente #{patientId || "44021"}</span>
+            <p>{userName || "Paciente"}</p>
+            <span>Cuenta autenticada</span>
           </div>
         </div>
 
@@ -218,10 +286,12 @@ export function PatientShell({
       <div className="patient-content">
         <header className="patient-topbar">
           <button
+            ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
             aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={menuOpen}
+            aria-controls="patient-mobile-navigation"
             onClick={() => setMenuOpen((open) => !open)}
           >
             {menuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
@@ -232,22 +302,9 @@ export function PatientShell({
             <p>{meta.subtitle}</p>
           </div>
 
-          <div className="patient-topbar__actions">
-            <button className="patient-icon-button" type="button" aria-label="Ver notificaciones">
-              <Bell className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-              <span className="patient-notification-dot" aria-hidden="true" />
-            </button>
-            <button className="patient-icon-button" type="button" aria-label="Abrir mensajes">
-              <MessageCircle className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-            </button>
-            <button className="patient-primary-button patient-topbar__cta" type="button">
-              {showTriage ? <Plus className="size-4" aria-hidden="true" /> : <CalendarDays className="size-4" aria-hidden="true" />}
-              <span>{meta.action}</span>
-            </button>
-          </div>
         </header>
 
-        <main className="patient-main">{children}</main>
+        <main id="main-content" className="patient-main">{children}</main>
       </div>
     </div>
   );
