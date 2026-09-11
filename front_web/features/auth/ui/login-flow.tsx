@@ -3,7 +3,7 @@
 import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
-import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { COUNTRY_OPTIONS, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
@@ -64,7 +64,7 @@ const INITIAL_FLOW_STATE: FlowState = {
   otpDigits: createEmptyOtp(),
   expiresIn: 0,
   resendAfter: 0,
-  destination: "tu medio de contacto registrado",
+  destination: "tu correo electrónico registrado",
   error: null,
   fieldErrors: {},
   isPending: false,
@@ -229,7 +229,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       expiresIn: response.data.expires_in,
       resendAfter: response.data.resend_after,
       destination: identifierType === "phone"
-        ? maskPhoneNumber(identifier)
+        ? "el correo electrónico registrado en tu cuenta"
         : "tu correo electrónico",
     });
   }
