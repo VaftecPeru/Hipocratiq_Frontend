@@ -28,8 +28,8 @@ const LOGIN_CREDENTIAL_TITLES = {
   healthcare: "Iniciar sesión — Profesional de salud",
   receptionist: "Iniciar sesión — Recepción",
   patient: "Iniciar sesión — Paciente",
-  administrator: "Iniciar sesión — Administrador",
-  support: "Acceso de soporte",
+  administrator: "Iniciar sesión — Administrador de clínica",
+  support: "Iniciar sesión — Superadministrador",
 } satisfies Record<LoginRole, string>;
 
 type FlowState = {
@@ -64,7 +64,7 @@ const INITIAL_FLOW_STATE: FlowState = {
   otpDigits: createEmptyOtp(),
   expiresIn: 0,
   resendAfter: 0,
-  destination: "tu teléfono registrado",
+  destination: "tu medio de contacto registrado",
   error: null,
   fieldErrors: {},
   isPending: false,
@@ -230,7 +230,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       resendAfter: response.data.resend_after,
       destination: identifierType === "phone"
         ? maskPhoneNumber(identifier)
-        : "el teléfono registrado en tu cuenta",
+        : "tu correo electrónico",
     });
   }
 
