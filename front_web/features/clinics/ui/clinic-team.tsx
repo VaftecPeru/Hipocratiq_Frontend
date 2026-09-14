@@ -377,10 +377,10 @@ export function ClinicTeam() {
         <div className="flex items-center justify-between border-t border-line px-4 py-3"><p className="text-[0.6rem] text-muted">Mostrando {filteredMembers.length} de {members.length} miembros</p><span className="inline-flex items-center gap-1.5 text-[0.58rem] font-bold text-muted"><CountryFlag countryCode={clinicCountryCode} />Sede principal</span></div>
       </section>
 
-      <CreateReceptionistModal key={`${clinicCountryCode}-${isCreateOpen ? "open" : "closed"}`} clinicCountryCode={clinicCountryCode} isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />
+      <CreateReceptionistModal key={`receptionist-${clinicCountryCode}-${isCreateOpen ? "open" : "closed"}`} clinicCountryCode={clinicCountryCode} isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />
 
       <CreateClinicDoctorModal
-        key={`${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
+        key={`doctor-${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
         clinicCountryCode={clinicCountryCode}
         isOpen={isCreateDoctorOpen}
         onClose={() => setIsCreateDoctorOpen(false)}

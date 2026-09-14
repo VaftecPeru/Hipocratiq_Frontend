@@ -161,6 +161,87 @@ type ApiAppointmentsResponse = {
   };
 };
 
+export type ClinicInvoiceStatus =
+  | "pending"
+  | "paid"
+  | "overdue";
+
+export type ClinicInvoicePaymentMethod =
+  | "card"
+  | "transfer"
+  | "cash"
+  | "insurance";
+
+export type ClinicInvoicePeriod =
+  | "today"
+  | "week"
+  | "month";
+
+export type ClinicInvoice = {
+  id: number;
+  invoiceNumber: string;
+  concept: string;
+  amount: number;
+  currency: string;
+  paymentMethod: ClinicInvoicePaymentMethod | null;
+  status: ClinicInvoiceStatus;
+  issuedAt: string;
+  dueAt: string | null;
+  paidAt: string | null;
+  notes: string | null;
+  appointmentId: number | null;
+
+  patient: {
+    id: number;
+    patientCode: string;
+    name: string | null;
+    email: string | null;
+    phoneNumber: string | null;
+  };
+};
+
+export type ClinicInvoicesPage = {
+  invoices: ClinicInvoice[];
+  pagination: {
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+    total: number;
+  };
+};
+
+type ApiClinicInvoice = {
+  id: number;
+  invoice_number: string;
+  concept: string;
+  amount: string | number;
+  currency: string;
+  payment_method: ClinicInvoicePaymentMethod | null;
+  status: ClinicInvoiceStatus;
+  issued_at: string;
+  due_at: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  appointment_id: number | null;
+
+  patient: {
+    id: number;
+    patient_code: string;
+    name: string | null;
+    email: string | null;
+    phone_number: string | null;
+  };
+};
+
+type ApiClinicInvoicesResponse = {
+  data: ApiClinicInvoice[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+};
 type ApiClinicResponse = { data: { clinic: ApiClinic } };
 
 function mapClinic(clinic: ApiClinic): ClinicAdminInfo {
@@ -283,6 +364,32 @@ function mapAppointmentSummary(summary: ApiAppointmentSummary): ClinicAppointmen
     inConsultation: summary.in_consultation,
     noShow: summary.no_show,
     canceled: summary.canceled,
+  };
+}
+
+function mapClinicInvoice(
+  invoice: ApiClinicInvoice,
+): ClinicInvoice {
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    concept: invoice.concept,
+    amount: Number(invoice.amount),
+    currency: invoice.currency,
+    paymentMethod: invoice.payment_method,
+    status: invoice.status,
+    issuedAt: invoice.issued_at,
+    dueAt: invoice.due_at,
+    paidAt: invoice.paid_at,
+    notes: invoice.notes,
+    appointmentId: invoice.appointment_id,
+    patient: {
+      id: invoice.patient.id,
+      patientCode: invoice.patient.patient_code,
+      name: invoice.patient.name,
+      email: invoice.patient.email,
+      phoneNumber: invoice.patient.phone_number,
+    },
   };
 }
 
@@ -466,6 +573,73 @@ export async function getClinicPatients(
       total: payload.meta.total,
     },
   };
+}
+
+export async function getClinicInvoices(
+  period: ClinicInvoicePeriod = "month",
+  page = 1,
+  signal?: AbortSignal,
+): Promise<ClinicInvoicesPage> {
+  const query = new URLSearchParams({period, page: String(page), per_page: "10"});
+
+  const payload = await getFromApi<ApiClinicInvoicesResponse>(`/api/v1/auth/clinic/invoices?${query.toString()}`,{ signal });
+
+  if (
+    !Array.isArray(payload.data)
+    || !payload.meta
+  ) {
+    throw new ApiError(
+      "El servidor devolvió una facturación incompleta.",
+      502,
+    );
+  }
+
+  return {
+    invoices: payload.data.map(mapClinicInvoice),
+    pagination: {
+      currentPage: payload.meta.current_page,
+      lastPage: payload.meta.last_page,
+      perPage: payload.meta.per_page,
+      total: payload.meta.total,
+    },
+  };
+}
+
+export type CreateClinicInvoicePayload = {
+  patientProfileId: number;
+  appointmentId: number | null;
+  concept: string;
+  amount: number;
+  paymentMethod: ClinicInvoicePaymentMethod | null;
+  status: "pending" | "paid";
+  issuedAt: string;
+  dueAt: string | null;
+  notes: string | null;
+};
+
+export async function createClinicInvoice(
+  payload: CreateClinicInvoicePayload,
+): Promise<ClinicInvoice> {
+  const response =
+    await postToApi<{ data: ApiClinicInvoice }>(
+      "/api/v1/auth/clinic/invoices",
+      {
+        patient_profile_id: payload.patientProfileId,
+        appointment_id: payload.appointmentId,
+        concept: payload.concept,
+        amount: payload.amount,
+        payment_method: payload.paymentMethod,
+        status: payload.status,
+        issued_at: payload.issuedAt,
+        due_at: payload.dueAt,
+        notes: payload.notes,
+      },
+    );
+
+  if (!response.data) {
+    throw new ApiError("El servidor no devolvió la factura registrada.",502);
+  }
+  return mapClinicInvoice(response.data);
 }
 
 export type CreateClinicPatientPayload = {
