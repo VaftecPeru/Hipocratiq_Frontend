@@ -2,10 +2,10 @@ import { BrandLogo } from "@/shared/ui/brand-logo";
 
 export default function AuthLoading() {
   return (
-    <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-2" role="status" aria-live="polite" aria-busy="true">
+    <main className="fixed inset-0 grid overflow-hidden bg-paper min-[900px]:grid-cols-2" role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">Cargando acceso a Hipocratiq</span>
 
-      <section className="grid h-dvh min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" aria-label="Carga de inicio de sesión">
+      <section className="grid h-dvh min-h-0 grid-rows-[1fr_auto] overflow-hidden bg-surface pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" aria-label="Carga de inicio de sesión">
         <div className="grid min-h-0 place-items-center overflow-hidden px-[clamp(1.25rem,5vw,4.5rem)] py-[clamp(1.5rem,4vh,3rem)]">
           <div className="w-full max-w-[38rem] motion-safe:animate-pulse" aria-hidden="true">
             <div className="mb-6 flex items-center gap-4">
@@ -42,8 +42,8 @@ export default function AuthLoading() {
       </section>
 
       <aside className="relative hidden h-dvh min-h-0 overflow-hidden bg-accent-soft min-[900px]:block" aria-hidden="true">
-        <div className="absolute top-[clamp(5rem,16%,8.5rem)] right-[clamp(1.5rem,8%,5rem)] left-[clamp(1.5rem,8%,5rem)] h-[clamp(14rem,42%,25rem)] rounded-xl bg-white/45" />
-        <div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-[clamp(1.5rem,7%,4rem)] h-32 w-[min(20rem,calc(100%_-_3rem))] rounded-xl bg-white/45" />
+        <div className="absolute top-[clamp(5rem,16%,8.5rem)] right-[clamp(1.5rem,8%,5rem)] left-[clamp(1.5rem,8%,5rem)] h-[clamp(14rem,42%,25rem)] rounded-xl bg-surface/45" />
+        <div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-[clamp(1.5rem,7%,4rem)] h-32 w-[min(20rem,calc(100%_-_3rem))] rounded-xl bg-surface/45" />
       </aside>
     </main>
   );

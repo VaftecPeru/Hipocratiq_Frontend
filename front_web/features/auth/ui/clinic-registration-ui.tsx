@@ -13,7 +13,7 @@ export type RegistrationFieldErrors = Partial<Record<RegistrationFieldName, stri
 
 export const registrationButtonClasses = "flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-2xs font-extrabold text-white shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus";
 
-const fieldClasses = "min-h-10 w-full rounded-lg border bg-surface-input px-3 text-2xs text-ink outline-none placeholder:text-placeholder transition-[border-color,background-color,box-shadow] focus:border-accent focus:bg-white focus:ring-3 focus:ring-focus/30";
+const fieldClasses = "min-h-10 w-full rounded-lg border bg-surface-input px-3 text-2xs text-ink outline-none placeholder:text-placeholder transition-[border-color,background-color,box-shadow] focus:border-accent focus:bg-surface focus:ring-3 focus:ring-focus/30";
 const invalidFieldClasses = "border-danger bg-danger-soft/30 focus:border-danger focus:ring-danger/15";
 
 /* ── Inline error ── */

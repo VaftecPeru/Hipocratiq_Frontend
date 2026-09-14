@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { getAdminPlatformSettings, updateAdminPlatformSettings } from "@/features/platform/api/browser-platform-settings";
 import type { AiModel, LocaleCode, PlatformSettings } from "@/features/platform/model/platform-settings.types";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
-import { appLocaleFromBackendLocale } from "@/i18n/config";
+import { appLocaleFromBackendLocale, isEnglishLocale } from "@/i18n/config";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 import { SettingsCard, SettingsInput, SettingsSelect, SettingsToggle } from "@/features/platform/ui/settings-primitives";
@@ -192,7 +192,7 @@ export function LocalizationSettingsForm() {
   const labelForLocale = (locale: LocaleCode) => t(`localeLabels.${locale}`);
   const enabledLocaleSet = new Set(settings.localization.enabledLocales);
   const interfaceLocale = appLocaleFromBackendLocale(currentLocale);
-  const interfaceLanguage = interfaceLocale === "en" ? t("localeLabels.en-US") : t("localeLabels.es-MX");
+  const interfaceLanguage = isEnglishLocale(interfaceLocale) ? t("localeLabels.en-US") : t("localeLabels.es-MX");
 
   const toggleLocale = (locale: LocaleCode) => {
     const enabled = enabledLocaleSet.has(locale);

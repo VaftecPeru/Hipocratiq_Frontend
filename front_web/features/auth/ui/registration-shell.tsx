@@ -2,18 +2,22 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { BrandLogo } from "@/shared/ui/brand-logo";
+import { PreferenceControls } from "@/shared/ui/preference-controls";
 
 export function RegistrationShell({ children }: { children: ReactNode }) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <main className="fixed inset-0 grid overflow-hidden bg-white min-[900px]:grid-cols-[minmax(34rem,38%)_1fr]">
+    <main id="main-content" className="fixed inset-0 grid overflow-hidden bg-surface min-[900px]:grid-cols-[minmax(34rem,38%)_1fr]">
       <section
-        className="grid h-dvh min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        className="grid h-dvh min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-surface pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         aria-label="Registro de cuenta"
       >
-        <header className="px-[clamp(1.25rem,5vw,3.25rem)] pt-5 pb-2 sm:pt-7">
-          <span className="grid size-10 place-items-center rounded-[0.7rem] bg-accent shadow-[0_0.45rem_1rem_rgb(8_98_221/20%)]">
+        <header className="relative z-30 px-[clamp(1.25rem,5vw,3.25rem)] pt-4 pb-2 text-2xs text-footer-text sm:pt-7" aria-label="Utilidades de autenticación">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <PreferenceControls className="shrink-0" idPrefix="auth-register" menuAlign="right" />
+          </div>
+          <span className="mt-3 grid size-10 place-items-center rounded-[0.7rem] bg-accent shadow-[0_0.45rem_1rem_rgb(8_98_221/20%)]">
             <BrandLogo className="h-7 w-auto brightness-0 invert" priority />
           </span>
         </header>

@@ -16,7 +16,7 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<AdminNotificationCenterData | null>(null);
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
+    () => new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
     [locale],
   );
 

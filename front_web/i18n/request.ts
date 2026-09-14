@@ -1,8 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import { DEFAULT_LOCALE, localeFromValue, LOCALE_COOKIE_NAME, type AppLocale } from "@/i18n/config";
+import { canonicalizeLocale, localeFromValue, LOCALE_COOKIE_NAME, messageLocale, type AppLocale } from "@/i18n/config";
+import { getServerLocalePolicy } from "@/i18n/server-policy";
 
-const messageLoaders: Record<AppLocale, () => Promise<{ default: Record<string, unknown> }>> = {
+const messageLoaders: Record<"es" | "en", () => Promise<{ default: Record<string, unknown> }>> = {
   es: () => import("@/messages/es.json"),
   en: () => import("@/messages/en.json"),
 };
@@ -21,11 +22,13 @@ function localeFromAcceptLanguage(value: string | null): AppLocale | undefined {
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
   const requestHeaders = await headers();
+  const policy = await getServerLocalePolicy(requestHeaders.get("accept-language"));
   const cookieLocale = localeFromValue(cookieStore.get(LOCALE_COOKIE_NAME)?.value);
-  const locale = cookieLocale ?? localeFromAcceptLanguage(requestHeaders.get("accept-language")) ?? DEFAULT_LOCALE;
+  const requestedLocale = cookieLocale ?? localeFromAcceptLanguage(requestHeaders.get("accept-language"));
+  const locale = canonicalizeLocale(requestedLocale, policy.enabledLocales, policy.defaultLocale);
 
   return {
     locale,
-    messages: (await messageLoaders[locale]()).default,
+    messages: (await messageLoaders[messageLocale(locale)]()).default,
   };
 });

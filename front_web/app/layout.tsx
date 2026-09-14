@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { NextIntlClientProvider } from "next-intl";
 import Script from "next/script";
 import "@fontsource-variable/roboto-mono";
 import "./globals.css";
+import type { AppLocale } from "@/i18n/config";
+import { AuthPlatformSettingsProvider } from "@/features/auth/ui/auth-platform-settings";
+import { LocalePreferenceProvider } from "@/shared/ui/locale-provider";
 import { ThemeProvider } from "@/shared/ui/theme-provider";
 
 export const metadata: Metadata = {
@@ -48,9 +50,11 @@ export default async function RootLayout({
             } catch {}
           })();`}
         </Script>
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <ThemeProvider>{children}</ThemeProvider>
-        </NextIntlClientProvider>
+        <LocalePreferenceProvider initialLocale={locale as AppLocale} initialMessages={messages}>
+          <AuthPlatformSettingsProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthPlatformSettingsProvider>
+        </LocalePreferenceProvider>
       </body>
     </html>
   );

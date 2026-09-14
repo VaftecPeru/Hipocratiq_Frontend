@@ -20,12 +20,14 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { ClinicalNotificationBell } from "@/features/platform/ui/clinical-notification-bell";
+import { PreferenceControls } from "@/shared/ui/preference-controls";
 
 type NavigationItem = {
-  label: string;
+  labelKey: string;
   href: string;
   icon: LucideIcon;
   available: boolean;
@@ -33,26 +35,26 @@ type NavigationItem = {
 };
 
 const navigation: readonly NavigationItem[] = [
-  { label: "Resumen Clínica", href: "/clinic/dashboard", icon: House, available: true },
-  { label: "Agenda", href: "/clinic/agenda", icon: CalendarDays, available: true },
-  { label: "Médicos", href: "/clinic/medicos", icon: Users, available: true },
-  { label: "Equipo", href: "/clinic/equipo", icon: Users, available: true, clinicAdminOnly: true },
-  { label: "Facturación", href: "/clinic/facturacion", icon: FileText, available: true, clinicAdminOnly: true },
-  { label: "Pacientes", href: "/clinic/pacientes", icon: Users, available: true },
-  { label: "Reportes", href: "/clinic/reportes", icon: ChartNoAxesCombined, available: true },
-  { label: "IA Epidemiológica", href: "/clinic/epidemiologia", icon: BrainCircuit, available: true, clinicAdminOnly: true },
-  { label: "Configuración", href: "/clinic/configuracion", icon: Settings, available: true },
+  { labelKey: "summary", href: "/clinic/dashboard", icon: House, available: true },
+  { labelKey: "agenda", href: "/clinic/agenda", icon: CalendarDays, available: true },
+  { labelKey: "doctors", href: "/clinic/medicos", icon: Users, available: true },
+  { labelKey: "team", href: "/clinic/equipo", icon: Users, available: true, clinicAdminOnly: true },
+  { labelKey: "billing", href: "/clinic/facturacion", icon: FileText, available: true, clinicAdminOnly: true },
+  { labelKey: "patients", href: "/clinic/pacientes", icon: Users, available: true },
+  { labelKey: "reports", href: "/clinic/reportes", icon: ChartNoAxesCombined, available: true },
+  { labelKey: "epidemiology", href: "/clinic/epidemiologia", icon: BrainCircuit, available: true, clinicAdminOnly: true },
+  { labelKey: "settings", href: "/clinic/configuracion", icon: Settings, available: true },
 ];
 
 const receptionistNavigation: readonly NavigationItem[] = [
-  { label: "Inicio", href: "/clinic/dashboard", icon: House, available: true },
-  { label: "Agenda", href: "/clinic/agenda", icon: CalendarDays, available: true },
-  { label: "Pacientes", href: "/clinic/pacientes", icon: Users, available: true },
-  { label: "Registro de Pacientes", href: "/clinic/registro-pacientes", icon: FileText, available: true },
-  { label: "Mensajes", href: "/clinic/mensajes", icon: Bell, available: true },
-  { label: "Caja y Pagos", href: "/clinic/caja-pagos", icon: CreditCard, available: true },
-  { label: "Reportes", href: "/clinic/reportes", icon: ChartNoAxesCombined, available: true },
-  { label: "Configuración", href: "/clinic/configuracion", icon: Settings, available: true },
+  { labelKey: "home", href: "/clinic/dashboard", icon: House, available: true },
+  { labelKey: "agenda", href: "/clinic/agenda", icon: CalendarDays, available: true },
+  { labelKey: "patients", href: "/clinic/pacientes", icon: Users, available: true },
+  { labelKey: "registration", href: "/clinic/registro-pacientes", icon: FileText, available: true },
+  { labelKey: "messages", href: "/clinic/mensajes", icon: Bell, available: true },
+  { labelKey: "cashier", href: "/clinic/caja-pagos", icon: CreditCard, available: true },
+  { labelKey: "reports", href: "/clinic/reportes", icon: ChartNoAxesCombined, available: true },
+  { labelKey: "settings", href: "/clinic/configuracion", icon: Settings, available: true },
 ];
 
 type ClinicShellProps = Readonly<{
@@ -70,6 +72,7 @@ type ClinicNavigationProps = Readonly<{
 }>;
 
 function ClinicNavigation({ clinicName, actorContext, pathname, onNavigate }: ClinicNavigationProps) {
+  const t = useTranslations("clinic");
   const visibleNavigation = actorContext === "receptionist"
     ? receptionistNavigation
     : navigation.filter((item) => !item.clinicAdminOnly || actorContext === "clinic_admin");
@@ -85,14 +88,14 @@ function ClinicNavigation({ clinicName, actorContext, pathname, onNavigate }: Cl
         </Link>
       </div>
 
-      <nav className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Navegación de clínica">
+       <nav className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label={t("navigation.ariaLabel")}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
           <ul className="grid gap-1">
             {visibleNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || (item.href === "/clinic/configuracion" && pathname.startsWith(`${item.href}/`));
               return (
-                <li key={`${actorContext}-${item.label}`}>
+                 <li key={`${actorContext}-${item.labelKey}`}>
                   {item.available ? (
                     <Link
                       className={`relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-xs font-bold transition-colors focus-visible:outline-3 focus-visible:outline-focus lg:min-h-10 ${isActive ? "bg-accent-soft text-accent after:absolute after:inset-y-2 after:right-0 after:w-0.5 after:rounded-full after:bg-accent" : "text-icon-nav-inactive hover:bg-surface-subtle hover:text-ink"}`}
@@ -101,12 +104,12 @@ function ClinicNavigation({ clinicName, actorContext, pathname, onNavigate }: Cl
                       aria-current={isActive ? "page" : undefined}
                     >
                       <Icon className="size-4 shrink-0" strokeWidth={1.7} aria-hidden="true" />
-                      {item.label}
+                       {t(`navigation.${item.labelKey}`)}
                     </Link>
                   ) : (
-                    <span className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-xs font-bold text-muted/65 lg:min-h-10" aria-disabled="true" title="Disponible próximamente">
+                    <span className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-xs font-bold text-muted/65 lg:min-h-10" aria-disabled="true" title={t("navigation.soon")}>
                       <Icon className="size-4 shrink-0" strokeWidth={1.7} aria-hidden="true" />
-                      {item.label}
+                      {t(`navigation.${item.labelKey}`)}
                     </span>
                   )}
                 </li>
@@ -118,7 +121,7 @@ function ClinicNavigation({ clinicName, actorContext, pathname, onNavigate }: Cl
         <div className="shrink-0 border-t border-line p-3">
           <div className="mb-2 flex items-center gap-2 rounded-xl border border-line bg-surface-subtle px-3 py-2.5">
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Building2 className="size-4" aria-hidden="true" /></span>
-            <div className="min-w-0"><p className="truncate text-xs font-extrabold">{actorContext === "receptionist" ? "Recepción Central" : clinicName}</p><p className="truncate text-2xs text-muted">{actorContext === "receptionist" ? clinicName : "Sede principal"}</p></div>
+             <div className="min-w-0"><p className="truncate text-xs font-extrabold">{actorContext === "receptionist" ? t("receptionCentral") : clinicName}</p><p className="truncate text-2xs text-muted">{actorContext === "receptionist" ? clinicName : t("mainBranch")}</p></div>
           </div>
           <LogoutButton appearance="navigation" />
         </div>
@@ -128,6 +131,7 @@ function ClinicNavigation({ clinicName, actorContext, pathname, onNavigate }: Cl
 }
 
 export function ClinicShell({ children, clinicName, userName, actorContext }: ClinicShellProps) {
+  const t = useTranslations("clinic");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const pathname = usePathname();
@@ -194,23 +198,24 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
         <ClinicNavigation actorContext={actorContext} clinicName={clinicName} pathname={pathname} />
       </aside>
 
-      {menuOpen ? <button className="fixed inset-0 z-[25] cursor-default bg-ink/20 backdrop-blur-sm lg:hidden" aria-label="Cerrar menú" type="button" onClick={() => closeMobileNavigation(true)} /> : null}
+       {menuOpen ? <button className="fixed inset-0 z-[25] cursor-default bg-ink/20 backdrop-blur-sm lg:hidden" aria-label={t("closeMenu")} type="button" onClick={() => closeMobileNavigation(true)} /> : null}
 
       <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur-md lg:ml-60 lg:px-6">
-        <button ref={menuButtonRef} className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden" type="button" aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={menuOpen} aria-controls="clinic-mobile-navigation" onClick={toggleMobileNavigation}>
+         <button ref={menuButtonRef} className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden" type="button" aria-label={menuOpen ? t("closeMenu") : t("openMenu")} aria-expanded={menuOpen} aria-controls="clinic-mobile-navigation" onClick={toggleMobileNavigation}>
           {menuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
         </button>
         <label className="relative hidden w-full max-w-sm sm:block">
-          <span className="sr-only">Buscar en el panel</span>
+           <span className="sr-only">{t("searchLabel")}</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <input className="h-11 w-full rounded-lg border border-line bg-surface-input pr-3 pl-9 text-xs outline-none placeholder:text-placeholder focus:border-accent focus:ring-3 focus:ring-focus/30 sm:h-9" type="search" placeholder="Buscar pacientes, expedientes, facturas..." />
+           <input className="h-11 w-full rounded-lg border border-line bg-surface-input pr-3 pl-9 text-xs outline-none placeholder:text-placeholder focus:border-accent focus:ring-3 focus:ring-focus/30 sm:h-9" type="search" placeholder={t("searchPlaceholder")} />
         </label>
-        <span className="ml-auto hidden items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[0.58rem] font-extrabold tracking-wide text-success md:inline-flex"><span className="size-1.5 rounded-full bg-success" /> SINCRONIZADO</span>
-        <div className="ml-auto md:ml-0">
-          <ClinicalNotificationBell isDrawerOpen={menuOpen} isOpen={notificationOpen} onOpenChange={setNotificationOpen} />
-        </div>
-        <div className="hidden items-center gap-2 border-l border-line pl-3 sm:flex">
-          <div className="max-w-32 text-right"><p className="truncate text-2xs font-extrabold">{userName}</p><p className="text-[0.58rem] font-bold text-accent">{actorContext === "receptionist" ? "Recepción" : "Admin de Clínica"}</p></div>
+         <span className="ml-auto hidden items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[0.58rem] font-extrabold tracking-wide text-success md:inline-flex"><span className="size-1.5 rounded-full bg-success" /> {t("synced")}</span>
+         <div className="ml-auto md:ml-0">
+           <ClinicalNotificationBell isDrawerOpen={menuOpen} isOpen={notificationOpen} onOpenChange={setNotificationOpen} />
+         </div>
+         <PreferenceControls idPrefix="clinic-header" />
+         <div className="hidden items-center gap-2 border-l border-line pl-3 sm:flex">
+           <div className="max-w-32 text-right"><p className="truncate text-2xs font-extrabold">{userName}</p><p className="text-[0.58rem] font-bold text-accent">{actorContext === "receptionist" ? t("reception") : t("clinicAdmin")}</p></div>
           <span className="grid size-8 place-items-center rounded-full bg-ink font-mono text-[0.6rem] font-bold text-white">{userName.split(" ").slice(0, 2).map((part) => part[0]).join("")}</span>
           <ChevronDown className="size-3 text-muted" aria-hidden="true" />
         </div>
@@ -223,7 +228,7 @@ export function ClinicShell({ children, clinicName, userName, actorContext }: Cl
           id="clinic-mobile-navigation"
           className="m-0 fixed inset-x-0 top-16 z-30 flex max-h-[calc(100dvh-4rem)] flex-col overflow-hidden border-0 border-b border-line bg-surface p-0 text-ink shadow-[0_1.25rem_3rem_rgb(16_27_51/12%)] lg:hidden"
           aria-modal="true"
-          aria-label="Navegación de clínica"
+           aria-label={t("navigation.ariaLabel")}
           onCancel={(event) => {
             event.preventDefault();
             closeMobileNavigation(true);
