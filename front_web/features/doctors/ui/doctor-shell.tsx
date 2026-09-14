@@ -20,6 +20,7 @@ import {
   Video,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -97,9 +98,12 @@ export function DoctorShell({
     <div className="min-h-svh bg-paper text-ink">
       <aside className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-[206px] flex-col border-r border-line bg-surface lg:flex`}>
         <div className="flex h-[60px] items-center border-b border-line px-4">
-          <div className="grid size-[34px] place-items-center rounded-[10px] bg-accent" aria-label="Hipocratiq">
-            <Stethoscope className="size-[18px] text-white" strokeWidth={2.1} aria-hidden="true" />
-          </div>
+          <Link className="flex min-h-11 min-w-0 items-center focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" href="/doctor/dashboard" onClick={() => setMenuOpen(false)}>
+            <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] bg-accent p-1.5 shadow-[0_0.45rem_1rem_rgb(8_98_221/22%)]">
+              <Image className="size-full object-contain brightness-0 invert" src="/logo_hipocratiq.webp" width={28} height={28} alt="" priority />
+            </span>
+            <span className="ml-2 truncate text-sm font-extrabold tracking-[0.06em]">HIPOCRATIQ</span>
+          </Link>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Navegación médica">

@@ -158,6 +158,7 @@ export type ClinicAppointment = {
   appointmentType: string;
   status: ClinicAppointmentStatus;
   statusLabel: string;
+  notes: string | null;
   patient: {
     id: number;
     patientCode: string;
@@ -397,5 +398,26 @@ export type ClinicPatientsPage = {
     lastPage: number;
     perPage: number;
     total: number;
+  };
+};
+
+export type ClinicScheduleBlock = {
+  id: number;
+  startsAt: string;
+  endsAt: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string;
+  reason: string | null;
+  scope: "clinic" | "doctor";
+
+  doctor: {
+    id: number;
+    name: string;
+  } | null;
+
+  createdBy: {
+    id: number;
+    name: string;
   };
 };

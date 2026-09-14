@@ -74,10 +74,12 @@ type ApiDashboard = {
       scheduled_date: string;
       time: string;
       appointment_type: string;
+      notes: string | null; 
       status: "pending" | "confirmed" | "waiting" | "in_consultation" | "completed" | "canceled" | "no_show";
       status_label: string;
       patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
       doctor: { id: number; name: string; specialty: string | null } | null;
+
     }>;
     team: Array<{ id: number; name: string; email: string | null; phone_number: string; country_code?: CountryCode | null; status: "pending_verification" | "active" | "suspended" | "disabled"; role: "clinic_admin" | "receptionist" | "doctor"; role_name: string; specialty: string | null; medical_license: string | null; last_login_at: string | null }>;
     recent_patients: Array<{ id: number; patient_code: string; name: string | null; email: string | null; phone_number: string | null; status: "pending_verification" | "active" | "suspended" | "disabled" | null; created_at: string | null; age: number | null; insurance?: string | null; is_returning_patient?: boolean; whatsapp_consent?: boolean }>;
@@ -90,6 +92,7 @@ type ApiServerAppointment = {
   scheduled_date: string;
   time: string;
   appointment_type: string;
+  notes?: string | null;
   status: ClinicAppointment["status"];
   status_label: string;
   patient: { id: number; patient_code: string; name: string | null; phone_number: string | null };
@@ -213,6 +216,7 @@ export async function getClinicDashboardServer(): Promise<ClinicDashboardData | 
         scheduledDate: appointment.scheduled_date,
         time: appointment.time,
         appointmentType: appointment.appointment_type,
+        notes: appointment.notes ?? null, 
         status: appointment.status,
         statusLabel: appointment.status_label,
         patient: {
@@ -283,6 +287,7 @@ export async function getClinicAppointmentsServer(from: string, to: string): Pro
       scheduledDate: appointment.scheduled_date,
       time: appointment.time,
       appointmentType: appointment.appointment_type,
+      notes: appointment.notes ?? null,
       status: appointment.status,
       statusLabel: appointment.status_label,
       patient: {
