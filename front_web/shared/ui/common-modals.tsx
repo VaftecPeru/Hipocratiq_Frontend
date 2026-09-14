@@ -13,12 +13,11 @@ import {
 } from "@/shared/ui/modal-parts";
 
 export function ExportReportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [format, setFormat] = useState("xlsx");
 
-  const handleExport = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
+  const handleExport = () => {
+    const query = new URLSearchParams({ format });
+    window.location.assign(`/backend/api/v1/auth/admin/reports/export?${query}`);
     onClose();
   };
 
@@ -28,63 +27,27 @@ export function ExportReportModal({ isOpen, onClose }: { isOpen: boolean; onClos
       onClose={onClose}
       size="md"
       title="Exportar Reporte"
-      description="Selecciona el formato y opciones de exportación"
+       description="Descarga el reporte ejecutivo real generado por el backend."
       footer={
         <>
           <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
-          <ModalPrimaryButton onClick={handleExport}>
+           <ModalPrimaryButton onClick={handleExport}>
             <Download className="size-3.5" strokeWidth={1.9} />
-            {isLoading ? "Exportando..." : "Exportar"}
+            Exportar
           </ModalPrimaryButton>
         </>
       }
     >
       <div className="space-y-4">
-        <ModalSelect
-          id="export-type"
-          label="Tipo de Reporte"
-          options={["Reporte de Ingresos", "Reporte de Usuarios", "Reporte de Actividad", "Reporte de Clínicas"]}
-          required
-        />
-
-        <ModalGrid cols={2}>
-          <ModalField id="export-start" label="Fecha Inicio" type="date" defaultValue="2024-01-01" required />
-          <ModalField id="export-end" label="Fecha Fin" type="date" defaultValue={new Date().toISOString().split("T")[0]} required />
-        </ModalGrid>
-
-        <ModalSelect
-          id="export-format"
-          label="Formato"
-          options={["Excel (.xlsx)", "CSV (.csv)", "PDF (.pdf)"]}
-          defaultValue="Excel (.xlsx)"
-          required
-        />
-
-        <ModalSelect
-          id="export-scope"
-          label="Alcance"
-          options={["Todas las clínicas", "Solo México", "Solo Perú", "Selección personalizada"]}
-          defaultValue="Todas las clínicas"
-          required
-        />
-
-        <div className="space-y-2">
-          <label className="text-2xs font-bold text-muted">Opciones Adicionales</label>
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs text-ink">
-              <input className="size-4 accent-accent" defaultChecked type="checkbox" />
-              Incluir gráficas
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink">
-              <input className="size-4 accent-accent" defaultChecked type="checkbox" />
-              Incluir datos detallados
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink">
-              <input className="size-4 accent-accent" type="checkbox" />
-              Enviar por correo al completar
-            </label>
-          </div>
-        </div>
+         <p className="rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs text-muted">Reporte ejecutivo global: clínicas, usuarios, pacientes, ingresos y cobertura por país.</p>
+         <ModalSelect
+           id="export-format"
+           label="Formato"
+           options={[{ value: "xlsx", label: "Excel (.xlsx)" }, { value: "csv", label: "CSV (.csv)" }]}
+           value={format}
+           onChange={setFormat}
+           required
+         />
       </div>
     </Modal>
   );

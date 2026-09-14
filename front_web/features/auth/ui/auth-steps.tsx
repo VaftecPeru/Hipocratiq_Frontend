@@ -70,10 +70,10 @@ type CredentialsStepProps = {
 };
 
 const LOGIN_ROLE_OPTIONS = [
+  { value: "administrator", label: "Administrador de clínica", description: "Gestión de clínica o institución", icon: Building2 },
   { value: "healthcare", label: "Profesional de salud", description: "Médicos con acceso clínico", icon: UserRound },
   { value: "receptionist", label: "Recepción", description: "Agenda y atención de clínica", icon: Building2 },
   { value: "patient", label: "Paciente", description: "Accede a tu historial clínico", icon: UsersRound },
-  { value: "administrator", label: "Administrador", description: "Gestión de clínica o institución", icon: Building2 },
 ] satisfies ReadonlyArray<{ value: LoginRole; label: string; description: string; icon: typeof UserRound }>;
 
 export function CredentialsStep({
@@ -123,7 +123,7 @@ export function CredentialsStep({
       <div className="mt-6">
         {isSupportLogin ? (
           <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <p className="text-sm font-semibold text-ink">Acceso de soporte</p>
+            <p className="text-sm font-semibold text-ink">Acceso de Superadministrador / Soporte VAFTEC</p>
             <button
               type="button"
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border-0 bg-transparent px-0 text-2xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}

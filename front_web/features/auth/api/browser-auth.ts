@@ -4,6 +4,7 @@ import type {
   OtpChallengeResponse,
   WebLoginVerificationResponse,
 } from "@/features/auth/model/auth.types";
+import { invalidatePlatformData } from "@/features/platform/model/platform-data-cache";
 import { ApiError, postToApi } from "@/shared/api/http-client";
 
 type RequestLoginOtpInput =
@@ -19,6 +20,7 @@ function clearLegacyBrowserToken(): void {
 
 export function requestLoginOtp(input: RequestLoginOtpInput): Promise<OtpChallengeResponse> {
   clearLegacyBrowserToken();
+  invalidatePlatformData(["audit", "emergency", "support"]);
 
   const payload: Record<string, unknown> & { actor_context: LoginActorContext } = {
     purpose: "login",
@@ -85,5 +87,6 @@ export async function logout(): Promise<void> {
     }
   } finally {
     clearLegacyBrowserToken();
+    invalidatePlatformData(["audit", "emergency", "support"]);
   }
 }

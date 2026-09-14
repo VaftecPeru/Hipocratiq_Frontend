@@ -1,0 +1,342 @@
+{
+  "navigation": {
+    "ariaLabel": "Main navigation",
+    "dashboard": "Dashboard",
+    "clinics": "Clinics",
+    "specialties": "Specialties",
+    "users": "Users",
+    "accessControl": "Roles and permissions",
+    "memberships": "Memberships",
+    "billing": "Billing",
+    "reports": "Reports",
+    "monitoring": "System monitoring",
+    "audit": "Global audit",
+    "emergency": "Emergency",
+    "support": "Support",
+    "settings": "Settings",
+    "general": "General",
+    "languages": "Languages and region",
+    "integrations": "Integrations",
+    "ai": "Epidemiological AI",
+    "notifications": "Notifications",
+    "backups": "Backups",
+    "soon": "Coming soon"
+  },
+  "header": {
+    "closeNavigation": "Close navigation",
+    "openNavigation": "Open navigation",
+    "mobileNavigationLabel": "Mobile navigation",
+    "searchClinicsLabel": "Search clinics",
+    "searchClinicsPlaceholder": "Search clinics by name...",
+    "profileRole": "Platform administrator"
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content"
+  },
+  "emergency": {
+    "eyebrow": "SaaS configuration",
+    "title": "Emergency button",
+    "description": "Persistent global policy for every country; critical publications are audited.",
+    "audit": "Audit",
+    "publish": "Publish policy",
+    "statsLabel": "Emergency indicators",
+    "activeClinics": "Active clinics",
+    "enabledPolicy": "Enabled policy",
+    "changesToday": "Changes today",
+    "publicationTitle": "Latest global publication",
+    "publicationDescription": "Every active publication temporarily replaces the local configuration in all clinics.",
+    "activeOverride": "Active override",
+    "noPublication": "No publication",
+    "scope": "Scope",
+    "allClinics": "All clinics",
+    "published": "Published",
+    "responsibles": "Responsible roles",
+    "responsibleCount": "{count, plural, one {# configured} other {# configured}}",
+    "publishHint": "Save a policy and publish it to activate the global override.",
+    "globalPolicy": "Global policy",
+    "backendConfiguration": "Effective backend configuration",
+    "enabled": "Enabled",
+    "buttonLabel": "Button label",
+    "visibility": "Visibility",
+    "color": "Color",
+    "inheritance": "Inheritance",
+    "defaultChannel": "Default channel",
+    "escalationAfter": "Escalate after",
+    "visibilityOptions": {
+      "receptionDoctorsAdmins": "Reception, doctors, and administrators",
+      "doctorsAdmins": "Doctors and administrators",
+      "adminsOnly": "Administrators only"
+    },
+    "colorOptions": {
+      "red": "Emergency red",
+      "orange": "Alert orange",
+      "violet": "Critical violet"
+    },
+    "inheritanceOptions": {
+      "workflow": "Editable workflow and responsible roles",
+      "responsibles": "Editable responsible roles only",
+      "locked": "Locked policy"
+    },
+    "channelOptions": {
+      "priorityPush": "Priority push",
+      "internalAlert": "Internal alert",
+      "email": "Email",
+      "sms": "SMS"
+    },
+    "minute": "{count, plural, one {# minute} other {# minutes}}",
+    "defaultResponsibles": "Default responsible roles",
+    "newClinicTemplate": "Template for new clinics",
+    "role": "Role",
+    "channelAction": "Channel / action",
+    "saving": "Saving...",
+    "save": "Save changes",
+    "publishedForClinics": "Policy published for {count} clinics.",
+    "savedNotice": "Policy saved and recorded in the audit log.",
+    "saveError": "We could not save the policy.",
+    "pageUnavailable": "Emergency unavailable",
+    "publishModal": {
+      "title": "Publish global policy",
+      "description": "Register a mandatory version for all clinics",
+      "cancel": "Cancel",
+      "publishing": "Publishing...",
+      "publishAll": "Publish for all",
+      "warning": "This publication temporarily replaces the local policy for all clinics. Its scope cannot be limited by country.",
+      "noteLabel": "Version note",
+      "error": "We could not publish the policy."
+    }
+  },
+  "localeSwitcher": {
+    "label": "Language",
+    "current": "Current language: {language}",
+    "optionEs": "Español",
+    "optionEn": "English",
+    "changed": "Language changed to {language}"
+  },
+  "theme": {
+    "label": "Theme",
+    "current": "Current theme: {theme}",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "changed": "Theme changed to {theme}"
+  },
+  "notifications": {
+    "view": "View notifications",
+    "title": "Notifications",
+    "unreadCount": "{count} unread",
+    "markAll": "Read all",
+    "noOperational": "No operational notifications.",
+    "openCenter": "Open notification center",
+    "unread": "Unread"
+  },
+  "clinicalNotifications": {
+    "view": "View clinical alerts",
+    "viewWithCount": "View clinical alerts, {count} unread",
+    "title": "Clinical alerts",
+    "unreadCount": "{count} unread",
+    "markAll": "Read all",
+    "close": "Close alerts",
+    "unread": "Unread",
+    "loading": "Loading clinical alerts...",
+    "empty": "No clinical alerts.",
+    "unknownClinic": "the clinic",
+    "emergency": {
+      "publishedTitle": "Global emergency active",
+      "publishedMessage": "An emergency policy was activated for {clinic}.",
+      "activatedTitle": "Emergency intake enabled",
+      "activatedMessage": "The emergency policy was enabled for {clinic}."
+    }
+  },
+  "settings": {
+    "common": {
+      "loadingConfiguration": "Loading configuration...",
+      "configurationLoaded": "Configuration loaded from the backend.",
+      "loadError": "Error: configuration could not be loaded.",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "statusError": "Error: configuration could not be saved.",
+      "loading": "Loading configuration"
+    },
+    "general": {
+      "pageTitle": "General settings",
+      "pageDescription": "Manage identity and coverage from one global platform configuration.",
+      "loading": "Loading general settings",
+      "scopeLabel": "Global scope",
+      "scopeTitle": "One configuration for the whole platform",
+      "scopeDescription": "These values apply to the complete Hipocratiq platform. They are not tied to a clinic, tenant, or individual user.",
+      "countryCardTitle": "Countries and region",
+      "countryCardDescription": "Enabled countries and the platform default country.",
+      "quickTitle": "Configuration shortcuts",
+      "quickDescription": "The platform's remaining capabilities are managed from their respective modules.",
+      "quick": {
+        "languages": { "label": "Languages and region", "description": "Locales and global coverage" },
+        "integrations": { "label": "Integrations", "description": "Backend-connected capabilities" },
+        "ai": { "label": "Epidemiological AI", "description": "Persisted engine parameters" },
+        "notifications": { "label": "Notifications", "description": "Administrative alert center" },
+        "backups": { "label": "Backups", "description": "Copy and recovery status" },
+        "support": { "label": "Support", "description": "Operational assistance and follow-up" }
+      },
+      "brandingTitle": "Platform identity",
+      "brandingDescription": "Global values used by support and platform metadata.",
+      "platformName": "Platform name",
+      "supportEmail": "Support email",
+      "supportUrl": "Support URL",
+      "identitySaving": "Saving platform identity...",
+      "identitySaved": "Platform identity saved.",
+      "identityError": "Error: identity could not be saved.",
+      "assetsTitle": "Visual assets",
+      "assetsDescription": "Logo, favicon, and sign-in image.",
+      "assetLogo": "Hipocratiq logo",
+      "assetLogoDescription": "Primary logo shown across the platform.",
+      "assetFavicon": "Favicon",
+      "assetFaviconDescription": "Browser icon (32 × 32 px).",
+      "assetLogin": "Sign-in logo",
+      "assetLoginDescription": "Brand shown on the authentication screen.",
+      "assetUploadSoon": "Coming soon",
+      "assetUploadAria": "{title}: file upload coming soon",
+      "assetUploadTitle": "File upload coming soon",
+      "assetUploadLabel": "Asset uploads:",
+      "assetApiAvailable": "the API reports the capability, but this screen does not have a connected upload endpoint yet.",
+      "assetApiUnavailable": "the global API does not enable this capability yet; actions remain disabled."
+    },
+    "languagesPage": {
+      "pageTitle": "Languages and region",
+      "pageDescription": "Define enabled countries and the default language without changing existing URLs.",
+      "loading": "Loading language and region settings",
+      "regionTitle": "Platform region",
+      "regionDescription": "Country coverage and the default country are persisted in the backend.",
+      "monetaryTitle": "Currency policy",
+      "monetaryDescription": "Display rule for clinics, plans, and global aggregates.",
+      "currencyListLabel": "Billing-supported currencies",
+      "currencyNames": {
+        "USD": "United States dollar",
+        "MXN": "Mexican peso",
+        "PEN": "Peruvian sol"
+      },
+      "currencyScopes": {
+        "clinic": {
+          "label": "Per clinic",
+          "description": "Each clinic keeps its billing currency and its amounts are displayed in that currency."
+        },
+        "plan": {
+          "label": "Per plan",
+          "description": "Each plan stores its monthly price, annual price, and currency; no implicit conversion is applied."
+        },
+        "aggregate": {
+          "label": "Aggregates",
+          "description": "MRR, ARR, payments, and reports are grouped by USD, MXN, and PEN instead of adding unlike currencies."
+        }
+      },
+      "monetaryPolicy": "The global currency does not replace a clinic or plan configuration. Aggregates are shown separately by currency and are not implicitly converted."
+    },
+    "languages": {
+      "cardTitle": "Available languages",
+      "cardDescription": "Enabled locale catalog and default locale.",
+      "enabledLocales": "Enabled locales",
+      "defaultLocale": "Default language",
+      "interfaceLabel": "Current interface",
+      "interfaceValue": "{language}. The header selector changes this preference and persists it in a cookie.",
+      "interfaceSupport": "The administrative interface initially supports Spanish and English. Backend regional locales remain configurable and can be extended without changing routes.",
+      "statusSaving": "Saving languages...",
+      "statusSaved": "Languages saved.",
+      "statusError": "Error: languages could not be saved.",
+      "note": "Locales are persisted in the backend. The interface uses a preference cookie and keeps existing URLs without language prefixes.",
+      "localeLabels": {
+        "es-MX": "Español (México)",
+        "es-PE": "Español (Perú)",
+        "en-US": "English (US)"
+      }
+    },
+    "region": {
+      "countriesLegend": "Enabled countries",
+      "defaultCountry": "Default country",
+      "base": "Base",
+      "coverageSummary": "Country coverage enabled for the platform: {countries}",
+      "loading": "Loading global configuration",
+      "globalLoading": "Loading global configuration...",
+      "globalLoaded": "Global configuration loaded from the backend.",
+      "loadError": "Global configuration could not be loaded.",
+      "unsaved": "There are unsaved coverage changes.",
+      "saving": "Saving global configuration...",
+      "saved": "Global configuration saved.",
+      "saveError": "Global configuration could not be saved.",
+      "save": "Save changes",
+      "countries": {
+        "MX": { "label": "Mexico", "description": "Platform base country" },
+        "PE": { "label": "Peru", "description": "Available operational coverage" },
+        "US": { "label": "United States", "description": "Available operational coverage" }
+      }
+    },
+    "integrations": {
+      "pageTitle": "Integrations",
+      "pageDescription": "Inventory returned by the backend; credentials are not exposed and fictitious connections are not presented.",
+      "loading": "Loading integrations",
+      "summaryLabel": "Integration summary",
+      "detected": "Adapters detected",
+      "productionReady": "Production ready",
+      "pending": "Pending",
+      "inventoryTitle": "Backend capabilities",
+      "inventoryDescription": "Status is derived from active server adapters and configuration.",
+      "adapter": "Adapter",
+      "noAdapter": "Not declared",
+      "items": {
+        "email": { "name": "Transactional email", "purpose": "Account and recovery notifications." },
+        "sms": { "name": "SMS / OTP", "purpose": "Verification code delivery." },
+        "billing": { "name": "Billing", "purpose": "Clinic purchases and subscriptions." },
+        "storage": { "name": "File storage", "purpose": "Private platform documents." },
+        "cache": { "name": "Cache and sessions", "purpose": "Cache, sessions, limits, and distributed locks." },
+        "his_ehr": { "name": "HIS / EHR", "purpose": "Clinical record exchange." },
+        "laboratory": { "name": "Laboratory / HL7", "purpose": "Laboratory results and orders." },
+        "pacs": { "name": "PACS / Imaging", "purpose": "Diagnostic images and studies." }
+      },
+      "credentialsTitle": "Credential management:",
+      "credentialsDescription": "remains outside the interface. It must be handled through environment secrets and controlled deployment.",
+      "status": {
+        "configured": "Configured",
+        "not_configured": "Not configured",
+        "sandbox": "Sandbox / test",
+        "local": "Local only"
+      },
+      "unavailableTitle": "Integrations unavailable",
+      "unavailableFallback": "The integration inventory could not be loaded."
+    },
+    "ai": {
+      "pageTitle": "Epidemiological AI",
+      "pageDescription": "Configure persisted parameters and show only inference capability verified by the backend.",
+      "loading": "Loading epidemiological AI settings",
+      "formTitle": "Persisted engine parameters",
+      "formDescription": "These values are saved for an inference service when a provider is connected.",
+      "frequency": "Frequency",
+      "frequencyOptions": { "every_12_hours": "Every 12 hours", "daily": "Daily", "weekly": "Weekly" },
+      "window": "Prediction window",
+      "days": "{count} days",
+      "sensitivity": "Sensitivity",
+      "sensitivityOptions": { "low": "Low", "medium": "Medium", "high": "High" },
+      "automaticAlerts": "Automatic alerts",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "models": "Enabled models",
+      "modelLabels": {
+        "respiratory": "Respiratory",
+        "dengue": "Dengue",
+        "gastrointestinal": "Gastrointestinal",
+        "hospital_occupancy": "Hospital occupancy"
+      },
+      "statusSaving": "Saving engine parameters...",
+      "statusSaved": "Engine parameters saved.",
+      "statusError": "Error: parameters could not be saved.",
+      "capabilityTitle": "Operational capability",
+      "capabilityDescription": "Status reported by the backend; predictions are not shown unless verified.",
+      "configured": "Provider configured",
+      "notConfigured": "Service not configured",
+      "provider": "Provider: {provider}.",
+      "noProvider": "none",
+      "predictions": "Verified predictions: {status}.",
+      "available": "available",
+      "notAvailable": "not available",
+      "dataSources": "Verified sources: {sources}.",
+      "noSources": "No connected epidemiological sources or verified predictions.",
+      "noSourcesConfigured": "No epidemiological sources are configured."
+    }
+  }
+}

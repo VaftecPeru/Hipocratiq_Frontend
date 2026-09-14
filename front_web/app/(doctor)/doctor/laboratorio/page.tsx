@@ -1,66 +1,139 @@
+"use client";
+
+import { AlertTriangle, CheckCircle2, Clock3, FlaskConical, History, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  Eye,
-  FlaskConical,
-  FolderOpen,
-  HeartPulse,
-  History,
-  Plus,
-} from "lucide-react";
-import {
-  DoctorAvatar,
-  DoctorCard,
-  LegendDot,
-  MetricCard,
-  SectionHeading,
-  StatusBadge,
-} from "@/features/doctors/ui/doctor-primitives";
+  createDoctorLaboratoryOrder,
+  getDoctorLaboratory,
+  getDoctorPatients,
+  updateDoctorLaboratoryStatus,
+  type DoctorPatient,
+  type LaboratoryOrder,
+  type LaboratoryOrderMeta,
+  type LaboratoryOrderStatus,
+} from "@/features/doctors/api/doctor-clinical";
+import { DoctorAvatar, DoctorCard, MetricCard, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
+import { DoctorModuleAlert, DoctorModuleEmpty, DoctorModuleError, DoctorModuleLoading } from "@/features/doctors/ui/doctor-module-state";
 
-const metrics = [
-  { label: "Resultados pendientes", value: "5", icon: FlaskConical, tone: "violet" as const },
-  { label: "Críticos", value: "2", icon: AlertTriangle, tone: "red" as const },
-  { label: "Completados", value: "18", icon: CheckCircle2, tone: "green" as const },
-  { label: "Muestras en proceso", value: "4", icon: FlaskConical, tone: "orange" as const },
-] as const;
+const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-const results = [
-  { initials: "JP", patient: "Juan Pérez", study: "Hemograma", date: "Hoy 09:15 AM", status: "Pendiente", tone: "blue" as const, avatarTone: "blue" as const },
-  { initials: "ML", patient: "María López", study: "Perfil lipídico", date: "Hoy 08:40 AM", status: "Crítico", tone: "red" as const, avatarTone: "orange" as const },
-  { initials: "PG", patient: "Pedro García", study: "Glucosa en ayunas", date: "Ayer 11:20 AM", status: "Listo", tone: "green" as const, avatarTone: "slate" as const },
-  { initials: "AT", patient: "Ana Torres", study: "Hemoglobina glicosilada", date: "Ayer 10:05 AM", status: "En proceso", tone: "orange" as const, avatarTone: "violet" as const },
-  { initials: "CM", patient: "Carlos Méndez", study: "Urea y creatinina", date: "14 May 04:10 PM", status: "Listo", tone: "green" as const, avatarTone: "orange" as const },
-] as const;
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+}
 
-const upcoming = [
-  { initials: "ML", name: "María López", study: "Hemograma completo", date: "Hoy, 10:00 AM", avatarTone: "orange" as const },
-  { initials: "JP", name: "Juan Pérez", study: "Perfil lipídico", date: "Hoy, 11:30 AM", avatarTone: "blue" as const },
-  { initials: "AT", name: "Ana Torres", study: "Urea y creatinina", date: "Mañana, 09:00", avatarTone: "violet" as const },
-] as const;
+function initialsOf(name: string | null): string {
+  return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
+}
+
+function statusTone(status: LaboratoryOrderStatus): "blue" | "green" | "orange" | "red" | "slate" {
+  if (status === "ready" || status === "reviewed") return "green";
+  if (status === "in_progress") return "orange";
+  if (status === "canceled") return "red";
+  return "blue";
+}
+
+function nextStatus(status: LaboratoryOrderStatus): { value: LaboratoryOrderStatus; label: string } | null {
+  if (status === "requested") return { value: "in_progress", label: "Iniciar" };
+  if (status === "in_progress") return { value: "ready", label: "Marcar listo" };
+  if (status === "ready") return { value: "reviewed", label: "Marcar revisado" };
+  return null;
+}
+
+type CountedLaboratoryStatus = "requested" | "in_progress" | "ready" | "reviewed";
+
+function isCountedLaboratoryStatus(status: LaboratoryOrderStatus): status is CountedLaboratoryStatus {
+  return status !== "canceled";
+}
+
+const EMPTY_META: LaboratoryOrderMeta = { total: 0, requested: 0, in_progress: 0, ready: 0, reviewed: 0, critical: 0 };
 
 export default function DoctorLaboratoryPage() {
+  const [orders, setOrders] = useState<LaboratoryOrder[]>([]);
+  const [patients, setPatients] = useState<DoctorPatient[]>([]);
+  const [meta, setMeta] = useState<LaboratoryOrderMeta>(EMPTY_META);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [form, setForm] = useState({ patientId: "", studyName: "", priority: "normal" as "normal" | "urgent", notes: "" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([getDoctorLaboratory(controller.signal), getDoctorPatients(controller.signal)])
+      .then(([orderResult, patientList]) => {
+        setOrders(orderResult.items);
+        setMeta(orderResult.meta);
+        setPatients(patientList);
+        if (patientList[0]) setForm((current) => ({ ...current, patientId: String(patientList[0].id) }));
+        setError(null);
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) setError(caught instanceof Error ? caught.message : "No pudimos cargar los estudios.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  async function handleCreate(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const created = await createDoctorLaboratoryOrder({ patient_profile_id: Number(form.patientId), study_name: form.studyName.trim(), priority: form.priority, notes: form.notes.trim() || null });
+      setOrders((current) => [created, ...current]);
+      setMeta((current) => ({ ...current, total: current.total + 1, requested: current.requested + 1 }));
+      setForm((current) => ({ ...current, studyName: "", notes: "" }));
+      setSuccess("Solicitud de laboratorio registrada correctamente.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos registrar el estudio.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleStatus(order: LaboratoryOrder): Promise<void> {
+    const next = nextStatus(order.status);
+    if (!next) return;
+    setPending(true);
+    setError(null);
+    try {
+      const updated = await updateDoctorLaboratoryStatus(order.id, next.value);
+      setOrders((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setMeta((current) => {
+        const nextMeta = { ...current };
+        if (isCountedLaboratoryStatus(order.status)) nextMeta[order.status] = Math.max(0, nextMeta[order.status] - 1);
+        if (isCountedLaboratoryStatus(next.value)) nextMeta[next.value] += 1;
+        return nextMeta;
+      });
+      setSuccess("Estado del estudio actualizado.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos actualizar el estudio.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const metrics = [
+    { label: "Resultados pendientes", value: String(meta.requested + meta.in_progress), icon: FlaskConical, tone: "violet" as const },
+    { label: "Críticos", value: String(meta.critical), icon: AlertTriangle, tone: "red" as const },
+    { label: "Completados", value: String(meta.ready + meta.reviewed), icon: CheckCircle2, tone: "green" as const },
+    { label: "En proceso", value: String(meta.in_progress), icon: Clock3, tone: "orange" as const },
+  ];
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Laboratorio</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Gestiona resultados, solicitudes y seguimiento de estudios clínicos.</p></div><div className="flex gap-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button"><Plus className="size-3.5" aria-hidden="true" />Solicitar estudio</button><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><History className="size-3.5" aria-hidden="true" />Ver historial</button></div></header>
-
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Laboratorio</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Registra solicitudes y revisa resultados internos sin inventar estados de proveedores externos.</p></div><span className="inline-flex min-h-9 items-center gap-2 self-start rounded-lg border border-line bg-surface px-3 text-[0.62rem] font-extrabold text-ink-secondary sm:self-auto"><History className="size-3.5 text-accent" aria-hidden="true" />Flujo clínico interno</span></header>
+      {error && orders.length > 0 ? <DoctorModuleAlert>{error}</DoctorModuleAlert> : null}
+      {success ? <DoctorModuleAlert tone="success">{success}</DoctorModuleAlert> : null}
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Resumen de laboratorio">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</section>
 
-      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(350px,0.9fr)]" aria-label="Resultados de laboratorio">
-        <DoctorCard className="min-w-0 overflow-hidden"><div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.82rem] font-extrabold">Resultados recientes</h2><button className="inline-flex items-center gap-1 text-[0.61rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver todos <ChevronRight className="size-3" aria-hidden="true" /></button></div><div className="overflow-x-auto"><table className="w-full min-w-[700px] border-collapse text-left"><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Paciente</th><th className="px-3 py-2.5 font-extrabold">Estudio</th><th className="px-3 py-2.5 font-extrabold">Fecha</th><th className="px-3 py-2.5 font-extrabold">Estado</th><th className="px-3 py-2.5 font-extrabold">Acción</th></tr></thead><tbody>{results.map((result) => <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={`${result.patient}-${result.study}`}><td className="px-3 py-2.5 sm:px-4"><div className="flex items-center gap-2"><DoctorAvatar initials={result.initials} tone={result.avatarTone} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{result.patient}</span></div></td><td className="px-3 py-2.5 text-[0.59rem] font-extrabold">{result.study}</td><td className="px-3 py-2.5 whitespace-nowrap text-[0.58rem] font-extrabold">{result.date}</td><td className="px-3 py-2.5"><StatusBadge tone={result.tone}>{result.status}<span className="ml-1">{result.status === "Crítico" ? "!" : result.status === "En proceso" ? "⌁" : result.status === "Pendiente" ? "◷" : "✓"}</span></StatusBadge></td><td className="px-3 py-2.5"><button className="grid size-7 place-items-center rounded-md text-ink-secondary hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={`Ver ${result.study} de ${result.patient}`}><Eye className="size-3.5" aria-hidden="true" /></button></td></tr>)}</tbody></table></div></DoctorCard>
+      <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.85fr)]" aria-label="Gestión de laboratorio">
+        <DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line px-4 py-3 sm:px-5"><h2 className="text-[0.86rem] font-extrabold">Solicitudes y resultados</h2></div>{loading ? <DoctorModuleLoading label="Cargando laboratorio…" /> : error && orders.length === 0 ? <DoctorModuleError message={error} /> : orders.length === 0 ? <DoctorModuleEmpty message="Aún no hay solicitudes de laboratorio para tus pacientes." /> : <div className="overflow-x-auto"><table className="w-full min-w-[740px] border-collapse text-left"><caption className="sr-only">Solicitudes de laboratorio</caption><thead><tr className="border-b border-line bg-surface-subtle text-[0.55rem] font-extrabold text-ink-secondary"><th className="px-3 py-2.5 font-extrabold sm:px-4">Paciente</th><th className="px-3 py-2.5 font-extrabold">Estudio</th><th className="px-3 py-2.5 font-extrabold">Fecha</th><th className="px-3 py-2.5 font-extrabold">Estado</th><th className="px-3 py-2.5 font-extrabold">Acción</th></tr></thead><tbody>{orders.map((order) => { const next = nextStatus(order.status); return <tr className="border-b border-line last:border-0 hover:bg-surface-subtle" key={order.id}><td className="px-3 py-2.5 sm:px-4"><div className="flex items-center gap-2"><DoctorAvatar initials={initialsOf(order.patient.name)} tone={order.id % 2 === 0 ? "blue" : "orange"} size="sm" /><span className="whitespace-nowrap text-[0.61rem] font-extrabold">{order.patient.name ?? order.patient.patientCode}</span></div></td><td className="px-3 py-2.5"><p className="text-[0.6rem] font-extrabold">{order.studyName}</p><p className="mt-0.5 text-[0.55rem] font-bold text-ink-secondary">{order.priority === "urgent" ? "Prioridad urgente" : "Prioridad normal"}{order.isCritical ? " · Resultado crítico" : ""}</p></td><td className="px-3 py-2.5 whitespace-nowrap text-[0.58rem] font-bold text-ink-secondary">{formatDate(order.orderedAt)}</td><td className="px-3 py-2.5"><StatusBadge tone={statusTone(order.status)}>{order.statusLabel}</StatusBadge></td><td className="px-3 py-2.5">{next ? <button className="rounded-md border border-accent/20 px-2 py-1.5 text-[0.56rem] font-extrabold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="button" disabled={pending} onClick={() => void handleStatus(order)}>{next.label}</button> : <span className="text-[0.56rem] font-bold text-muted">Sin acciones</span>}</td></tr>; })}</tbody></table></div>}</DoctorCard>
 
-        <aside className="grid gap-4"><DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line px-4 py-3"><h2 className="text-[0.82rem] font-extrabold">Paciente seleccionado</h2></div><div className="grid gap-3 p-4 sm:grid-cols-[1fr_1.1fr]"><div><div className="flex items-center gap-3"><DoctorAvatar initials="PG" tone="slate" size="lg" /><div><h3 className="text-[0.82rem] font-extrabold">Pedro García</h3><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">Masculino <span className="mx-1">·</span> 45 años</p><p className="mt-1 text-[0.55rem] font-bold text-ink-secondary">Expediente: EXP-004589</p></div></div><p className="mt-3 text-[0.57rem] font-extrabold">Contexto clínico</p><p className="mt-1 text-[0.55rem] font-bold text-ink-secondary">Seguimiento de hipertensión arterial.</p></div><div className="rounded-lg border border-line p-3"><p className="text-[0.59rem] font-extrabold">Estudios solicitados</p><ul className="mt-2 grid gap-1 text-[0.55rem] font-bold text-ink-secondary"><li>· Hemograma completo</li><li>· Perfil lipídico</li><li>· Glucosa en ayunas</li></ul><p className="mt-2 text-[0.52rem] font-bold text-muted">Solicitud: 16 May 2024, 08:30 AM</p></div></div><div className="flex flex-wrap gap-2 px-4 pb-4"><button className="inline-flex min-h-8 flex-1 items-center justify-center gap-2 rounded-lg border border-line px-3 text-[0.59rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button"><FolderOpen className="size-3.5" aria-hidden="true" />Ver expediente</button><button className="inline-flex min-h-8 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-3 text-[0.59rem] font-extrabold text-white focus-visible:outline-3 focus-visible:outline-focus" type="button"><Eye className="size-3.5" aria-hidden="true" />Revisar resultado</button></div></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Solicitudes próximas" action="Ver agenda completa" /><ul className="mt-3 divide-y divide-line">{upcoming.map((request) => <li className="grid grid-cols-[28px_1fr_auto] items-center gap-2 py-2 first:pt-0 last:pb-0" key={request.name}><span className="grid size-7 place-items-center rounded-lg bg-accent-soft text-accent"><CalendarDays className="size-3.5" aria-hidden="true" /></span><DoctorAvatar initials={request.initials} tone={request.avatarTone} size="sm" /><span className="min-w-0"><span className="block truncate text-[0.59rem] font-extrabold">{request.name}</span><span className="block truncate text-[0.54rem] font-bold text-ink-secondary">{request.study}</span></span><span className="text-right text-[0.53rem] font-bold text-ink-secondary">{request.date}<br /><span aria-hidden="true">◷</span></span></li>)}</ul></DoctorCard></aside>
-      </section>
-
-      <section className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_1fr_0.95fr]" aria-label="Analítica de laboratorio">
-        <DoctorCard className="min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="text-[0.82rem] font-extrabold">Tendencia de estudios</h2><div className="mt-2 flex gap-4 text-[0.56rem] font-bold text-ink-secondary"><span className="inline-flex items-center gap-1.5"><LegendDot tone="blue" />Solicitados</span><span className="inline-flex items-center gap-1.5"><LegendDot tone="green" />Completados</span></div></div><button className="rounded-lg border border-line px-2.5 py-1.5 text-[0.58rem] font-extrabold focus-visible:outline-3 focus-visible:outline-focus" type="button">Este mes⌄</button></div><svg className="mt-2 h-auto w-full overflow-visible" viewBox="0 0 390 165" role="img" aria-label="Tendencia mensual de estudios solicitados y completados"><line x1="30" y1="25" x2="372" y2="25" className="stroke-line" /><line x1="30" y1="55" x2="372" y2="55" className="stroke-line" /><line x1="30" y1="85" x2="372" y2="85" className="stroke-line" /><line x1="30" y1="115" x2="372" y2="115" className="stroke-line" /><line x1="30" y1="145" x2="372" y2="145" className="stroke-line" /><text x="5" y="29" className="fill-ink-secondary text-[9px]">40</text><text x="5" y="59" className="fill-ink-secondary text-[9px]">30</text><text x="5" y="89" className="fill-ink-secondary text-[9px]">20</text><text x="5" y="119" className="fill-ink-secondary text-[9px]">10</text><text x="9" y="149" className="fill-ink-secondary text-[9px]">0</text>{["1 May", "8 May", "16 May", "24 May", "31 May"].map((label, index) => <text key={label} x={[45, 122, 199, 276, 353][index]} y="162" textAnchor="middle" className="fill-ink-secondary text-[9px]">{label}</text>)}<polyline points="45,104 82,78 119,78 156,61 193,66 230,51 267,64 304,48 341,58 367,48" className="fill-none stroke-accent" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><polyline points="45,129 82,112 119,125 156,110 193,97 230,91 267,105 304,80 341,87 367,80" className="fill-none stroke-success" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />{[[45, 104], [82, 78], [119, 78], [156, 61], [193, 66], [230, 51], [267, 64], [304, 48], [341, 58], [367, 48]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" className="fill-accent" />)}</svg></DoctorCard>
-
-        <DoctorCard className="min-w-0 p-4"><h2 className="text-[0.82rem] font-extrabold">Tipos de estudio</h2><div className="mt-3 grid grid-cols-[145px_1fr] items-center gap-2"><div className="relative grid place-items-center"><svg className="col-start-1 row-start-1 size-32 -rotate-90" viewBox="0 0 120 120" role="img" aria-label="Tipos de estudio: Hematología 30%, Química sanguínea 25%, Perfil lipídico 20%, Orina 15%, Otros 10%"><circle cx="60" cy="60" r="43" className="fill-none stroke-surface-subtle" strokeWidth="14" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-accent" strokeWidth="14" strokeDasharray="30 70" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-success" strokeWidth="14" strokeDasharray="25 75" strokeDashoffset="-30" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-violet" strokeWidth="14" strokeDasharray="20 80" strokeDashoffset="-55" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-warning" strokeWidth="14" strokeDasharray="15 85" strokeDashoffset="-75" /><circle cx="60" cy="60" r="43" pathLength="100" className="fill-none stroke-muted" strokeWidth="14" strokeDasharray="10 90" strokeDashoffset="-90" /></svg><div className="col-start-1 row-start-1 text-center"><strong className="block font-mono text-2xl tracking-[-0.07em]">78</strong><span className="text-[0.55rem] font-bold text-muted">Total</span></div></div><ul className="grid gap-3 text-[0.57rem] font-extrabold"><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="blue" />Hematología</span>30%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="green" />Química sanguínea</span>25%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="violet" />Perfil lipídico</span>20%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="orange" />Orina</span>15%</li><li className="flex justify-between gap-2"><span className="flex items-center gap-2 text-ink-secondary"><LegendDot tone="slate" />Otros</span>10%</li></ul></div><button className="mt-3 inline-flex items-center gap-1 text-[0.57rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver detalle <ArrowUpRight className="size-3" aria-hidden="true" /></button></DoctorCard>
-
-        <div className="grid gap-4"><DoctorCard className="p-4"><div className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><HeartPulse className="size-4" aria-hidden="true" /></span><h2 className="text-[0.82rem] font-extrabold">IA Epidemiológica</h2></div><div className="mt-3 grid grid-cols-[1fr_1.1fr] gap-2"><div className="rounded-lg border border-line bg-surface-subtle p-2.5"><p className="text-[0.54rem] font-bold text-ink-secondary">Riesgo actual</p><strong className="mt-0.5 block text-lg font-extrabold text-success">Bajo</strong><p className="text-[0.53rem] font-bold text-ink-secondary">Tendencia estable</p><svg className="mt-2 h-5 w-full" viewBox="0 0 96 24" aria-hidden="true"><polyline points="2,20 18,14 32,17 47,9 62,14 78,6 94,2" className="fill-none stroke-success" strokeWidth="2" strokeLinecap="round" /></svg></div><div className="grid gap-2"><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><AlertTriangle className="size-3 text-danger" aria-hidden="true" /><span className="flex-1 text-[0.55rem] font-extrabold">1 alerta activa</span><span className="text-muted">›</span></div><div className="flex items-center gap-2 rounded-lg border border-line px-2 py-2"><CalendarDays className="size-3 text-accent" aria-hidden="true" /><span className="flex-1 text-[0.53rem] font-bold text-ink-secondary">Hoy, 10:30 AM</span><span className="text-muted">›</span></div></div></div><button className="mt-2 inline-flex items-center gap-1 text-[0.57rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver IA <ArrowUpRight className="size-3" aria-hidden="true" /></button></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Alertas y recordatorios" action="Ver todas" /><ul className="mt-3 grid gap-2"><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><AlertTriangle className="size-3.5 text-danger" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">2 resultados críticos por revisar</span><ChevronRight className="size-3 text-muted" /></li><li className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-2"><Clock3 className="size-3.5 text-warning" aria-hidden="true" /><span className="flex-1 text-[0.56rem] font-extrabold">1 paciente pendiente de muestra</span><ChevronRight className="size-3 text-muted" /></li></ul></DoctorCard></div>
+        <DoctorCard className="p-4"><div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.86rem] font-extrabold">Solicitar estudio</h2><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">La solicitud queda ligada al paciente y médico activos.</p></div><Plus className="size-4 text-accent" aria-hidden="true" /></div><form className="mt-4 grid gap-3" onSubmit={(event) => void handleCreate(event)}><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Paciente<select className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60" required value={form.patientId} onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))} disabled={pending || patients.length === 0}><option value="">Selecciona un paciente</option>{patients.map((patient) => <option key={patient.id} value={String(patient.id)}>{patient.name ?? patient.patientCode}</option>)}</select></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Estudio<input className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" required minLength={2} maxLength={180} value={form.studyName} onChange={(event) => setForm((current) => ({ ...current, studyName: event.target.value }))} disabled={pending} /></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Prioridad<select className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as "normal" | "urgent" }))} disabled={pending}><option value="normal">Normal</option><option value="urgent">Urgente</option></select></label><label className="grid gap-1 text-[0.6rem] font-bold text-ink-secondary">Notas<textarea className="min-h-20 rounded-lg border border-line bg-surface-input px-2 py-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} disabled={pending} /></label><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.62rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={pending || patients.length === 0}>{pending ? "Guardando…" : "Solicitar estudio"}</button>{patients.length === 0 && !loading ? <p className="text-[0.58rem] font-bold text-ink-secondary">Primero registra o vincula un paciente.</p> : null}</form></DoctorCard>
       </section>
     </div>
   );

@@ -20,6 +20,7 @@ import {
   createDoctorAppointment,
   getDoctorAppointments,
   getDoctorAvailability,
+  getDoctorEpidemiology,
   getDoctorPatients,
   updateDoctorAppointment,
   updateDoctorAppointmentStatus,
@@ -27,6 +28,7 @@ import {
   type DoctorAppointmentStatus,
   type DoctorAvailability,
   type DoctorAppointmentSummary,
+  type DoctorEpidemiology,
   type DoctorPatient,
 } from "@/features/doctors/api/doctor-clinical";
 import { DoctorAvatar, DoctorCard, MetricCard, SectionHeading, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
@@ -151,6 +153,9 @@ export default function DoctorAgendaPage() {
   const [availability, setAvailability] = useState<DoctorAvailability | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [epidemiology, setEpidemiology] = useState<DoctorEpidemiology | null>(null);
+  const [epidemiologyLoading, setEpidemiologyLoading] = useState(true);
+  const [epidemiologyError, setEpidemiologyError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -220,6 +225,24 @@ export default function DoctorAgendaPage() {
         }
       })
       .finally(() => setPatientsLoading(false));
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getDoctorEpidemiology(controller.signal)
+      .then((result) => {
+        setEpidemiology(result);
+        setEpidemiologyError(null);
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+          setEpidemiologyError(caught instanceof Error ? caught.message : "No pudimos cargar las fuentes epidemiológicas.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setEpidemiologyLoading(false);
+      });
     return () => controller.abort();
   }, []);
 
@@ -412,7 +435,7 @@ export default function DoctorAgendaPage() {
         <aside className="grid gap-4">
           <DoctorCard className="p-4"><SectionHeading title="Próximas consultas" action="Agenda del día" /><ul className="mt-3 divide-y divide-line">{upcomingAppointments.map((appointment) => <li className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0" key={appointment.id}><DoctorAvatar initials={initialsOf(appointment.patient.name)} tone={appointment.id % 2 === 0 ? "blue" : "orange"} size="sm" /><span className="min-w-0 flex-1"><span className="block text-[0.6rem] font-extrabold">{formattedTimes.get(appointment.id) ?? "—"}</span><span className="mt-0.5 block truncate text-[0.61rem] font-extrabold">{appointment.patient.name ?? "Paciente"}</span></span><StatusBadge tone={statusTone(appointment.status)}>{appointment.statusLabel}</StatusBadge></li>)}{!hasUpcomingAppointments ? <li className="py-3 text-xs font-bold text-ink-secondary">No hay próximas consultas.</li> : null}</ul></DoctorCard>
            <DoctorCard className="p-4"><div className="flex items-center justify-between gap-3"><div><h2 className="text-[0.82rem] font-extrabold">Disponibilidad del día</h2><p className="mt-1 text-[0.58rem] font-bold text-ink-secondary">Horario configurado y espacios libres.</p></div><CalendarDays className="size-4 text-accent" aria-hidden="true" /></div>{availabilityLoading ? <p className="mt-4 text-xs font-bold text-muted" aria-busy="true">Cargando disponibilidad…</p> : availabilityError ? <p className="mt-4 text-xs font-bold text-danger" role="alert">{availabilityError}</p> : availability?.is_working_day ? <><div className="mt-3 flex items-center justify-between gap-3 text-[0.58rem] font-extrabold"><span>{availability.working_hours?.start} – {availability.working_hours?.end}</span><span className="text-success">{availability.available_slots} libres</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-subtle"><span className="block h-full rounded-full bg-success" style={{ width: `${availability.slots.length === 0 ? 0 : (availability.available_slots / availability.slots.length) * 100}%` }} /></div><p className="mt-3 text-[0.56rem] font-bold text-ink-secondary">{availability.slots.length} bloques de {availability.duration_minutes} min · {summary.period_total ?? appointments.length} citas registradas.</p></> : <p className="mt-4 text-xs font-bold text-ink-secondary">No atiendes este día.</p>}</DoctorCard>
-          <DoctorCard className="p-4"><div className="flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-[0.82rem] font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><HeartPulse className="size-4" aria-hidden="true" /></span>IA Epidemiológica</h2><span className="text-[0.61rem] font-extrabold text-accent">Próximamente</span></div><div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3"><p className="text-[0.57rem] font-bold text-ink-secondary">Riesgo actual</p><strong className="mt-1 block text-lg font-extrabold text-success">Bajo</strong><p className="text-[0.56rem] font-bold text-ink-secondary">Disponible cuando exista información epidemiológica suficiente.</p></div></DoctorCard>
+           <DoctorCard className="p-4"><div className="flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-[0.82rem] font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><HeartPulse className="size-4" aria-hidden="true" /></span>IA Epidemiológica</h2><span className={`text-[0.61rem] font-extrabold ${epidemiology?.analysisAvailable ? "text-success" : "text-muted"}`}>{epidemiologyLoading ? "Cargando" : epidemiology?.analysisAvailable ? "Disponible" : "No disponible"}</span></div>{epidemiologyLoading ? <p className="mt-4 text-xs font-bold text-muted" aria-busy="true">Cargando fuentes clínicas…</p> : epidemiologyError ? <p className="mt-4 text-xs font-bold text-danger" role="alert">{epidemiologyError}</p> : epidemiology ? <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3"><p className="text-[0.57rem] font-bold leading-4 text-ink-secondary">{epidemiology.message}</p><p className="mt-3 text-[0.56rem] font-extrabold text-ink-secondary">Fuentes registradas · últimos {epidemiology.periodDays} días</p><dl className="mt-2 grid grid-cols-2 gap-2 text-[0.56rem]"><div><dt className="font-bold text-ink-secondary">Consultas</dt><dd className="mt-0.5 text-base font-extrabold text-ink">{epidemiology.metrics.consultations}</dd></div><div><dt className="font-bold text-ink-secondary">Laboratorio</dt><dd className="mt-0.5 text-base font-extrabold text-ink">{epidemiology.metrics.laboratoryOrders}</dd></div><div><dt className="font-bold text-ink-secondary">Teleconsultas</dt><dd className="mt-0.5 text-base font-extrabold text-ink">{epidemiology.metrics.teleconsultations}</dd></div><div><dt className="font-bold text-ink-secondary">Recetas</dt><dd className="mt-0.5 text-base font-extrabold text-ink">{epidemiology.metrics.prescriptions}</dd></div></dl></div> : <p className="mt-4 text-xs font-bold text-ink-secondary">No hay información epidemiológica disponible.</p>}</DoctorCard>
         </aside>
       </section>
 

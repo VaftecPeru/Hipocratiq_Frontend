@@ -3,10 +3,11 @@
 import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
-import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { COUNTRY_OPTIONS, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
 import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-steps";
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
+import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 import { ApiError } from "@/shared/api/http-client";
 
 type FieldName = "identifier" | "password" | "code";
@@ -22,6 +23,14 @@ const LOGIN_ROLE_REQUESTS = {
   administrator: { actorContext: "staff", requestedRole: "clinic_admin" },
   support: { actorContext: "staff", requestedRole: "super_admin" },
 } satisfies Record<LoginRole, { actorContext: LoginActorContext; requestedRole: LoginRequestedRole }>;
+
+const LOGIN_CREDENTIAL_TITLES = {
+  healthcare: "Iniciar sesión — Profesional de salud",
+  receptionist: "Iniciar sesión — Recepción",
+  patient: "Iniciar sesión — Paciente",
+  administrator: "Iniciar sesión — Administrador de clínica",
+  support: "Iniciar sesión — Superadministrador",
+} satisfies Record<LoginRole, string>;
 
 type FlowState = {
   step: AuthStep;
@@ -55,7 +64,7 @@ const INITIAL_FLOW_STATE: FlowState = {
   otpDigits: createEmptyOtp(),
   expiresIn: 0,
   resendAfter: 0,
-  destination: "tu teléfono registrado",
+  destination: "tu correo electrónico registrado",
   error: null,
   fieldErrors: {},
   isPending: false,
@@ -126,6 +135,13 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   const dashboardPath = useRef("/dashboard");
   const country = selectedCountry ?? defaultCountryCode;
   const { actorContext, requestedRole } = LOGIN_ROLE_REQUESTS[loginRole];
+  const documentTitle = flow.step === "otp"
+    ? "Verificar identidad"
+    : flow.step === "success"
+      ? "Acceso confirmado"
+      : LOGIN_CREDENTIAL_TITLES[loginRole];
+
+  useAuthDocumentTitle(documentTitle);
 
   useEffect(() => {
     if (flow.step !== "otp") {
@@ -213,8 +229,8 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       expiresIn: response.data.expires_in,
       resendAfter: response.data.resend_after,
       destination: identifierType === "phone"
-        ? maskPhoneNumber(identifier)
-        : "el teléfono registrado en tu cuenta",
+        ? "el correo electrónico registrado en tu cuenta"
+        : "tu correo electrónico",
     });
   }
 

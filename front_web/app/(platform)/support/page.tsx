@@ -200,8 +200,8 @@ export default function SupportPage() {
           <p className="mt-0.5 text-xs text-muted">Supervisa tickets, SLA, responsables y escalaciones de todos los países.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex min-h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink" type="button" onClick={refresh}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />Actualizar</button>
-          <button className="flex min-h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white hover:bg-accent-hover" type="button" onClick={() => { setCreateVersion((version) => version + 1); setCreateOpen(true); }}><Plus className="size-3.5" />Nuevo ticket</button>
+          <button className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink sm:min-h-9" type="button" onClick={refresh}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" />Actualizar</button>
+          <button className="flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-bold text-white hover:bg-accent-hover sm:min-h-9" type="button" onClick={() => { setCreateVersion((version) => version + 1); setCreateOpen(true); }}><Plus className="size-3.5" aria-hidden="true" />Nuevo ticket</button>
         </div>
       </header>
 
@@ -216,11 +216,11 @@ export default function SupportPage() {
       <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="support-queue-title">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div><h2 className="text-sm font-extrabold" id="support-queue-title">Cola global de tickets</h2><p className="mt-0.5 text-2xs text-muted">{numberFormatter.format(data?.meta.total ?? 0)} solicitudes encontradas</p></div>
-          {summary.totals.overdue > 0 ? <span className="flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-1 text-2xs font-extrabold text-danger"><AlertTriangle className="size-3" />{summary.totals.overdue} vencidos</span> : null}
+           {summary.totals.overdue > 0 ? <span className="flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-1 text-2xs font-extrabold text-danger"><AlertTriangle className="size-3" aria-hidden="true" />{summary.totals.overdue} vencidos</span> : null}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[68rem] border-collapse text-left">
-            <thead className="bg-surface-subtle text-2xs font-bold text-muted"><tr><th className="px-4 py-2.5">Ticket</th><th className="px-3 py-2.5">Clínica / País</th><th className="px-3 py-2.5">Estado</th><th className="px-3 py-2.5">Prioridad</th><th className="px-3 py-2.5">Responsable</th><th className="px-3 py-2.5">SLA</th><th className="px-4 py-2.5 text-right">Acción</th></tr></thead>
+            <thead className="bg-surface-subtle text-2xs font-bold text-muted"><tr><th className="px-4 py-2.5" scope="col">Ticket</th><th className="px-3 py-2.5" scope="col">Clínica / País</th><th className="px-3 py-2.5" scope="col">Estado</th><th className="px-3 py-2.5" scope="col">Prioridad</th><th className="px-3 py-2.5" scope="col">Responsable</th><th className="px-3 py-2.5" scope="col">SLA</th><th className="px-4 py-2.5 text-right" scope="col">Acción</th></tr></thead>
             <tbody className="divide-y divide-line">
               {(data?.tickets ?? []).map((ticket) => (
                 <tr className="text-xs transition-colors hover:bg-accent-soft/30" key={ticket.id}>
@@ -230,7 +230,7 @@ export default function SupportPage() {
                   <td className="px-3 py-3 font-semibold text-ink">{PRIORITY_LABELS[ticket.priority]}</td>
                   <td className="px-3 py-3 text-muted">{ticket.assignedTo?.name ?? "Sin asignar"}</td>
                   <td className={`px-3 py-3 text-2xs font-semibold ${ticket.isOverdue ? "text-danger" : "text-muted"}`}>{ticket.isOverdue ? "Vencido · " : ""}{formatDate(ticket.dueAt)}</td>
-                  <td className="px-4 py-3 text-right"><button className="rounded-lg border border-line px-3 py-1.5 text-2xs font-extrabold text-accent hover:border-accent" type="button" onClick={() => setSelectedTicket(ticket)}>Gestionar</button></td>
+                   <td className="px-4 py-3 text-right"><button className="min-h-11 rounded-lg border border-line px-3 py-1.5 text-2xs font-extrabold text-accent hover:border-accent sm:min-h-8" type="button" onClick={() => setSelectedTicket(ticket)}>Gestionar</button></td>
                 </tr>
               ))}
               {!isLoading && (data?.tickets.length ?? 0) === 0 ? <tr><td className="px-4 py-10 text-center text-xs text-muted" colSpan={7}>No hay tickets para los filtros seleccionados.</td></tr> : null}
@@ -240,8 +240,8 @@ export default function SupportPage() {
         <div className="flex items-center justify-between border-t border-line px-4 py-3 text-2xs text-muted">
           <span>Página {data?.meta.currentPage ?? 1} de {data?.meta.lastPage ?? 1}</span>
           <div className="flex gap-1">
-            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página anterior" disabled={(data?.meta.currentPage ?? 1) <= 1 || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))}><ChevronLeft className="size-3.5" /></button>
-            <button className="grid size-8 place-items-center rounded-lg border border-line disabled:opacity-40" type="button" aria-label="Página siguiente" disabled={(data?.meta.currentPage ?? 1) >= (data?.meta.lastPage ?? 1) || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))}><ChevronRight className="size-3.5" /></button>
+            <button className="grid size-11 place-items-center rounded-lg border border-line disabled:opacity-40 sm:size-8" type="button" aria-label="Página anterior" disabled={(data?.meta.currentPage ?? 1) <= 1 || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))}><ChevronLeft className="size-3.5" aria-hidden="true" /></button>
+            <button className="grid size-11 place-items-center rounded-lg border border-line disabled:opacity-40 sm:size-8" type="button" aria-label="Página siguiente" disabled={(data?.meta.currentPage ?? 1) >= (data?.meta.lastPage ?? 1) || isLoading} onClick={() => setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))}><ChevronRight className="size-3.5" aria-hidden="true" /></button>
           </div>
         </div>
       </section>
@@ -253,7 +253,7 @@ export default function SupportPage() {
       </section>
 
       <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.8fr)]">
-        <article className="overflow-hidden rounded-xl border border-line bg-surface"><div className="border-b border-line px-4 py-3"><h2 className="flex items-center gap-2 text-sm font-extrabold"><UsersRound className="size-4 text-accent" />Equipo Superadmin</h2></div><div className="overflow-x-auto"><table className="w-full min-w-lg text-left"><thead className="bg-surface-subtle text-2xs text-muted"><tr><th className="px-4 py-2">Responsable</th><th className="px-3 py-2">Activos</th><th className="px-3 py-2">Resueltos</th><th className="px-4 py-2">Asignados</th></tr></thead><tbody className="divide-y divide-line">{summary.agents.map((agent) => <tr className="text-xs" key={agent.id}><th className="px-4 py-3"><p className="font-bold">{agent.name}</p><p className="mt-0.5 text-2xs font-normal text-muted">{agent.email}</p></th><td className="px-3 py-3 font-mono">{agent.activeTickets}</td><td className="px-3 py-3 font-mono text-success">{agent.resolvedTickets}</td><td className="px-4 py-3 font-mono">{agent.assignedTickets}</td></tr>)}</tbody></table></div></article>
+         <article className="overflow-hidden rounded-xl border border-line bg-surface"><div className="border-b border-line px-4 py-3"><h2 className="flex items-center gap-2 text-sm font-extrabold"><UsersRound className="size-4 text-accent" />Equipo Superadmin</h2></div><div className="overflow-x-auto"><table className="w-full min-w-lg text-left"><thead className="bg-surface-subtle text-2xs text-muted"><tr><th className="px-4 py-2" scope="col">Responsable</th><th className="px-3 py-2" scope="col">Activos</th><th className="px-3 py-2" scope="col">Resueltos</th><th className="px-4 py-2" scope="col">Asignados</th></tr></thead><tbody className="divide-y divide-line">{summary.agents.map((agent) => <tr className="text-xs" key={agent.id}><th className="px-4 py-3" scope="row"><p className="font-bold">{agent.name}</p><p className="mt-0.5 text-2xs font-normal text-muted">{agent.email}</p></th><td className="px-3 py-3 font-mono">{agent.activeTickets}</td><td className="px-3 py-3 font-mono text-success">{agent.resolvedTickets}</td><td className="px-4 py-3 font-mono">{agent.assignedTickets}</td></tr>)}</tbody></table></div></article>
         <article className="rounded-xl border border-line bg-surface p-4"><h2 className="flex items-center gap-2 text-sm font-extrabold"><Clock3 className="size-4 text-danger" />Escalaciones por SLA</h2><ul className="mt-3 space-y-2">{summary.escalations.map((ticket) => <li key={ticket.id}><button className="w-full rounded-lg border border-danger/20 bg-danger-soft/40 p-3 text-left" type="button" onClick={() => setSelectedTicket(ticket)}><p className="font-mono text-2xs font-extrabold text-danger">#{ticket.ticketId}</p><p className="mt-1 truncate text-xs font-bold">{ticket.subject}</p><p className="mt-1 text-2xs text-muted">{ticket.clinic?.name} · venció {formatDate(ticket.dueAt)}</p></button></li>)}{summary.escalations.length === 0 ? <li className="py-8 text-center text-xs text-success">No hay tickets vencidos.</li> : null}</ul></article>
       </section>
 

@@ -17,6 +17,7 @@ import { ClinicOtpStep, RegistrationSuccessStep } from "@/features/auth/ui/clini
 import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/auth/ui/clinic-registration-ui";
 import { PatientRegistrationForm } from "@/features/auth/ui/patient-registration-form";
 import { ApiError } from "@/shared/api/http-client";
+import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 
 const initialDraft: PatientRegistrationDraft = {
   name: "",
@@ -26,6 +27,12 @@ const initialDraft: PatientRegistrationDraft = {
   clinic_id: null,
   terms_accepted: false,
 };
+
+const PATIENT_REGISTRATION_TITLES = {
+  details: "Registro de paciente",
+  otp: "Verificar registro de paciente",
+  success: "Cuenta de paciente activada",
+} satisfies Record<"details" | "otp" | "success", string>;
 
 function validateDraft(draft: PatientRegistrationDraft): RegistrationFieldErrors {
   const errors: RegistrationFieldErrors = {};
@@ -50,6 +57,8 @@ export function PatientRegistrationFlow({ onBack }: { onBack: () => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegistrationFieldErrors>({});
+
+  useAuthDocumentTitle(PATIENT_REGISTRATION_TITLES[step]);
 
   useEffect(() => { getPatientRegistrationClinics().then((response) => setClinics(response.data)).catch(handleError); }, []);
   useEffect(() => { document.getElementById("registration-scroll-region")?.scrollTo({ top: 0 }); }, [step]);

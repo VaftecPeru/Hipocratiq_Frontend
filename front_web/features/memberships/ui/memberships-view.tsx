@@ -8,7 +8,6 @@ import {
   Link2,
   Plus,
   RefreshCw,
-  Sparkles,
   TrendingUp,
   Users,
   Wallet,
@@ -24,11 +23,11 @@ import {
   UpgradeSubscriptionModal,
   CancelSubscriptionDialog,
 } from "@/features/memberships/ui/membership-modals";
-import type { MembershipDashboard, MembershipPlan } from "@/features/memberships/model/memberships.types";
+import type { MembershipCurrency, MembershipDashboard, MembershipPayment, MembershipPlan, MembershipSubscription } from "@/features/memberships/model/memberships.types";
 import { getAdminMemberships, getMembershipClinics, type MembershipClinic } from "@/features/memberships/api/browser-memberships";
 import { PlatformModuleLoading } from "@/shared/ui/platform-module-loading";
 
-type Currency = "USD" | "PEN";
+type Currency = MembershipCurrency;
 type TabId = "resumen" | "suscripciones" | "planes" | "historial";
 
 const TABS: Array<{ id: TabId; label: string }> = [
@@ -40,10 +39,9 @@ const TABS: Array<{ id: TabId; label: string }> = [
 
 const CURRENCIES: Array<{ id: Currency; label: string; flag: CountryCode }> = [
   { id: "USD", label: "USD", flag: "US" },
+  { id: "MXN", label: "MXN", flag: "MX" },
   { id: "PEN", label: "PEN", flag: "PE" },
 ];
-
-const EXCHANGE_RATE = 3.77;
 
 const usdFormatter = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -57,23 +55,39 @@ const penFormatter = new Intl.NumberFormat("es-PE", {
   maximumFractionDigits: 0,
 });
 
+const mxnFormatter = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 0,
+});
+
 const numberFormatter = new Intl.NumberFormat("es-MX");
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 
-/** Convierte centavos a monto en la moneda de visualización. */
-function formatCents(usdCents: number, penCents: number, currency: Currency): string {
-  return currency === "USD" ? usdFormatter.format(usdCents / 100) : penFormatter.format(penCents / 100);
+function formatterFor(currency: Currency): Intl.NumberFormat {
+  return currency === "USD" ? usdFormatter : currency === "PEN" ? penFormatter : mxnFormatter;
 }
 
-/** Precio de un plan, convertido con el tipo de cambio si la moneda es PEN. */
-function formatPlanPrice(plan: MembershipPlan, currency: Currency): string {
-  const price = currency === "USD" ? plan.monthlyPriceUsdCents / 100 : (plan.monthlyPriceUsdCents / 100) * EXCHANGE_RATE;
-  return (currency === "USD" ? usdFormatter : penFormatter).format(price);
+function convertCents(amountCents: number, source: Currency, target: Currency, rates: MembershipDashboard["currencyRates"]): number | null {
+  if (source === target) return amountCents;
+  const sourceRate = rates[source];
+  const targetRate = rates[target];
+  if (!sourceRate || !targetRate) return null;
+  return Math.round((amountCents / sourceRate) * targetRate);
 }
 
-function formatPlanCard(plan: MembershipPlan, currency: Currency): string {
-  return formatPlanPrice(plan, currency);
+function formatAmount(amountCents: number, source: Currency, target: Currency, rates: MembershipDashboard["currencyRates"]): string {
+  const converted = convertCents(amountCents, source, target, rates);
+  return formatterFor(converted === null ? source : target).format((converted ?? amountCents) / 100);
+}
+
+function formatPlanPrice(plan: MembershipPlan, currency: Currency, rates: MembershipDashboard["currencyRates"]): string {
+  return formatAmount(plan.monthlyPriceCents, plan.currency, currency, rates);
+}
+
+function formatPlanCard(plan: MembershipPlan, currency: Currency, rates: MembershipDashboard["currencyRates"]): string {
+  return formatPlanPrice(plan, currency, rates);
 }
 
 function formatRenewalDate(value: string): string {
@@ -153,10 +167,12 @@ function CountryCell({ countryCode }: { countryCode: string | null }) {
 function PricingCard({
   plan,
   currency,
+  currencyRates,
   onEdit,
 }: {
   plan: MembershipPlan;
   currency: Currency;
+  currencyRates: MembershipDashboard["currencyRates"];
   onEdit: () => void;
 }) {
   const popular = plan.popular || plan.key === "professional";
@@ -180,7 +196,7 @@ function PricingCard({
       <p className="mt-1 text-2xs leading-4 text-muted">{plan.description ?? "Plan de suscripción."}</p>
 
       <p className="mt-4 flex items-baseline gap-1">
-        <span className="font-mono text-[1.75rem] font-bold leading-none tracking-[-0.05em] text-ink">{formatPlanCard(plan, currency)}</span>
+        <span className="font-mono text-[1.75rem] font-bold leading-none tracking-[-0.05em] text-ink">{formatPlanCard(plan, currency, currencyRates)}</span>
         <span className="text-2xs font-semibold text-muted">/mes</span>
       </p>
       <p className="mt-1.5 text-2xs font-bold text-muted">{numberFormatter.format(plan.subscribers)} clínicas suscritas</p>
@@ -208,11 +224,13 @@ function PricingCard({
 function RenewalsTable({
   renewals,
   currency,
+  currencyRates,
   onUpgrade,
   onCancel,
 }: {
   renewals: MembershipDashboard["upcomingRenewals"];
   currency: Currency;
+  currencyRates: MembershipDashboard["currencyRates"];
   onUpgrade: (renewal: { id: number; clinic: string; plan: string }) => void;
   onCancel: (renewal: { id: number; clinic: string }) => void;
 }) {
@@ -238,7 +256,7 @@ function RenewalsTable({
                 <th className="whitespace-nowrap px-3 py-2.5 font-bold text-ink" scope="row">{renewal.clinic ?? "Clínica"}</th>
                 <td className="px-3 py-2.5"><CountryCard countryCode={renewal.countryCode} /></td>
                 <td className="px-3 py-2.5"><PlanBadge plan={renewal.plan} /></td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-mono font-bold text-ink">{formatCents(renewal.amountUsdCents, renewal.amountPenCents, currency)}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 font-mono font-bold text-ink">{formatAmount(renewal.amountCents, renewal.currency, currency, currencyRates)}</td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-muted">{formatRenewalDate(renewal.renewalAt)}</td>
                 <td className="px-3 py-2.5"><RenewalBadge auto={renewal.autoRenew} /></td>
                 <td className="px-3 py-1.5">
@@ -277,7 +295,7 @@ function RenewalsTable({
             </div>
             <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-xs">
               <div><dt className="text-2xs text-muted">Plan</dt><dd className="mt-1"><PlanBadge plan={renewal.plan} /></dd></div>
-              <div><dt className="text-2xs text-muted">Monto</dt><dd className="mt-1 font-mono font-bold">{formatCents(renewal.amountUsdCents, renewal.amountPenCents, currency)}</dd></div>
+               <div><dt className="text-2xs text-muted">Monto</dt><dd className="mt-1 font-mono font-bold">{formatAmount(renewal.amountCents, renewal.currency, currency, currencyRates)}</dd></div>
               <div><dt className="text-2xs text-muted">Renovación</dt><dd className="mt-1 font-medium">{formatRenewalDate(renewal.renewalAt)}</dd></div>
             </dl>
             <div className="mt-3 flex justify-end gap-1.5 border-t border-line pt-3">
@@ -303,19 +321,47 @@ function RenewalsTable({
   );
 }
 
-function ComingSoon({ label }: { label: string }) {
+const SUBSCRIPTION_STATUS_LABELS: Record<MembershipSubscription["status"], string> = {
+  active: "Activa",
+  past_due: "Pago vencido",
+  canceled: "Cancelada",
+  expired: "Expirada",
+};
+
+const SUBSCRIPTION_STATUS_CLASSES: Record<MembershipSubscription["status"], string> = {
+  active: "bg-success-soft text-success",
+  past_due: "bg-warning-soft text-warning",
+  canceled: "bg-danger-soft text-danger",
+  expired: "bg-surface-subtle text-muted",
+};
+
+function SubscriptionStatusBadge({ status }: { status: MembershipSubscription["status"] }) {
+  return <span className={`rounded-full px-2 py-1 text-2xs font-bold ${SUBSCRIPTION_STATUS_CLASSES[status]}`}>{SUBSCRIPTION_STATUS_LABELS[status]}</span>;
+}
+
+function SubscriptionsPanel({
+  subscriptions,
+  currency,
+  currencyRates,
+  onUpgrade,
+  onCancel,
+}: {
+  subscriptions: MembershipSubscription[];
+  currency: Currency;
+  currencyRates: MembershipDashboard["currencyRates"];
+  onUpgrade: (subscription: MembershipSubscription) => void;
+  onCancel: (subscription: MembershipSubscription) => void;
+}) {
   return (
-    <div className="mt-4 grid place-items-center rounded-xl border border-dashed border-line bg-surface px-6 py-16 text-center shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]">
-      <span className="grid size-12 place-items-center rounded-full bg-accent-soft text-accent" aria-hidden="true">
-        <Sparkles className="size-5" strokeWidth={1.8} />
-      </span>
-      <h2 className="mt-4 text-sm font-extrabold">{label}</h2>
-      <p className="mt-1.5 max-w-sm text-xs leading-5 text-muted">
-        Esta sección estará disponible al conectar el backend de membresías. Por ahora, solo el Resumen está habilitado.
-      </p>
-      <span className="mt-4"><DataBadge tone="neutral">Próximamente</DataBadge></span>
-    </div>
+    <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="subscriptions-list-title">
+      <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="subscriptions-list-title">Suscripciones registradas</h2><span className="text-2xs text-muted">{subscriptions.length} mostradas</span></div>
+      {subscriptions.length ? <><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[780px] text-left text-xs"><caption className="sr-only">Suscripciones registradas</caption><thead className="bg-surface-subtle text-2xs text-muted"><tr><th className="px-3 py-2.5" scope="col">Clínica</th><th className="px-3 py-2.5" scope="col">Plan</th><th className="px-3 py-2.5" scope="col">Ciclo</th><th className="px-3 py-2.5" scope="col">Monto</th><th className="px-3 py-2.5" scope="col">Estado</th><th className="px-3 py-2.5" scope="col">Fin</th><th className="px-3 py-2.5 text-right" scope="col">Acciones</th></tr></thead><tbody className="divide-y divide-line">{subscriptions.map((subscription) => <tr key={subscription.id}><th className="px-3 py-3 font-bold" scope="row">{subscription.clinic ?? "Clínica"}</th><td className="px-3 py-3"><PlanBadge plan={subscription.plan ?? "basic"} /></td><td className="px-3 py-3 text-muted">{subscription.billingCycle === "annual" ? "Anual" : "Mensual"}</td><td className="px-3 py-3 font-mono font-bold">{formatAmount(subscription.amountCents, subscription.currency, currency, currencyRates)}</td><td className="px-3 py-3"><SubscriptionStatusBadge status={subscription.status} /></td><td className="px-3 py-3 text-muted">{subscription.endsAt ? formatRenewalDate(subscription.endsAt) : "Sin fecha"}</td><td className="px-3 py-3 text-right">{subscription.status === "active" ? <span className="inline-flex gap-1.5"><button className="rounded-md border border-line px-2 py-1 text-2xs font-bold hover:border-accent hover:text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => onUpgrade(subscription)}>Cambiar plan</button><button className="rounded-md border border-danger/25 px-2 py-1 text-2xs font-bold text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => onCancel(subscription)}>Cancelar</button></span> : <span className="text-2xs text-muted">Sólo lectura</span>}</td></tr>)}</tbody></table></div><div className="grid gap-3 p-3 lg:hidden">{subscriptions.map((subscription) => <article className="rounded-xl border border-line p-4" key={subscription.id}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-xs font-extrabold">{subscription.clinic ?? "Clínica"}</h3><p className="mt-1 text-2xs text-muted">{subscription.planName ?? "Sin plan"}</p></div><SubscriptionStatusBadge status={subscription.status} /></div><dl className="mt-4 grid grid-cols-2 gap-3 border-y border-line py-3 text-xs"><div><dt className="text-2xs text-muted">Ciclo</dt><dd className="mt-1 font-semibold">{subscription.billingCycle === "annual" ? "Anual" : "Mensual"}</dd></div><div><dt className="text-2xs text-muted">Monto</dt><dd className="mt-1 font-mono font-bold">{formatAmount(subscription.amountCents, subscription.currency, currency, currencyRates)}</dd></div><div><dt className="text-2xs text-muted">Inicio</dt><dd className="mt-1 text-muted">{subscription.startsAt ? formatRenewalDate(subscription.startsAt) : "—"}</dd></div><div><dt className="text-2xs text-muted">Fin</dt><dd className="mt-1 text-muted">{subscription.endsAt ? formatRenewalDate(subscription.endsAt) : "Sin fecha"}</dd></div></dl>{subscription.status === "active" ? <div className="mt-3 flex justify-end gap-1.5"><button className="rounded-md border border-line px-2.5 py-1.5 text-2xs font-bold" type="button" onClick={() => onUpgrade(subscription)}>Cambiar plan</button><button className="rounded-md border border-danger/25 px-2.5 py-1.5 text-2xs font-bold text-danger" type="button" onClick={() => onCancel(subscription)}>Cancelar</button></div> : null}</article>)}</div></> : <p className="p-8 text-center text-xs text-muted">No hay suscripciones registradas.</p>}
+    </section>
   );
+}
+
+function PaymentHistoryPanel({ payments, currency, currencyRates }: { payments: MembershipPayment[]; currency: Currency; currencyRates: MembershipDashboard["currencyRates"] }) {
+  return <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.25rem_1rem_rgb(16_27_51/3%)]" aria-labelledby="payment-history-title"><div className="flex min-h-11 items-center justify-between gap-3 border-b border-line px-3"><h2 className="text-2xs font-extrabold" id="payment-history-title">Historial de pagos</h2><span className="text-2xs text-muted">Datos confirmados del backend</span></div>{payments.length ? <div className="grid gap-3 p-3">{payments.map((payment) => <article className="rounded-xl border border-line p-4" key={payment.id}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-xs font-extrabold">{payment.clinic ?? "Clínica"}</h3><p className="mt-1 truncate font-mono text-2xs text-muted">{payment.reference ?? "Sin referencia"}</p></div><DataBadge tone={payment.status === "succeeded" ? "success" : payment.status === "refunded" ? "violet" : payment.status === "failed" ? "danger" : "warning"}>{payment.status === "succeeded" ? "Exitoso" : payment.status === "refunded" ? "Reembolsado" : payment.status === "failed" ? "Fallido" : "Pendiente"}</DataBadge></div><dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-3 text-xs"><div><dt className="text-2xs text-muted">Plan</dt><dd className="mt-1 font-semibold">{payment.plan ?? "—"}</dd></div><div><dt className="text-2xs text-muted">Monto</dt><dd className="mt-1 font-mono font-bold">{formatAmount(payment.amountCents, payment.currency, currency, currencyRates)}</dd></div><div><dt className="text-2xs text-muted">Proveedor</dt><dd className="mt-1 text-muted">{payment.provider === "admin_manual" ? "Manual" : payment.provider}</dd></div><div><dt className="text-2xs text-muted">Fecha</dt><dd className="mt-1 text-muted">{formatRenewalDate(payment.refundedAt ?? payment.paidAt ?? payment.createdAt ?? "")}</dd></div></dl></article>)}</div> : <p className="p-8 text-center text-xs text-muted">No hay pagos registrados.</p>}</section>;
 }
 
 export function MembershipsView() {
@@ -383,7 +429,7 @@ export function MembershipsView() {
     return [
       {
         label: "MRR · Ingresos Mensuales",
-        value: formatCents(kpis.mrr.usdCents, kpis.mrr.penCents, currency),
+         value: formatterFor(currency).format(kpis.mrr.byCurrency[currency] / 100),
         change: kpis.mrr.changeNote || "Datos consolidados",
         direction: (kpis.mrr.changePct ?? 0) >= 0 ? "up" : "down",
         icon: Wallet,
@@ -391,7 +437,7 @@ export function MembershipsView() {
       },
       {
         label: "ARR · Ingresos Anuales",
-        value: formatCents(kpis.arr.usdCents, kpis.arr.penCents, currency),
+         value: formatterFor(currency).format(kpis.arr.byCurrency[currency] / 100),
         change: kpis.arr.changeNote || "Datos consolidados",
         direction: (kpis.arr.changePct ?? 0) >= 0 ? "up" : "down",
         icon: TrendingUp,
@@ -554,6 +600,7 @@ export function MembershipsView() {
                     key={plan.id}
                     plan={plan}
                     currency={currency}
+                    currencyRates={data.currencyRates}
                     onEdit={() => {
                       setSelectedPlan(plan);
                       setEditPlanOpen(true);
@@ -580,6 +627,7 @@ export function MembershipsView() {
               ) : (
                 <RenewalsTable
                   currency={currency}
+                  currencyRates={data.currencyRates}
                   renewals={data.upcomingRenewals}
                   onUpgrade={({ id, clinic, plan }) => {
                     setUpgradeTarget({ id, clinic, plan });
@@ -595,9 +643,9 @@ export function MembershipsView() {
           </>
         ) : null}
 
-        {activeTab !== "resumen" ? (
-          <ComingSoon label={TABS.find((tab) => tab.id === activeTab)?.label ?? "Próximamente"} />
-        ) : null}
+        {activeTab === "suscripciones" ? <SubscriptionsPanel subscriptions={data.subscriptions} currency={currency} currencyRates={data.currencyRates} onUpgrade={(subscription) => { setUpgradeTarget({ id: subscription.id, clinic: subscription.clinic ?? "Clínica", plan: subscription.plan ?? "basic" }); setUpgradeOpen(true); }} onCancel={(subscription) => { setCancelTarget({ id: subscription.id, clinic: subscription.clinic ?? "Clínica" }); setCancelOpen(true); }} /> : null}
+        {activeTab === "planes" ? <section className="mt-4 grid gap-4 lg:grid-cols-3" aria-label="Planes de suscripción">{data.plans.map((plan) => <PricingCard key={plan.id} plan={plan} currency={currency} currencyRates={data.currencyRates} onEdit={() => { setSelectedPlan(plan); setEditPlanOpen(true); }} />)}</section> : null}
+        {activeTab === "historial" ? <PaymentHistoryPanel payments={data.paymentHistory} currency={currency} currencyRates={data.currencyRates} /> : null}
       </div>
 
       <NewPlanModal

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CalendarDays,
   Clock3,
@@ -36,7 +36,12 @@ const statusStyles: Record<ClinicAppointmentStatus, string> = {
   no_show: "border-line bg-surface-subtle text-muted",
 };
 
-export function ClinicAppointmentDetailModal({
+export function ClinicAppointmentDetailModal(props: Readonly<Props>) {
+  if (!props.appointment) return null;
+  return <ClinicAppointmentDetailModalContent key={props.appointment.id} {...props} />;
+}
+
+function ClinicAppointmentDetailModalContent({
   appointment,
   onClose,
   onEdit,
@@ -44,11 +49,6 @@ export function ClinicAppointmentDetailModal({
 }: Readonly<Props>) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    setConfirmDelete(false);
-    setIsDeleting(false);
-  }, [appointment?.id]);
 
   if (!appointment) {
     return null;

@@ -541,12 +541,12 @@ export function ClinicPatients() {
 
       {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Gestión asistencial</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Pacientes</h1>
           <p className="mt-1 text-xs text-muted">Directorio, expedientes y administración de pacientes.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover disabled:opacity-50"
             type="button"

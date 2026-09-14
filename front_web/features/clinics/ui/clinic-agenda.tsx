@@ -492,7 +492,12 @@ function appointmentEditFormFromAppointment(appointment: ClinicAppointment): App
 function isDateInRange(date: string, from: string, to: string): boolean {
   return date >= from && date <= to;
 }
-function AppointmentDetailModal({
+function AppointmentDetailModal(props: Parameters<typeof AppointmentDetailModalContent>[0]) {
+  if (!props.isOpen || !props.appointment) return null;
+  return <AppointmentDetailModalContent key={props.appointment.id} {...props} />;
+}
+
+function AppointmentDetailModalContent({
   appointment,
   isOpen,
   onClose,
@@ -508,12 +513,6 @@ function AppointmentDetailModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setConfirmDelete(false);
-    setDeleting(false);
-    setDeleteError(null);
-  }, [appointment?.id, isOpen]);
 
   if (!isOpen || !appointment) {
     return null;
@@ -818,7 +817,7 @@ function EditAppointmentModal({
     getClinicMembers(controller.signal)
       .then((members) => {
         if (controller.signal.aborted) return;
-        setDoctors(members.filter((member) => member.role === "doctor"));
+         setDoctors(members.filter((member) => member.role === "doctor" && member.status === "active"));
       })
       .catch((requestError: unknown) => {
         if (controller.signal.aborted || isAbortError(requestError)) return;
@@ -994,6 +993,8 @@ function CreateAppointmentModal({
   onCreated: (appointment: ClinicAppointment) => void;
 }) {
   const [doctors, setDoctors] = useState<ClinicTeamMember[]>([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorsError, setDoctorsError] = useState<string | null>(null);
   const [patientQuery, setPatientQuery] = useState("");
   const [patientResults, setPatientResults] = useState<ClinicPatient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<ClinicPatient | null>(null);
@@ -1011,14 +1012,26 @@ function CreateAppointmentModal({
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setDoctorsLoading(true);
+      setDoctorsError(null);
+    });
     getClinicMembers(controller.signal)
       .then((members) => {
         const doctorMembers = members.filter((m) => m.role === "doctor");
-        setDoctors(doctorMembers);
-        if (doctorMembers.length > 0) setDoctorUserId(String(doctorMembers[0].id));
+        const activeDoctorMembers = doctorMembers.filter((member) => member.status === "active");
+        setDoctors(activeDoctorMembers);
+        if (activeDoctorMembers.length > 0) setDoctorUserId(String(activeDoctorMembers[0].id));
       })
-      .catch(() => { /* non-blocking */ });
-    return () => controller.abort();
+      .catch((requestError: unknown) => {
+        if (!controller.signal.aborted) setDoctorsError(requestError instanceof Error ? requestError.message : "No pudimos cargar los médicos activos.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDoctorsLoading(false);
+      });
+    return () => { active = false; controller.abort(); };
   }, [isOpen]);
 
   // Debounced patient search
@@ -1035,7 +1048,7 @@ function CreateAppointmentModal({
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()) return;
+    if (!selectedPatient || doctors.length === 0 || !doctorUserId || !date || !time || !appointmentType.trim()) return;
     setSaving(true);
     setError(null);
     const normalizedAppointmentType = normalizeAppointmentType(appointmentType);
@@ -1059,7 +1072,7 @@ function CreateAppointmentModal({
     } finally {
       setSaving(false);
     }
-  }, [selectedPatient, doctorUserId, date, time, appointmentType, notes, onCreated]);
+  }, [doctors.length, selectedPatient, doctorUserId, date, time, appointmentType, notes, onCreated]);
 
   const doctorOptions = doctors.map((d) => ({
     value: String(d.id),
@@ -1077,11 +1090,11 @@ function CreateAppointmentModal({
         <>
           <ModalSecondaryButton onClick={onClose}>Cancelar</ModalSecondaryButton>
           <ModalPrimaryButton
-            disabled={saving || !selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()}
+            disabled={saving || doctorsLoading || Boolean(doctorsError) || doctors.length === 0 || !selectedPatient || !doctorUserId || !date || !time || !appointmentType.trim()}
             onClick={() => { document.getElementById("create-appt-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-            {saving ? "Guardando..." : "Crear cita"}
+             {saving ? "Guardando..." : "Crear cita"}
           </ModalPrimaryButton>
         </>
       }
@@ -1136,7 +1149,10 @@ function CreateAppointmentModal({
         </div>
 
         {/* Doctor */}
-        {doctorOptions.length > 0 ? (
+        {doctorsLoading ? <p className="rounded-lg bg-accent-soft px-3 py-2 text-xs font-semibold text-accent" role="status">Cargando médicos activos...</p> : null}
+        {doctorsError ? <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs font-semibold text-danger" role="alert">{doctorsError}</p> : null}
+        {!doctorsLoading && !doctorsError && doctorOptions.length === 0 ? <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs font-semibold text-warning" role="alert">No hay médicos activos disponibles para asignar esta cita.</p> : null}
+        {!doctorsLoading && !doctorsError && doctorOptions.length > 0 ? (
           <ModalSelect
             id="appt-doctor"
             label="Médico"
@@ -1145,9 +1161,7 @@ function CreateAppointmentModal({
             onChange={setDoctorUserId}
             required
           />
-        ) : (
-          <ModalField id="appt-doctor-id" label="ID del médico" value={doctorUserId} onChange={(e) => setDoctorUserId(e.target.value)} required />
-        )}
+        ) : null}
 
         <ModalGrid>
           <ModalField id="appt-date" label="Fecha" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -1307,18 +1321,18 @@ export function ClinicAgenda() {
     <>
       <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7">
         {notice ? <div className="fixed right-4 bottom-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-bold text-white shadow-xl" role="status"><Check className="size-4 text-success" aria-hidden="true" />{notice}</div> : null}
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Recepción · agenda</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Agenda de Recepción</h1><p className="mt-1 text-xs text-muted">Organiza citas, llegadas y flujo de pacientes en tiempo real.</p></div><div className="flex flex-wrap gap-2"><button className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover" type="button" onClick={() => setIsBlockModalOpen(true)}><Lock className="size-3.5" aria-hidden="true" />Bloquear horario</button><button className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm hover:bg-accent-hover" type="button" onClick={() => setCreateOpen(true)}><Plus className="size-3.5" aria-hidden="true" />Nueva cita</button></div></header>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Recepción · agenda</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Agenda de Recepción</h1><p className="mt-1 text-xs text-muted">Organiza citas, llegadas y flujo de pacientes en tiempo real.</p></div><div className="flex flex-wrap gap-2"><button className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover" type="button" onClick={() => setIsBlockModalOpen(true)}><Lock className="size-3.5" aria-hidden="true" />Bloquear horario</button><button className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm hover:bg-accent-hover" type="button" onClick={() => setCreateOpen(true)}><Plus className="size-3.5" aria-hidden="true" />Nueva cita</button></div></header>
 
         <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen de citas"><MetricCard icon={CalendarDays} label="Citas de hoy" value={summary.todayTotal} helper={`${appointments.length} en el periodo visible`} tone="bg-accent-soft text-accent" /><MetricCard icon={CalendarCheck} label="Confirmadas" value={summary.confirmed} helper="Listas para atención" tone="bg-success-soft text-success" /><MetricCard icon={Clock3} label="En espera" value={summary.waiting} helper="Pendientes de llegada" tone="bg-warning-soft text-warning" /><MetricCard icon={X} label="Canceladas" value={summary.canceled} helper={`${summary.noShow} no asistieron`} tone="bg-danger-soft text-danger" /></section>
 
         <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="min-w-0 space-y-4">
             <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.3rem_1rem_rgb(16_27_51/4%)]" aria-labelledby="calendar-title">
-              <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-3"><div className="flex gap-1"><button className="grid size-8 place-items-center rounded-lg border border-line text-muted hover:bg-surface-hover" type="button" aria-label="Semana anterior" onClick={() => changeWeek(-1)}><ChevronLeft className="size-4" aria-hidden="true" /></button><button className="grid size-8 place-items-center rounded-lg border border-line text-muted hover:bg-surface-hover" type="button" aria-label="Semana siguiente" onClick={() => changeWeek(1)}><ChevronRight className="size-4" aria-hidden="true" /></button></div><h2 className="text-xs font-extrabold" id="calendar-title">{period}</h2><button className="ml-auto min-h-8 rounded-lg border border-line px-3 text-2xs font-bold text-accent hover:bg-accent-soft" type="button" onClick={goToCurrentWeek}>Hoy</button><div className="order-first flex rounded-lg bg-surface-subtle p-1 sm:order-none sm:ml-2">{(["Día", "Semana", "Mes"] as const).map((mode) => <button className={`min-h-7 rounded-md px-3 text-[0.62rem] font-bold ${view === mode ? "bg-surface text-accent shadow-sm" : "text-muted"}`} type="button" key={mode} onClick={() => setView(mode)}>{mode}</button>)}</div></div>
+              <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-3"><div className="flex shrink-0 gap-1"><button className="grid size-8 place-items-center rounded-lg border border-line text-muted hover:bg-surface-hover" type="button" aria-label="Semana anterior" onClick={() => changeWeek(-1)}><ChevronLeft className="size-4" aria-hidden="true" /></button><button className="grid size-8 place-items-center rounded-lg border border-line text-muted hover:bg-surface-hover" type="button" aria-label="Semana siguiente" onClick={() => changeWeek(1)}><ChevronRight className="size-4" aria-hidden="true" /></button></div><h2 className="min-w-0 text-xs font-extrabold" id="calendar-title">{period}</h2><button className="ml-auto min-h-8 shrink-0 rounded-lg border border-line px-3 text-2xs font-bold text-accent hover:bg-accent-soft" type="button" onClick={goToCurrentWeek}>Hoy</button><div className="order-first flex shrink-0 rounded-lg bg-surface-subtle p-1 sm:order-none sm:ml-2">{(["Día", "Semana", "Mes"] as const).map((mode) => <button className={`min-h-7 rounded-md px-3 text-[0.62rem] font-bold ${view === mode ? "bg-surface text-accent shadow-sm" : "text-muted"}`} type="button" key={mode} onClick={() => setView(mode)}>{mode}</button>)}</div></div>
               {isLoading ? <div className="grid min-h-125 place-items-center text-xs font-bold text-muted">Cargando agenda…</div> : view === "Semana" ? <WeekCalendar days={days} appointments={appointments} blocks={blocks} onAppointmentClick={(a) => { setSelectedAppointment(a); setDetailOpen(true); }} onBlockClick={(block) => {  setSelectedBlock(block);  setBlockDetailOpen(true);}} /> : <div className="grid min-h-125 place-items-center p-8 text-center"><div><CalendarDays className="mx-auto size-10 text-accent" aria-hidden="true" /><p className="mt-3 text-sm font-extrabold">Vista de {view.toLowerCase()}</p><p className="mt-1 max-w-sm text-xs text-muted">{view === "Día" ? "Selecciona Semana para ver los horarios de toda la clínica." : "La información mensual se alimenta de las citas registradas."}</p><button className="mt-4 rounded-lg bg-accent-soft px-3 py-2 text-xs font-bold text-accent" type="button" onClick={() => setView("Semana")}>Volver a semana</button></div></div>}
             </section>
 
-            <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.3rem_1rem_rgb(16_27_51/4%)]" aria-labelledby="appointments-list-title"><div className="flex items-center justify-between border-b border-line px-4 py-3"><div><h2 className="text-xs font-extrabold" id="appointments-list-title">Citas del periodo</h2><p className="mt-0.5 text-[0.6rem] text-muted">Datos sincronizados con la agenda clínica.</p></div><span className="rounded-full bg-surface-subtle px-2 py-1 text-[0.58rem] font-bold text-muted">{appointments.length} registradas</span></div><div className="overflow-x-auto"><table className="w-full min-w-180 text-left"><thead className="bg-surface-subtle text-[0.56rem] font-bold uppercase tracking-wide text-muted"><tr><th className="px-3 py-2" scope="col">Hora</th><th className="px-3 py-2" scope="col">Paciente</th><th className="px-3 py-2" scope="col">Médico</th><th className="px-3 py-2" scope="col">Tipo</th><th className="px-3 py-2" scope="col">Estado</th></tr></thead><tbody className="divide-y divide-line">{appointments.map((appointment) => <tr className="text-[0.62rem]" key={appointment.id}><td className="px-3 py-2.5 font-mono font-bold">{new Date(`${appointment.scheduledDate}T12:00:00`).toLocaleDateString("es-PE", { weekday: "short", day: "numeric" })} · {appointment.time}</td><th className="px-3 py-2.5 font-normal" scope="row"><span className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-full bg-accent-soft font-mono text-[0.5rem] font-bold text-accent">{initials(appointment.patient.name ?? "Paciente")}</span><span className="font-extrabold">{appointment.patient.name ?? "Paciente sin nombre"}</span></span></th><td className="px-3 py-2.5 font-semibold text-ink-secondary">{appointment.doctor?.name ?? "Sin asignar"}</td><td className="px-3 py-2.5 text-ink-secondary">{appointment.appointmentType}</td><td className="px-3 py-2.5"><span className={`rounded-full border px-2 py-1 text-[0.52rem] font-extrabold ${statusStyles[appointment.status]}`}>{appointment.statusLabel}</span></td></tr>)}</tbody></table>{!isLoading && appointments.length === 0 ? <p className="px-4 py-8 text-center text-xs font-semibold text-muted">No hay citas en este periodo.</p> : null}</div></section>
+            <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-[0_0.3rem_1rem_rgb(16_27_51/4%)]" aria-labelledby="appointments-list-title"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3"><div className="min-w-0"><h2 className="text-xs font-extrabold" id="appointments-list-title">Citas del periodo</h2><p className="mt-0.5 text-[0.6rem] text-muted">Datos sincronizados con la agenda clínica.</p></div><span className="shrink-0 rounded-full bg-surface-subtle px-2 py-1 text-[0.58rem] font-bold text-muted">{appointments.length} registradas</span></div><div className="overflow-x-auto"><table className="w-full min-w-180 text-left"><thead className="bg-surface-subtle text-[0.56rem] font-bold uppercase tracking-wide text-muted"><tr><th className="px-3 py-2" scope="col">Hora</th><th className="px-3 py-2" scope="col">Paciente</th><th className="px-3 py-2" scope="col">Médico</th><th className="px-3 py-2" scope="col">Tipo</th><th className="px-3 py-2" scope="col">Estado</th></tr></thead><tbody className="divide-y divide-line">{appointments.map((appointment) => <tr className="text-[0.62rem]" key={appointment.id}><td className="px-3 py-2.5 font-mono font-bold">{new Date(`${appointment.scheduledDate}T12:00:00`).toLocaleDateString("es-PE", { weekday: "short", day: "numeric" })} · {appointment.time}</td><th className="px-3 py-2.5 font-normal" scope="row"><span className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-full bg-accent-soft font-mono text-[0.5rem] font-bold text-accent">{initials(appointment.patient.name ?? "Paciente")}</span><span className="font-extrabold">{appointment.patient.name ?? "Paciente sin nombre"}</span></span></th><td className="px-3 py-2.5 font-semibold text-ink-secondary">{appointment.doctor?.name ?? "Sin asignar"}</td><td className="px-3 py-2.5 text-ink-secondary">{appointment.appointmentType}</td><td className="px-3 py-2.5"><span className={`rounded-full border px-2 py-1 text-[0.52rem] font-extrabold ${statusStyles[appointment.status]}`}>{appointment.statusLabel}</span></td></tr>)}</tbody></table>{!isLoading && appointments.length === 0 ? <p className="px-4 py-8 text-center text-xs font-semibold text-muted">No hay citas en este periodo.</p> : null}</div></section>
           </div>
 
           <aside className="grid gap-3"><section className="rounded-xl border border-line bg-surface p-4"><div className="flex items-center justify-between"><h2 className="text-xs font-extrabold">Próximas citas</h2><span className="text-[0.6rem] font-bold text-accent">{upcoming.length}</span></div><ol className="mt-3 divide-y divide-line">{upcoming.map((appointment) => <li className="grid grid-cols-[2.5rem_1fr] gap-2 py-2.5" key={`upcoming-${appointment.id}`}><time className="font-mono text-[0.65rem] font-bold">{appointment.time}</time><div><p className="truncate text-[0.62rem] font-extrabold">{appointment.patient.name ?? "Paciente"}</p><p className="mt-0.5 text-[0.55rem] text-muted">{appointment.doctor?.name ?? "Sin médico"}</p><span className={`mt-1 inline-flex items-center gap-1 text-[0.52rem] font-bold ${appointment.status === "confirmed" ? "text-success" : appointment.status === "waiting" ? "text-warning" : "text-accent"}`}><span className="size-1 rounded-full bg-current" />{appointment.statusLabel}</span></div></li>)}</ol>{upcoming.length === 0 ? <p className="mt-3 text-[0.62rem] text-muted">No hay próximas citas.</p> : null}</section><section className="rounded-xl border border-line bg-surface p-4"><div className="flex items-center justify-between"><h2 className="text-xs font-extrabold">Disponibilidad médica</h2><UserRound className="size-4 text-accent" aria-hidden="true" /></div><ul className="mt-3 grid gap-2.5">{doctors.map((doctor) => <li className="flex items-center gap-2" key={doctor?.id}><span className="grid size-7 place-items-center rounded-full bg-accent-soft font-mono text-[0.55rem] font-bold text-accent">{initials(doctor?.name ?? "")}</span><span className="min-w-0 flex-1 truncate text-[0.6rem] font-extrabold">{doctor?.name}</span><span className="size-1.5 rounded-full bg-success" title="Con citas registradas" /></li>)}</ul>{doctors.length === 0 ? <p className="mt-3 text-[0.62rem] text-muted">Sin médicos con agenda registrada.</p> : null}</section><section className="rounded-xl border border-line bg-surface p-4"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-lg bg-violet-soft text-violet"><ShieldCheck className="size-4" aria-hidden="true" /></span><h2 className="text-xs font-extrabold">Resumen de estado</h2></div><div className="mt-3 rounded-lg bg-success-soft p-3"><p className="text-[0.62rem] font-extrabold text-success">Agenda sincronizada</p><p className="mt-1 text-[0.56rem] leading-relaxed text-success/80">El backend devolvió los datos del periodo seleccionado.</p></div><div className="mt-3"><SummaryList summary={summary} /></div></section></aside>

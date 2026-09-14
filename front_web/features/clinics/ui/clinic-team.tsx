@@ -174,7 +174,7 @@ function EditMemberModal({
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [phoneNumber, setPhoneNumber] = useState(member?.phoneNumber ?? "");
-  const [countryCode, setCountryCode] = useState("MX");
+  const [countryCode, setCountryCode] = useState<CountryCode | "">(member?.countryCode ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -186,8 +186,8 @@ function EditMemberModal({
       name: name.trim(),
       email: email.trim() || null,
       phoneNumber: phoneNumber.trim(),
-      countryCode,
     };
+    if (countryCode) payload.countryCode = countryCode;
     try {
       const updated = await updateClinicMember(member.id, payload);
       onSaved(updated);
@@ -224,10 +224,9 @@ function EditMemberModal({
           <ModalSelect
             id="edit-member-country"
             label="País del teléfono"
-            options={[{ value: "MX", label: "México" }, { value: "PE", label: "Perú" }, { value: "US", label: "Estados Unidos" }]}
+            options={[{ value: "", label: "Sin país registrado" }, { value: "MX", label: "México" }, { value: "PE", label: "Perú" }, { value: "US", label: "Estados Unidos" }]}
             value={countryCode}
-            onChange={setCountryCode}
-            required
+            onChange={(value) => setCountryCode(value === "" ? "" : value as CountryCode)}
           />
           <ModalField id="edit-member-phone" label="Teléfono" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
         </ModalGrid>
@@ -239,7 +238,7 @@ function EditMemberModal({
 
 export function ClinicTeam() {
   const [members, setMembers] = useState<ClinicTeamMember[]>([]);
-  const [clinicCountryCode, setClinicCountryCode] = useState<CountryCode>("MX");
+  const [clinicCountryCode, setClinicCountryCode] = useState<CountryCode | null>(null);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -280,6 +279,12 @@ export function ClinicTeam() {
     if (!normalized) return members;
     return members.filter((member) => `${member.name} ${member.email ?? ""} ${ROLE_LABELS[member.role]}`.toLocaleLowerCase("es").includes(normalized));
   }, [members, query]);
+  const canCreateMembers = clinicCountryCode !== null && !isLoading;
+  const countryStatusMessage = isLoading
+    ? "Cargando el país de la clínica antes de habilitar nuevas cuentas."
+    : loadError
+      ? "No se pudo confirmar el país de la clínica. Reintenta la carga antes de crear miembros."
+      : "El país de la clínica aún no está disponible. No se pueden crear miembros todavía.";
   const receptionists = members.filter((member) => member.role === "receptionist").length;
   const doctors = members.filter((member) => member.role === "doctor").length;
   const metrics: Array<{ icon: LucideIcon; label: string; value: number; helper: string; tone: string }> = [
@@ -343,20 +348,23 @@ export function ClinicTeam() {
     <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7">
       {notice ? <div className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-bold text-white shadow-xl" role="status"><CircleCheck className="size-4 text-success" />{notice}</div> : null}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Directorio clínico</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Equipo</h1>
           <p className="mt-1 text-xs text-muted">Administra los accesos y el personal activo de tu clínica.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => setIsCreateDoctorOpen(true)}>
-            <Stethoscope className="size-3.5" aria-hidden="true" />
-            Agregar médico
-          </button>
-          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="size-3.5" aria-hidden="true" />
-            Nueva recepcionista
-          </button>
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap gap-2">
+            <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 text-xs font-extrabold shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canCreateMembers} aria-describedby={!canCreateMembers ? "clinic-team-country-status" : undefined} onClick={() => setIsCreateDoctorOpen(true)}>
+              <Stethoscope className="size-3.5" aria-hidden="true" />
+              Agregar médico
+            </button>
+            <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canCreateMembers} aria-describedby={!canCreateMembers ? "clinic-team-country-status" : undefined} onClick={() => setIsCreateOpen(true)}>
+              <Plus className="size-3.5" aria-hidden="true" />
+              Nueva recepcionista
+            </button>
+          </div>
+          {!canCreateMembers ? <p className="max-w-72 text-right text-2xs text-muted" id="clinic-team-country-status" role={loadError ? "alert" : "status"} aria-live="polite">{countryStatusMessage}</p> : null}
         </div>
       </header>
 
@@ -374,18 +382,20 @@ export function ClinicTeam() {
           {isLoading ? <div className="grid min-h-40 place-items-center text-center text-xs font-bold text-muted">Cargando equipo...</div> : null}
           {!isLoading && filteredMembers.length === 0 ? <div className="grid min-h-40 place-items-center px-4 text-center"><div><Users className="mx-auto size-7 text-muted" aria-hidden="true" /><p className="mt-2 text-xs font-extrabold">{loadError ?? "No hay miembros con esta búsqueda."}</p><button className="mt-2 text-2xs font-bold text-accent" type="button" onClick={() => setQuery("")}>Limpiar búsqueda</button></div></div> : null}
         </div>
-        <div className="flex items-center justify-between border-t border-line px-4 py-3"><p className="text-[0.6rem] text-muted">Mostrando {filteredMembers.length} de {members.length} miembros</p><span className="inline-flex items-center gap-1.5 text-[0.58rem] font-bold text-muted"><CountryFlag countryCode={clinicCountryCode} />Sede principal</span></div>
+        <div className="flex items-center justify-between border-t border-line px-4 py-3"><p className="text-[0.6rem] text-muted">Mostrando {filteredMembers.length} de {members.length} miembros</p>{clinicCountryCode ? <span className="inline-flex items-center gap-1.5 text-[0.58rem] font-bold text-muted"><CountryFlag countryCode={clinicCountryCode} />Sede principal</span> : <span className="text-[0.58rem] font-bold text-muted">País pendiente</span>}</div>
       </section>
 
-      <CreateReceptionistModal key={`receptionist-${clinicCountryCode}-${isCreateOpen ? "open" : "closed"}`} clinicCountryCode={clinicCountryCode} isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} />
+      {canCreateMembers && clinicCountryCode ? <CreateReceptionistModal key={`${clinicCountryCode}-${isCreateOpen ? "open" : "closed"}`} clinicCountryCode={clinicCountryCode} isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreated} /> : null}
 
-      <CreateClinicDoctorModal
-        key={`doctor-${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
-        clinicCountryCode={clinicCountryCode}
-        isOpen={isCreateDoctorOpen}
-        onClose={() => setIsCreateDoctorOpen(false)}
-        onCreated={handleDoctorCreated}
-      />
+      {canCreateMembers && clinicCountryCode ? (
+        <CreateClinicDoctorModal
+          key={`${clinicCountryCode}-${isCreateDoctorOpen ? "open" : "closed"}`}
+          clinicCountryCode={clinicCountryCode}
+          isOpen={isCreateDoctorOpen}
+          onClose={() => setIsCreateDoctorOpen(false)}
+          onCreated={handleDoctorCreated}
+        />
+      ) : null}
 
       <EditMemberModal key={editMember?.id ?? "closed"} member={editMember} isOpen={editOpen} onClose={() => { setEditOpen(false); setEditMember(null); }} onSaved={handleMemberSaved} />
 

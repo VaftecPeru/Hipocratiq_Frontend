@@ -1,42 +1,147 @@
-import {
-  CalendarDays,
-  CheckCheck,
-  ChevronRight,
-  Clock3,
-  Heart,
-  MessageCircle,
-  MoreHorizontal,
-  Paperclip,
-  Phone,
-  Pill,
-  Plus,
-  Search,
-  Send,
-  Smile,
-  Video,
-} from "lucide-react";
-import { DoctorAvatar, DoctorCard, SectionHeading } from "@/features/doctors/ui/doctor-primitives";
+"use client";
 
-const conversations = [
-  { initials: "ML", name: "María López", preview: "Hola doctor, ¿podría confirmarme si mi cita de seguimiento sigue en pie?", time: "09:15 AM", unread: "2", tone: "orange" as const },
-  { initials: "JP", name: "Juan Pérez", preview: "Gracias doctor, seguiré las indicaciones.", time: "08:30 AM", unread: "1", tone: "blue" as const },
-  { initials: "LAB", name: "Laboratorio Central", preview: "Resultados listos: Hemograma completo para Juan Pérez.", time: "Ayer", unread: "2", tone: "violet" as const },
-  { initials: "AG", name: "Dra. Ana Gómez", preview: "¿Podemos revisar el caso del paciente Carlos Méndez?", time: "Ayer", unread: "", tone: "orange" as const },
-  { initials: "S", name: "Soporte MEDIQ", preview: "Tu ticket #4587 ha sido actualizado. Estamos para ayudarte.", time: "14 May", unread: "", tone: "blue" as const },
-] as const;
+import { MessageCircle, Search, Send, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getDoctorMessages, getDoctorPatients, markDoctorMessageRead, sendDoctorMessage, type DoctorMessage, type DoctorPatient } from "@/features/doctors/api/doctor-clinical";
+import { DoctorAvatar, DoctorCard, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
+import { DoctorModuleAlert, DoctorModuleEmpty, DoctorModuleError, DoctorModuleLoading } from "@/features/doctors/ui/doctor-module-state";
+
+const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+}
+
+function initialsOf(name: string | null): string {
+  return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
+}
 
 export default function DoctorMessagesPage() {
+  const [messages, setMessages] = useState<DoctorMessage[]>([]);
+  const [patients, setPatients] = useState<DoctorPatient[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [draft, setDraft] = useState("");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [readStatus, setReadStatus] = useState<"idle" | "reading">("idle");
+  const readAttemptedIds = useRef(new Set<number>());
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([getDoctorMessages(controller.signal), getDoctorPatients(controller.signal)])
+      .then(([messageResult, patientList]) => {
+        setMessages(messageResult.items);
+        setUnread(messageResult.unread);
+        setPatients(patientList);
+        const firstPatient = messageResult.items.find((message) => message.patient)?.patient ?? patientList[0];
+        if (firstPatient) setSelectedPatientId(String(firstPatient.id));
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === "AbortError")) setError(caught instanceof Error ? caught.message : "No pudimos cargar los mensajes.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPatientId) return;
+
+    const unreadMessages = messages.filter((message) => (
+      message.isReceived
+      && message.readAt === null
+      && String(message.patient?.id) === selectedPatientId
+      && !readAttemptedIds.current.has(message.id)
+    ));
+
+    if (unreadMessages.length === 0) return;
+
+    unreadMessages.forEach((message) => readAttemptedIds.current.add(message.id));
+    const conversationPatientId = selectedPatientId;
+    setReadStatus("reading");
+
+    void Promise.allSettled(unreadMessages.map((message) => markDoctorMessageRead(message.id))).then((results) => {
+      if (!mountedRef.current) return;
+
+      const readMessages = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+      const failedReads = results.filter((result) => result.status === "rejected");
+
+      if (readMessages.length > 0) {
+        const readById = new Map(readMessages.map((message) => [message.id, message]));
+        setMessages((current) => current.map((message) => {
+          const readMessage = readById.get(message.id);
+          return readMessage ? { ...message, readAt: readMessage.readAt } : message;
+        }));
+        setUnread((current) => Math.max(0, current - readMessages.length));
+      }
+
+      if (conversationPatientId === selectedPatientId) {
+        setReadStatus("idle");
+        if (failedReads.length > 0) setError("No pudimos marcar todos los mensajes como leídos. Inténtalo de nuevo.");
+      }
+    });
+  }, [messages, selectedPatientId]);
+
+  const patientOptions = useMemo(() => {
+    const byId = new Map<number, DoctorPatient | NonNullable<DoctorMessage["patient"]>>();
+    patients.forEach((patient) => byId.set(patient.id, patient));
+    messages.forEach((message) => { if (message.patient) byId.set(message.patient.id, message.patient); });
+    return [...byId.values()];
+  }, [messages, patients]);
+
+  const selectedPatient = patientOptions.find((patient) => String(patient.id) === selectedPatientId) ?? null;
+  const visibleMessages = messages.filter((message) => {
+    const belongsToPatient = selectedPatientId === "" || String(message.patient?.id) === selectedPatientId;
+    const matchesSearch = search.trim() === "" || `${message.patient?.name ?? ""} ${message.body}`.toLowerCase().includes(search.trim().toLowerCase());
+    return belongsToPatient && matchesSearch;
+  });
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedPatient || draft.trim() === "") return;
+    setPending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const created = await sendDoctorMessage(selectedPatient.id, draft.trim());
+      setMessages((current) => [created, ...current]);
+      setDraft("");
+      setSuccess("Mensaje enviado correctamente.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "No pudimos enviar el mensaje.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Mensajes</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Comunícate con pacientes, colegas y el equipo clínico.</p></div><div className="flex gap-2"><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button"><Plus className="size-3.5" aria-hidden="true" />Nuevo grupo</button><button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button"><MessageCircle className="size-3.5" aria-hidden="true" />Nuevo mensaje</button></div></header>
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-[1.45rem] font-extrabold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">Mensajes</h1><p className="mt-1 text-[0.68rem] font-bold text-ink-secondary">Comunicación persistida con pacientes vinculados a tu práctica.</p></div><StatusBadge tone={unread > 0 ? "orange" : "green"}>{unread > 0 ? `${unread} sin leer` : "Sin mensajes sin leer"}</StatusBadge></header>
+      {error && messages.length > 0 ? <DoctorModuleAlert>{error}</DoctorModuleAlert> : null}
+      {success ? <DoctorModuleAlert tone="success">{success}</DoctorModuleAlert> : null}
+      {readStatus === "reading" ? <p className="sr-only" role="status" aria-live="polite">Marcando mensajes recibidos como leídos…</p> : null}
 
-      <section className="grid items-start gap-4 xl:grid-cols-[322px_minmax(0,1fr)_326px]" aria-label="Centro de mensajes">
-        <DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line p-3"><label className="flex h-8 items-center gap-2 rounded-lg border border-line bg-surface-input px-2.5 text-muted"><Search className="size-3.5" aria-hidden="true" /><span className="sr-only">Buscar conversaciones</span><input className="min-w-0 flex-1 bg-transparent text-[0.6rem] outline-none placeholder:text-placeholder" placeholder="Buscar conversaciones..." /></label><div className="mt-2 grid grid-cols-4 gap-1"><button className="rounded-md border border-accent/20 bg-accent-soft px-1 py-1.5 text-[0.55rem] font-extrabold text-accent" type="button">Todos <span className="ml-0.5">12</span></button><button className="rounded-md border border-line px-1 py-1.5 text-[0.55rem] font-extrabold" type="button">Pacientes</button><button className="rounded-md border border-line px-1 py-1.5 text-[0.55rem] font-extrabold" type="button">Equipo</button><button className="rounded-md border border-line px-1 py-1.5 text-[0.55rem] font-extrabold" type="button">No leídos <span className="ml-0.5 text-accent">3</span></button></div></div><ul className="divide-y divide-line">{conversations.map((conversation, index) => <li key={conversation.name}><button className={`flex w-full gap-2.5 px-3 py-3 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus ${index === 0 ? "bg-accent-soft/70 ring-1 ring-inset ring-accent/30" : ""}`} type="button"><DoctorAvatar initials={conversation.initials} tone={conversation.tone} size="md" /><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><b className="truncate text-[0.62rem] font-extrabold">{conversation.name}</b><time className="shrink-0 text-[0.52rem] font-bold text-ink-secondary">{conversation.time}</time></span><span className="mt-1 block line-clamp-2 text-[0.55rem] font-bold leading-4 text-ink-secondary">{conversation.preview}</span></span>{conversation.unread ? <span className="self-center grid size-5 shrink-0 place-items-center rounded-md bg-accent text-[0.55rem] font-extrabold text-white">{conversation.unread}</span> : null}</button></li>)}</ul><button className="flex min-h-12 w-full items-center justify-center text-[0.58rem] font-extrabold text-accent hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver todas las conversaciones</button></DoctorCard>
+      {loading ? <DoctorModuleLoading label="Cargando mensajes…" /> : error && messages.length === 0 && patients.length === 0 ? <DoctorModuleError message={error} /> : (
+        <section className="grid items-start gap-4 xl:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.35fr)]" aria-label="Centro de mensajes">
+          <DoctorCard className="min-w-0 overflow-hidden"><div className="border-b border-line p-3"><label className="flex h-9 items-center gap-2 rounded-lg border border-line bg-surface-input px-2.5 text-muted"><Search className="size-3.5" aria-hidden="true" /><span className="sr-only">Buscar mensajes</span><input className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-placeholder" placeholder="Buscar mensajes…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><label className="mt-3 grid gap-1 text-[0.58rem] font-bold text-ink-secondary">Paciente<select className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)}><option value="">Todos los pacientes</option>{patientOptions.map((patient) => <option key={patient.id} value={String(patient.id)}>{patient.name ?? `Paciente ${patient.id}`}</option>)}</select></label></div>{messages.length === 0 ? <DoctorModuleEmpty message="Aún no hay mensajes registrados." /> : <ul className="divide-y divide-line">{patientOptions.slice(0, 12).map((patient) => { const latest = messages.find((message) => message.patient?.id === patient.id); return <li key={patient.id}><button className={`flex w-full items-center gap-2.5 px-3 py-3 text-left hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus ${String(patient.id) === selectedPatientId ? "bg-accent-soft/70" : ""}`} type="button" onClick={() => setSelectedPatientId(String(patient.id))}><DoctorAvatar initials={initialsOf(patient.name)} tone={patient.id % 2 === 0 ? "blue" : "orange"} size="md" /><span className="min-w-0 flex-1"><span className="block truncate text-[0.62rem] font-extrabold">{patient.name ?? `Paciente ${patient.id}`}</span><span className="mt-1 block truncate text-[0.55rem] font-bold text-ink-secondary">{latest?.body ?? "Sin mensajes todavía"}</span></span></button></li>; })}</ul>}</DoctorCard>
 
-        <DoctorCard className="flex min-h-[580px] min-w-0 flex-col overflow-hidden"><div className="flex items-center gap-3 border-b border-line px-4 py-3"><DoctorAvatar initials="ML" tone="orange" size="lg" /><div className="min-w-0 flex-1"><h2 className="truncate text-[0.82rem] font-extrabold">María López</h2><p className="mt-1 text-[0.55rem] font-bold text-ink-secondary">Paciente <span className="mx-1">·</span> EXP-000521</p></div><button className="grid size-9 place-items-center rounded-full border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Llamar a María López"><Phone className="size-4" /></button><button className="grid size-9 place-items-center rounded-full border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Videollamada con María López"><Video className="size-4" /></button><button className="grid size-9 place-items-center rounded-full border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Más opciones"><MoreHorizontal className="size-4" /></button></div><div className="flex-1 space-y-4 overflow-y-auto bg-paper/60 px-4 py-4"><div className="flex justify-center"><span className="rounded-full bg-surface-subtle px-3 py-1 text-[0.55rem] font-extrabold text-ink-secondary">Hoy, 16 de Mayo</span></div><div className="flex items-end gap-2"><DoctorAvatar initials="ML" tone="orange" size="sm" /><div className="max-w-[78%] rounded-xl rounded-bl-sm bg-surface-subtle px-3 py-2.5"><p className="text-[0.61rem] font-extrabold leading-4">Hola doctor, ¿podría confirmarme si mi cita de seguimiento sigue en pie para el próximo viernes a las 10:30 AM?</p><time className="mt-1 block text-right text-[0.5rem] font-bold text-ink-secondary">09:15 AM</time></div></div><div className="flex items-end justify-end gap-2"><div className="max-w-[78%] rounded-xl rounded-br-sm bg-accent-soft px-3 py-2.5"><p className="text-[0.61rem] font-extrabold leading-4">Hola María, sí, tu cita está confirmada para el viernes a las 10:30 AM. Por favor llega 15 minutos antes y trae tus medicamentos actuales.</p><time className="mt-1 flex items-center justify-end gap-1 text-[0.5rem] font-bold text-ink-secondary">09:18 AM <CheckCheck className="size-3 text-accent" /></time></div><DoctorAvatar initials="CR" tone="slate" size="sm" /></div><div className="flex items-end gap-2"><DoctorAvatar initials="ML" tone="orange" size="sm" /><div className="max-w-[65%] rounded-xl rounded-bl-sm bg-surface-subtle px-3 py-2.5"><p className="text-[0.61rem] font-extrabold leading-4">Perfecto, muchas gracias doctor. 🙏</p><time className="mt-1 block text-right text-[0.5rem] font-bold text-ink-secondary">09:19 AM</time></div></div><div className="flex items-end justify-end gap-2"><div className="max-w-[78%] rounded-xl rounded-br-sm bg-accent-soft px-3 py-2.5"><p className="text-[0.61rem] font-extrabold leading-4">De nada. También ya actualicé tu receta de Losartán 50mg por 30 días y está disponible en tu historial. Nos vemos el viernes.</p><time className="mt-1 flex items-center justify-end gap-1 text-[0.5rem] font-bold text-ink-secondary">09:21 AM <CheckCheck className="size-3 text-accent" /></time></div><DoctorAvatar initials="CR" tone="slate" size="sm" /></div></div><div className="flex items-center gap-2 border-t border-line bg-surface p-3"><button className="grid size-9 place-items-center rounded-lg border border-line text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Adjuntar archivo"><Paperclip className="size-4" /></button><label className="flex h-9 min-w-0 flex-1 items-center rounded-lg border border-line bg-surface-input px-3"><span className="sr-only">Escribe un mensaje</span><input className="min-w-0 flex-1 bg-transparent text-[0.6rem] outline-none placeholder:text-placeholder" placeholder="Escribe un mensaje..." /><Smile className="size-4 text-ink-secondary" /></label><button className="grid size-9 place-items-center rounded-lg bg-accent text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Enviar mensaje"><Send className="size-4" /></button></div></DoctorCard>
-
-        <aside className="grid gap-4"><DoctorCard className="p-4"><h2 className="text-[0.82rem] font-extrabold">Información del contacto</h2><div className="mt-4 flex items-center gap-3"><DoctorAvatar initials="ML" tone="orange" size="lg" /><div><h3 className="text-[0.82rem] font-extrabold">María López</h3><p className="mt-1 text-[0.55rem] font-bold text-ink-secondary">Paciente</p></div></div><ul className="mt-4 grid gap-3 text-[0.58rem] font-bold text-ink-secondary"><li className="flex items-center gap-2"><Phone className="size-3.5" />55 1234 5678</li><li className="flex items-center gap-2"><Heart className="size-3.5" />Hipertensión esencial</li><li className="flex items-center gap-2"><CalendarDays className="size-3.5" />Próxima cita: 24 May 2024, 10:30 AM</li><li className="flex items-center gap-2"><MessageCircle className="size-3.5" />Canal preferido: <b className="text-ink">WhatsApp</b></li></ul></DoctorCard><DoctorCard className="p-4"><SectionHeading title="Historial de la conversación" action="Ver historial completo" /><ul className="mt-3 grid divide-y divide-line">{[{ icon: MessageCircle, label: "Consulta inicial", date: "05 May 2024, 09:15 AM" }, { icon: Pill, label: "Receta enviada", date: "05 May 2024, 09:20 AM" }, { icon: MessageCircle, label: "Resultado comentado", date: "10 May 2024, 11:30 AM" }].map(({ icon: Icon, label, date }) => <li className="flex items-center gap-2 py-2 text-[0.56rem] font-extrabold" key={label}><Icon className="size-3.5 text-accent" /><span className="flex-1">{label}</span><time className="text-[0.52rem] font-bold text-ink-secondary">{date}</time></li>)}</ul></DoctorCard><DoctorCard className="p-4"><h2 className="text-[0.82rem] font-extrabold">Notas rápidas</h2><div className="mt-3 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5"><p className="text-[0.58rem] font-extrabold">Paciente suele responder por la tarde.</p><p className="mt-1 text-[0.55rem] font-bold text-ink-secondary">Requiere lenguaje claro.</p></div></DoctorCard><DoctorCard className="p-4"><div className="flex items-center gap-2"><span className="grid size-7 place-items-center rounded-lg bg-violet-soft text-violet"><Heart className="size-4" /></span><h2 className="text-[0.82rem] font-extrabold">IA Epidemiológica</h2></div><div className="mt-3 grid gap-2"><div className="flex items-center justify-between rounded-lg border border-line bg-surface-subtle px-3 py-2.5"><div><p className="text-[0.54rem] font-bold text-ink-secondary">Riesgo actual</p><strong className="mt-0.5 block text-lg font-extrabold text-success">Bajo</strong></div><svg className="h-6 w-20" viewBox="0 0 96 24" aria-hidden="true"><polyline points="2,20 18,14 32,17 47,9 62,14 78,6 94,2" className="fill-none stroke-success" strokeWidth="2" /></svg></div><div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5"><span className="size-2 rounded-full bg-danger" /><span className="flex-1 text-[0.56rem] font-extrabold">1 alerta activa</span><ChevronRight className="size-3 text-muted" /></div><div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5"><Clock3 className="size-3.5 text-accent" /><span className="flex-1 text-[0.55rem] font-bold text-ink-secondary">Última actualización<br /><b className="text-ink">Hoy, 10:30 AM</b></span></div></div><button className="mt-2 w-full text-right text-[0.57rem] font-extrabold text-accent focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver IA Epidemiológica ↗</button></DoctorCard></aside>
-      </section>
+          <DoctorCard className="min-w-0 overflow-hidden"><div className="flex items-center gap-3 border-b border-line px-4 py-3"><span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-accent"><MessageCircle className="size-4" aria-hidden="true" /></span><div className="min-w-0"><h2 className="truncate text-[0.86rem] font-extrabold">{selectedPatient?.name ?? "Conversación clínica"}</h2><p className="mt-1 text-[0.56rem] font-bold text-ink-secondary">{selectedPatient ? "Paciente vinculado" : "Selecciona un paciente para comenzar"}</p></div><Users className="ml-auto size-4 text-muted" aria-hidden="true" /></div><div className="min-h-[300px] space-y-3 bg-paper/50 px-4 py-4">{visibleMessages.length === 0 ? <DoctorModuleEmpty message={selectedPatient ? "No hay mensajes para este paciente." : "Selecciona un paciente para ver la conversación."} /> : visibleMessages.slice(0, 50).reverse().map((message) => <article className="rounded-xl border border-line bg-surface px-3 py-2.5" key={message.id}><div className="flex items-center justify-between gap-3"><span className="text-[0.58rem] font-extrabold">{message.sender?.name ?? "Usuario"}</span><time className="text-[0.52rem] font-bold text-muted" dateTime={message.createdAt ?? undefined}>{formatDate(message.createdAt)}</time></div><p className="mt-1 text-[0.62rem] font-bold leading-5 text-ink-secondary">{message.body}</p></article>)}</div><form className="border-t border-line p-4" onSubmit={(event) => void handleSubmit(event)}><label className="sr-only" htmlFor="doctor-message">Nuevo mensaje</label><textarea id="doctor-message" className="min-h-20 w-full rounded-lg border border-line bg-surface-input px-3 py-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60" placeholder={selectedPatient ? "Escribe un mensaje clínico…" : "Selecciona un paciente…"} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={pending || !selectedPatient} maxLength={5000} required /><div className="mt-2 flex items-center justify-between gap-3"><p className="text-[0.55rem] font-bold text-ink-secondary">No incluyas datos fuera del expediente clínico.</p><button className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-accent px-3 text-[0.6rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={pending || !selectedPatient || draft.trim() === ""}>{pending ? "Enviando…" : <><Send className="size-3.5" aria-hidden="true" />Enviar</>}</button></div></form></DoctorCard>
+        </section>
+      )}
     </div>
   );
 }

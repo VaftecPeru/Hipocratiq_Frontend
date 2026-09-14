@@ -30,9 +30,24 @@ export function NewManualPaymentButton({ subscriptions }: { subscriptions: Admin
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedSubscriptionId = subscriptions.some((subscription) => String(subscription.id) === subscriptionId)
+    ? subscriptionId
+    : String(subscriptions[0]?.id ?? "");
+
+  const close = (force = false) => {
+    if (isLoading && !force) return;
+    setIsOpen(false);
+    setError(null);
+    setAmount("");
+    setCurrency("USD");
+    setReference("");
+    setPaidAt(localDateTimeValue());
+    setNote("");
+  };
+
   const submit = async () => {
     const parsedAmount = Number(amount);
-    if (!subscriptionId || !Number.isFinite(parsedAmount) || parsedAmount <= 0 || !reference.trim() || !paidAt) {
+    if (!selectedSubscriptionId || !Number.isFinite(parsedAmount) || parsedAmount <= 0 || !reference.trim() || !paidAt) {
       setError("Completa la suscripción, monto, referencia y fecha del cobro.");
       return;
     }
@@ -41,15 +56,15 @@ export function NewManualPaymentButton({ subscriptions }: { subscriptions: Admin
     setError(null);
     try {
       await createManualPayment({
-        subscriptionId: Number(subscriptionId),
+         subscriptionId: Number(selectedSubscriptionId),
         amount: parsedAmount,
         currency,
         reference: reference.trim(),
         paidAt: new Date(paidAt).toISOString(),
         note: note.trim(),
       });
-      setIsOpen(false);
-      router.refresh();
+       close(true);
+       router.refresh();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No pudimos registrar el pago.");
     } finally {
@@ -59,13 +74,13 @@ export function NewManualPaymentButton({ subscriptions }: { subscriptions: Admin
 
   return (
     <>
-      <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50" disabled={!subscriptions.length} onClick={() => setIsOpen(true)} title={!subscriptions.length ? "No hay suscripciones manuales activas" : undefined} type="button">
+       <button className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-xs font-bold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50" disabled={!subscriptions.length} onClick={() => { setError(null); setIsOpen(true); }} title={!subscriptions.length ? "No hay suscripciones manuales activas" : undefined} type="button">
         <Banknote className="size-3.5" aria-hidden="true" />Registrar pago
       </button>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Registrar pago manual" description="Conciliación para una suscripción creada manualmente por administración." footer={<><ModalSecondaryButton onClick={() => setIsOpen(false)}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading} onClick={submit}>{isLoading ? "Registrando..." : "Registrar pago"}</ModalPrimaryButton></>}>
+       <Modal isOpen={isOpen} onClose={close} title="Registrar pago manual" description="Conciliación para una suscripción creada manualmente por administración." footer={<><ModalSecondaryButton onClick={close}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading} onClick={submit}>{isLoading ? "Registrando..." : "Registrar pago"}</ModalPrimaryButton></>}>
         <div className="space-y-4">
           <ErrorNote message={error} />
-          <ModalSelect id="manual-subscription" label="Suscripción" required value={subscriptionId} onChange={setSubscriptionId} options={subscriptions.map((item) => ({ value: String(item.id), label: `${item.clinic} · ${item.plan ?? "Sin plan"} · ${item.countryCode ?? "—"}` }))} />
+           <ModalSelect id="manual-subscription" label="Suscripción" required value={selectedSubscriptionId} onChange={setSubscriptionId} options={subscriptions.map((item) => ({ value: String(item.id), label: `${item.clinic} · ${item.plan ?? "Sin plan"} · ${item.countryCode ?? "—"}` }))} />
           <ModalGrid>
             <ModalField id="manual-amount" label="Monto" min={0.01} required step={0.01} type="number" value={amount} onChange={(event) => setAmount(event.target.value)} />
             <ModalSelect id="manual-currency" label="Moneda" required value={currency} onChange={setCurrency} options={["USD", "MXN", "PEN"]} />
@@ -89,6 +104,14 @@ export function RefundManualPaymentButton({ payment }: { payment: AdminPayment }
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const close = (force = false) => {
+    if (isLoading && !force) return;
+    setIsOpen(false);
+    setError(null);
+    setReference("");
+    setReason("");
+  };
+
   const submit = async () => {
     if (!reference.trim() || reason.trim().length < 10) {
       setError("Ingresa una referencia y un motivo de al menos 10 caracteres.");
@@ -98,8 +121,8 @@ export function RefundManualPaymentButton({ payment }: { payment: AdminPayment }
     setError(null);
     try {
       await refundManualPayment(payment.id, reference.trim(), reason.trim());
-      setIsOpen(false);
-      router.refresh();
+       close(true);
+       router.refresh();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No pudimos registrar el reembolso.");
     } finally {
@@ -109,8 +132,8 @@ export function RefundManualPaymentButton({ payment }: { payment: AdminPayment }
 
   return (
     <>
-      <button className="inline-flex min-h-8 items-center gap-1 rounded-md border border-danger/25 px-2.5 text-2xs font-bold text-danger hover:bg-danger-soft" onClick={() => setIsOpen(true)} type="button"><RotateCcw className="size-3" aria-hidden="true" />Reembolsar</button>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} size="sm" title="Registrar reembolso manual" description={`Pago ${payment.reference}. Esta acción descuenta el cobro de los ingresos confirmados.`} footer={<><ModalSecondaryButton onClick={() => setIsOpen(false)}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading} onClick={submit} tone="danger">{isLoading ? "Procesando..." : "Confirmar reembolso"}</ModalPrimaryButton></>}>
+       <button className="inline-flex min-h-8 items-center gap-1 rounded-md border border-danger/25 px-2.5 text-2xs font-bold text-danger hover:bg-danger-soft" onClick={() => { setError(null); setIsOpen(true); }} type="button"><RotateCcw className="size-3" aria-hidden="true" />Reembolsar</button>
+       <Modal isOpen={isOpen} onClose={close} size="sm" title="Registrar reembolso manual" description={`Pago ${payment.reference}. Esta acción descuenta el cobro de los ingresos confirmados.`} footer={<><ModalSecondaryButton onClick={close}>Cancelar</ModalSecondaryButton><ModalPrimaryButton disabled={isLoading} onClick={submit} tone="danger">{isLoading ? "Procesando..." : "Confirmar reembolso"}</ModalPrimaryButton></>}>
         <div className="space-y-4">
           <ErrorNote message={error} />
           <ModalField id={`refund-reference-${payment.id}`} label="Referencia del reembolso" required value={reference} onChange={(event) => setReference(event.target.value)} />

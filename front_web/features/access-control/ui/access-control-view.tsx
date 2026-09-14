@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { getAccessControl } from "@/features/access-control/api/browser-access-control";
 import type { AccessControlData } from "@/features/access-control/model/access-control.types";
+import { notifySuperadminNavigationMutation } from "@/features/platform/model/superadmin-navigation-invalidation";
 import { ManageUserAccessModal } from "@/features/access-control/ui/manage-user-access-modal";
 import { getAdminUsers } from "@/features/users/api/browser-users";
 import type {
@@ -230,7 +231,7 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
                       <td className="px-3 py-2"><DataBadge tone={ROLE_TONES[user.role]}>{ROLE_LABELS[user.role]}</DataBadge></td>
                       <td className="px-3 py-2"><span className="flex items-center gap-1.5 text-muted"><CountryFlag countryCode={user.countryCode} />{user.countryCode}</span></td>
                       <td className="max-w-52 truncate px-3 py-2 text-muted">{user.clinic?.name ?? (user.role === "super_admin" ? "Alcance global" : "Sin asignar")}</td>
-                      <td className="px-3 py-2 text-right"><button className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-2xs font-bold text-ink transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={user.id === access?.actorUserId} title={user.id === access?.actorUserId ? "Otro Superadministrador debe modificar tu acceso" : undefined} onClick={() => openAccess(user)}><UserCog className="size-3" aria-hidden="true" />Gestionar</button></td>
+                       <td className="px-3 py-2 text-right"><button className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-2.5 text-2xs font-bold text-ink transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8" type="button" disabled={user.id === access?.actorUserId} title={user.id === access?.actorUserId ? "Otro Superadministrador debe modificar tu acceso" : undefined} onClick={() => openAccess(user)}><UserCog className="size-3" aria-hidden="true" />Gestionar</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -240,7 +241,7 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
 
           <div className="flex min-h-13 items-center justify-between gap-3 border-t border-line px-3 py-2">
             <p className="text-2xs text-muted">Página {currentPage} de {lastPage}</p>
-            <div className="flex gap-1"><button className="min-h-8 rounded-lg border border-line px-3 text-2xs font-bold disabled:opacity-40" type="button" disabled={currentPage <= 1 || isLoading} onClick={() => updateFilters({ page: currentPage - 1 })}>Anterior</button><button className="min-h-8 rounded-lg border border-line px-3 text-2xs font-bold disabled:opacity-40" type="button" disabled={currentPage >= lastPage || isLoading} onClick={() => updateFilters({ page: currentPage + 1 })}>Siguiente</button></div>
+            <div className="flex gap-1"><button className="min-h-11 rounded-lg border border-line px-3 text-2xs font-bold disabled:opacity-40 sm:min-h-8" type="button" disabled={currentPage <= 1 || isLoading} onClick={() => updateFilters({ page: currentPage - 1 })}>Anterior</button><button className="min-h-11 rounded-lg border border-line px-3 text-2xs font-bold disabled:opacity-40 sm:min-h-8" type="button" disabled={currentPage >= lastPage || isLoading} onClick={() => updateFilters({ page: currentPage + 1 })}>Siguiente</button></div>
           </div>
         </section>
 
@@ -261,11 +262,11 @@ export function AccessControlView({ initialSearch = "" }: { initialSearch?: stri
 
       {access ? (
         <ManageUserAccessModal
-          key={selectedUser?.id ?? "no-user"}
+          key={`${selectedUser?.id ?? "no-user"}-${isAccessModalOpen ? "open" : "closed"}`}
           access={access}
           isOpen={isAccessModalOpen}
           onClose={() => setIsAccessModalOpen(false)}
-          onUpdated={() => { setIsLoading(true); setError(null); setRefreshVersion((current) => current + 1); }}
+          onUpdated={() => { notifySuperadminNavigationMutation(["users", "access-control"]); setIsLoading(true); setError(null); setRefreshVersion((current) => current + 1); }}
           user={selectedUser}
         />
       ) : null}

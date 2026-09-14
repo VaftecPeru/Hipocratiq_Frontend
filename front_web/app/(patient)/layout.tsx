@@ -16,7 +16,6 @@ export default async function PatientLayout({ children }: Readonly<{ children: R
   return (
     <PatientShell
       userName={session.user.name}
-      patientId={String(session.user.id).padStart(5, "0")}
     >
       {children}
     </PatientShell>

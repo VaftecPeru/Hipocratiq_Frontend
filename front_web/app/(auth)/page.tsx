@@ -1,9 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginFlow } from "@/features/auth/ui/login-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthPlatformSettingsProvider } from "@/features/auth/ui/auth-platform-settings";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
+
+export const metadata: Metadata = {
+  title: "Iniciar sesión",
+};
 
 type HomeProps = {
   searchParams: Promise<{ role?: string | string[] | undefined }>;
@@ -30,7 +35,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
           <footer className="flex min-h-12 items-center justify-between gap-3 px-[clamp(1.25rem,4vw,3rem)] py-1 text-2xs text-footer-text">
             <span className="shrink-0 whitespace-nowrap">© {currentYear} Hipocratiq</span>
-            <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Soporte</Link>
+            <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Superadministrador / Soporte</Link>
           </footer>
         </section>
 

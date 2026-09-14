@@ -10,7 +10,7 @@ export function DashboardRouteLoading({ children }: DashboardRouteLoadingProps) 
       <span className="sr-only">Cargando módulo administrativo</span>
       <aside className="fixed inset-y-0 left-0 hidden w-52 border-r border-line bg-surface lg:flex lg:flex-col" aria-hidden="true">
         <div className="flex h-14 items-center gap-2.5 px-4">
-          <BrandLogo className="h-8 w-9" priority />
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent"><BrandLogo className="h-6 w-6 brightness-0 invert" priority /></span>
           <span className="text-sm font-extrabold tracking-[0.07em]">HIPOCRATIQ</span>
         </div>
         <div className="min-h-0 flex-1 space-y-0.5 overflow-hidden px-2 py-2 motion-safe:animate-pulse">

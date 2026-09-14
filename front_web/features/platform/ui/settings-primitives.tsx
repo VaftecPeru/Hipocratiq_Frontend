@@ -43,7 +43,7 @@ export function SettingsCard({
           ) : null}
           <div className="min-w-0">
             <h2 className="text-xs font-extrabold sm:text-sm" id={titleId}>{title}</h2>
-            {description ? <p className="mt-0.5 text-2xs leading-4 text-muted">{description}</p> : null}
+             {description ? <p className="mt-0.5 break-words text-2xs leading-4 text-muted">{description}</p> : null}
           </div>
         </div>
         {action}
@@ -116,6 +116,7 @@ export function SettingsSelect({
   value,
   options,
   valueClassName = "",
+  disabled = false,
   onChange,
   children,
 }: {
@@ -124,6 +125,7 @@ export function SettingsSelect({
   value: string;
   options: string[];
   valueClassName?: string;
+  disabled?: boolean;
   onChange?: (value: string) => void;
   children?: ReactNode;
 }) {
@@ -137,6 +139,7 @@ export function SettingsSelect({
       onChange={onChange}
       leading={children}
       density="compact"
+      disabled={disabled}
       surface="input"
       buttonClassName={valueClassName}
     />
@@ -154,15 +157,16 @@ export function SettingsInput({ id, label, value, type = "text", onChange }: { i
 }
 
 /** Interruptor accesible usado en todos los módulos. */
-export function SettingsToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange?: (checked: boolean) => void }) {
+export function SettingsToggle({ label, checked, disabled = false, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange?: (checked: boolean) => void }) {
   return (
     <button
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus ${checked ? "bg-accent" : "bg-line"}`}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55 ${checked ? "bg-accent" : "bg-line"}`}
+      disabled={disabled}
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      onClick={onChange ? () => onChange(!checked) : undefined}
+      onClick={onChange && !disabled ? () => onChange(!checked) : undefined}
     >
       <span
         className={`absolute top-0.5 size-4 rounded-full bg-surface shadow-[0_0.0625rem_0.25rem_rgb(16_27_51/25%)] transition-all ${checked ? "left-4.5" : "left-0.5"}`}
@@ -214,7 +218,7 @@ export function SettingsPageHeader({ title, description, action }: { title: stri
     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
       <div className="min-w-0">
         <h1 className="text-[clamp(1.15rem,1.8vw,1.6rem)] font-extrabold tracking-[-0.03em]">{title}</h1>
-        <p className="mt-0.5 text-2xs text-muted sm:text-xs">{description}</p>
+         <p className="mt-0.5 break-words text-2xs text-muted sm:text-xs">{description}</p>
       </div>
       {action}
     </div>
@@ -250,14 +254,14 @@ export function SettingsTableHead({ columns }: { columns: Array<{ label: string;
 }
 
 /** Cabecera de página en estado de carga, alineada con SettingsPageHeader. */
-export function SettingsHeaderSkeleton({ titleWidth = "12rem", actionWidth = "9rem" }: { titleWidth?: string; actionWidth?: string }) {
+export function SettingsHeaderSkeleton({ titleWidth = "12rem", actionWidth = "9rem", showAction = true }: { titleWidth?: string; actionWidth?: string; showAction?: boolean }) {
   return (
     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
       <div className="min-w-0">
         <div className="h-6 rounded-lg bg-line/70 sm:h-7" style={{ width: titleWidth }} />
         <div className="mt-2 h-3 w-80 max-w-full rounded bg-line/50" />
       </div>
-      <div className="h-9 w-full rounded-lg bg-accent-soft sm:w-auto" style={{ minWidth: actionWidth }} />
+      {showAction ? <div className="h-9 w-full rounded-lg bg-accent-soft sm:w-auto" style={{ minWidth: actionWidth }} /> : null}
     </div>
   );
 }

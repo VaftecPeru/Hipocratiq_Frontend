@@ -27,13 +27,19 @@ export function ConfirmDialog({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={isLoading ? () => undefined : onClose}
       size="sm"
       title={title}
+      description="Confirma esta acción para continuar."
+      formId="clinic-status-confirm-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!isLoading) onConfirm();
+      }}
       footer={
         <>
           <button
-            className="flex min-h-9 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60 sm:flex-initial sm:px-5"
+            className="flex min-h-11 flex-1 items-center justify-center rounded-lg border border-line bg-surface px-4 text-xs font-bold text-ink transition-colors hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60 sm:flex-initial sm:px-5 md:min-h-9"
             disabled={isLoading}
             onClick={onClose}
             type="button"
@@ -41,14 +47,14 @@ export function ConfirmDialog({
             Cancelar
           </button>
           <button
-            className={`flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60 sm:flex-initial sm:px-5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-bold text-white transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60 sm:flex-initial sm:px-5 md:min-h-9 ${
               confirmTone === "danger"
                 ? "bg-danger hover:bg-danger/90"
                 : "bg-accent hover:bg-accent-hover"
             }`}
             disabled={isLoading}
-            onClick={onConfirm}
-            type="button"
+            form="clinic-status-confirm-form"
+            type="submit"
           >
             {isLoading ? "Procesando..." : confirmLabel}
           </button>
@@ -64,7 +70,7 @@ export function ConfirmDialog({
         >
           <AlertTriangle className="size-5" strokeWidth={1.8} />
         </span>
-        <p className="min-w-0 text-sm leading-6 text-ink">{description}</p>
+        <p className="min-w-0 text-sm leading-6 text-ink" aria-live="assertive">{description}</p>
       </div>
     </Modal>
   );

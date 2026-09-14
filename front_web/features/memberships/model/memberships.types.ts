@@ -1,4 +1,6 @@
-export type MembershipCurrency = "USD" | "PEN";
+export type MembershipCurrency = "USD" | "MXN" | "PEN";
+
+export type CurrencyAmounts = Record<MembershipCurrency, number>;
 
 export type BillingCycle = "monthly" | "annual";
 
@@ -7,7 +9,9 @@ export type SubscriptionStatus = "active" | "past_due" | "canceled" | "expired";
 export type KpiMetric = {
   usdCents: number;
   penCents: number;
+  byCurrency: CurrencyAmounts;
   changePct: number | null;
+  changePctByCurrency: Record<MembershipCurrency, number | null>;
   changeNote: string;
 };
 
@@ -35,9 +39,11 @@ export type MembershipPlan = {
   key: string;
   name: string;
   description: string | null;
+  monthlyPriceCents: number;
+  annualPriceCents: number;
   monthlyPriceUsdCents: number;
   annualPriceUsdCents: number;
-  currency: string;
+  currency: MembershipCurrency;
   features: string[];
   publiclySelectable: boolean;
   isActive: boolean;
@@ -63,10 +69,43 @@ export type UpcomingRenewal = {
   clinic: string | null;
   countryCode: string | null;
   plan: string;
-  amountUsdCents: number;
-  amountPenCents: number;
+  amountCents: number;
+  currency: MembershipCurrency;
+  amountUsdCents: number | null;
+  amountPenCents: number | null;
   renewalAt: string;
   autoRenew: boolean;
+};
+
+export type MembershipSubscription = {
+  id: number;
+  clinicId: number;
+  clinic: string | null;
+  countryCode: string | null;
+  plan: string | null;
+  planName: string | null;
+  billingCycle: BillingCycle;
+  status: SubscriptionStatus;
+  autoRenew: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  amountCents: number;
+  currency: MembershipCurrency;
+};
+
+export type MembershipPayment = {
+  id: number;
+  reference: string | null;
+  clinic: string | null;
+  countryCode: string | null;
+  plan: string | null;
+  status: "succeeded" | "pending" | "failed" | "refunded";
+  amountCents: number;
+  currency: MembershipCurrency;
+  provider: string;
+  paidAt: string | null;
+  refundedAt: string | null;
+  createdAt: string | null;
 };
 
 export type MembershipDashboard = {
@@ -75,7 +114,10 @@ export type MembershipDashboard = {
   subscriptionsByCountry: CountryDistribution[];
   subscriptionsByPlan: PlanSubscription[];
   upcomingRenewals: UpcomingRenewal[];
-  conversionRate: number;
+  conversionRate: number | null;
+  currencyRates: Record<MembershipCurrency, number | null>;
+  subscriptions: MembershipSubscription[];
+  paymentHistory: MembershipPayment[];
   generatedAt: string;
 };
 
@@ -85,6 +127,7 @@ export type CreatePlanPayload = {
   description?: string | null;
   monthlyPriceUsd: number;
   annualPriceUsd: number;
+  currency?: MembershipCurrency;
   features: string[];
   publiclySelectable?: boolean;
   isActive?: boolean;
@@ -96,6 +139,7 @@ export type UpdatePlanPayload = {
   description?: string | null;
   monthlyPriceUsd?: number;
   annualPriceUsd?: number;
+  currency?: MembershipCurrency;
   features?: string[];
   publiclySelectable?: boolean;
   isActive?: boolean;
