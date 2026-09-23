@@ -5,11 +5,14 @@ import {  useEffect,  useMemo,  useState,} from "react";
 import {
   createClinicInvoice,
   getClinicPatients,
-  type ClinicInvoice,
-  type ClinicInvoicePaymentMethod,
+  recordClinicInvoicePayment,
 } from "@/features/clinics/api/browser-clinic-dashboard";
 
-import type {  ClinicPatient,} from "@/features/clinics/model/clinic-admin.types";
+import type {
+  ClinicInvoice,
+  ClinicPatient,
+  ClinicPaymentMethod,
+} from "@/features/clinics/model/clinic-admin.types";
 
 type Props = {
   isOpen: boolean;
@@ -20,7 +23,7 @@ type Props = {
 type InvoiceStatus = "pending" | "paid";
 
 const paymentMethods: Array<{
-  value: ClinicInvoicePaymentMethod;
+  value: ClinicPaymentMethod;
   label: string;
 }> = [
   {
@@ -32,21 +35,26 @@ const paymentMethods: Array<{
     label: "Tarjeta",
   },
   {
-    value: "transfer",
-    label: "Transferencia",
+    value: "bank_transfer",
+    label: "Transferencia bancaria",
   },
   {
-    value: "insurance",
-    label: "Seguro",
+    value: "other",
+    label: "Otro",
   },
 ];
 
 function today(): string {
   const current = new Date();
   const year = current.getFullYear();
-  const month = String( current.getMonth() + 1).padStart(2, "0");
+  const month = String(current.getMonth() + 1).padStart(2, "0");
   const day = String(current.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  return `${year}-${month}-${day}`;
+}
+
+function buildInvoiceNumber(patientId: number): string {
+  const timestamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+  return `HQ-${patientId}-${timestamp}`;
 }
 
 export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Readonly<Props>) 
@@ -56,7 +64,7 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
   const [patientId, setPatientId] = useState<number | null>(null);
   const [concept, setConcept] = useState("");
   const [amount, setAmount] = useState("");
-  const [paymentMethod,setPaymentMethod] = useState<ClinicInvoicePaymentMethod | null>(null);
+  const [paymentMethod,setPaymentMethod] = useState<ClinicPaymentMethod | null>(null);
   const [status, setStatus] = useState<InvoiceStatus>("pending");
   const [issuedAt, setIssuedAt] = useState(today());
   const [dueAt, setDueAt] = useState("");
@@ -175,18 +183,32 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
     setIsSaving(true);
 
     try {
-      const invoice =
-        await createClinicInvoice({
-          patientProfileId:patientId,
-          appointmentId:null,
-          concept:concept.trim(),
-          amount:numericAmount,
-          paymentMethod:status === "paid" ? paymentMethod : null,
-          status,
-          issuedAt,
-          dueAt: dueAt || null,
-          notes: notes.trim() || null,
+      const amountMinor = Math.round(numericAmount * 100);
+      let invoice = await createClinicInvoice({
+        patientId,
+        invoiceNumber: buildInvoiceNumber(patientId),
+        issueDate: issuedAt,
+        dueDate: dueAt || null,
+        currency: "USD",
+        items: [
+          {
+            description: concept.trim(),
+            quantity: 1,
+            unitAmountMinor: amountMinor,
+          },
+        ],
+      });
+
+      if (status === "paid" && paymentMethod !== null) {
+        const paymentResult = await recordClinicInvoicePayment(invoice.id, {
+          amountMinor,
+          currency: invoice.currency || "USD",
+          paymentMethod,
+          note: notes.trim() || null,
         });
+        invoice = paymentResult.invoice;
+      }
+
       onCreated(invoice);
       resetForm();
       onClose();
@@ -393,7 +415,7 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
               </div>
 
               <p className="mt-1 text-[0.55rem] text-muted">
-                Moneda: PEN
+                Moneda: USD
               </p>
             </section>
           </div>
@@ -503,7 +525,7 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
                   setPaymentMethod(
                     event.target.value
                       ? (event.target
-                          .value as ClinicInvoicePaymentMethod)
+                          .value as ClinicPaymentMethod)
                       : null,
                   )
                 }
