@@ -1,5 +1,27 @@
 const API_PREFIX = "/backend";
 
+function getLocaleHeader(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+
+  const prefix = "hipocratiq-locale=";
+  const cookie = document.cookie
+    .split(";")
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(prefix));
+
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : undefined;
+}
+
+function apiHeaders(contentType?: boolean): HeadersInit {
+  const locale = getLocaleHeader();
+
+  return {
+    Accept: "application/json",
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    ...(locale ? { "Accept-Language": locale } : {}),
+  };
+}
+
 type ValidationErrors = Record<string, string[]>;
 
 type ApiErrorPayload = {
@@ -103,7 +125,7 @@ function invalidateCsrfToken(): void {
 async function refreshCsrfToken(): Promise<string> {
   const response = await fetch(`${API_PREFIX}/sanctum/csrf-cookie`, {
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {
@@ -155,8 +177,7 @@ async function sendMutation(
     method,
     credentials: "include",
     headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
+      ...apiHeaders(true),
       "X-XSRF-TOKEN": token,
     },
     body: payload ? JSON.stringify(payload) : undefined,
@@ -223,7 +244,7 @@ export async function getFromApi<T>(
 ): Promise<T> {
   const response = await fetch(`${API_PREFIX}${path}`, {
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: apiHeaders(),
     cache: "no-store",
     signal: options.signal,
   });

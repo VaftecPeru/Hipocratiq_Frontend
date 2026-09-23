@@ -184,6 +184,10 @@ body {
   transform: translateY(0);
 }
 
+.dark .auth-brand-logo {
+  filter: brightness(0) invert(1);
+}
+
 .login-role-grid-container {
   container-type: inline-size;
 }

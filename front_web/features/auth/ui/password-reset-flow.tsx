@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, CircleAlert, Eye, EyeOff, LockKeyhole } from "lucide-react";
@@ -88,15 +89,15 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
 }
 
 const FOCUS_RING = "focus-visible:outline-[3px] focus-visible:outline-offset-3 focus-visible:outline-focus-ring";
-const FIELD_CONTAINER = "flex min-h-10 items-center overflow-hidden rounded-lg border border-line bg-white transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
+const FIELD_CONTAINER = "flex min-h-10 items-center overflow-hidden rounded-lg border border-line bg-surface transition-[border-color,box-shadow] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgb(8_98_221/12%)]";
 const INVALID_FIELD = "border-danger focus-within:border-danger focus-within:shadow-[0_0_0_3px_rgb(186_59_70/14%)]";
 const PRIMARY_BUTTON = `flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border-0 bg-accent text-2xs font-extrabold text-white shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)] transition-[background-color,transform,box-shadow] not-disabled:hover:-translate-y-px not-disabled:hover:bg-accent-hover not-disabled:hover:shadow-[0_0.6rem_1.2rem_rgb(8_98_221/24%)] disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`;
 
 const PASSWORD_RULES = [
-  { label: "Mínimo 8 caracteres", test: (value: string) => value.length >= 8 },
-  { label: "Una mayúscula", test: (value: string) => /[A-Z]/.test(value) },
-  { label: "Un número", test: (value: string) => /\d/.test(value) },
-  { label: "Carácter especial", test: (value: string) => /[^A-Za-z0-9]/.test(value) },
+  { labelKey: "minimumLength", test: (value: string) => value.length >= 8 },
+  { labelKey: "uppercase", test: (value: string) => /[A-Z]/.test(value) },
+  { labelKey: "number", test: (value: string) => /\d/.test(value) },
+  { labelKey: "special", test: (value: string) => /[^A-Za-z0-9]/.test(value) },
 ];
 
 function InlineError({ id, message }: { id?: string; message?: string }) {
@@ -151,15 +152,18 @@ function NewPasswordStep({
   onTogglePassword,
   onToggleConfirmation,
 }: NewPasswordStepProps) {
+  const t = useTranslations("auth.reset");
+  const authT = useTranslations("auth");
+
   return (
     <div className="w-full max-w-96">
       <BrandLogo className="mb-7 h-11 w-auto" />
-      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Nueva contraseña</h1>
-      <p className="mt-3 text-sm leading-6 text-muted">Crea una contraseña segura para proteger tu cuenta.</p>
+       <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">{t("newPassword")}</h1>
+       <p className="mt-3 text-sm leading-6 text-muted">{t("newPasswordDescription")}</p>
 
       <form className="mt-6 grid gap-5" onSubmit={onSubmit} aria-busy={flow.isPending} noValidate>
         <div className="grid gap-2">
-          <label className="text-2xs font-bold text-ink" htmlFor="new-password">Nueva contraseña</label>
+           <label className="text-2xs font-bold text-ink" htmlFor="new-password">{t("newPassword")}</label>
           <div className={`${FIELD_CONTAINER} ${flow.fieldErrors.password ? INVALID_FIELD : ""}`}>
             <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${flow.fieldErrors.password ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
             <input
@@ -173,7 +177,7 @@ function NewPasswordStep({
               aria-invalid={flow.fieldErrors.password ? true : undefined}
               aria-describedby={flow.fieldErrors.password ? "password-error" : "password-requirements"}
             />
-            <button type="button" className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING}`} onClick={onTogglePassword} aria-label={passwordInputType === "text" ? "Ocultar contraseña" : "Mostrar contraseña"}>
+             <button type="button" className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING}`} onClick={onTogglePassword} aria-label={passwordInputType === "text" ? authT("hidePassword") : authT("showPassword")}>
               {passwordInputType === "text" ? <EyeOff className="size-4" strokeWidth={1.8} aria-hidden="true" /> : <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />}
             </button>
           </div>
@@ -181,7 +185,7 @@ function NewPasswordStep({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-2xs font-bold text-ink" htmlFor="confirm-password">Confirmar contraseña</label>
+           <label className="text-2xs font-bold text-ink" htmlFor="confirm-password">{t("confirmPassword")}</label>
           <div className={`${FIELD_CONTAINER} ${flow.fieldErrors.password_confirmation ? INVALID_FIELD : ""}`}>
             <LockKeyhole className={`mx-3 size-4 shrink-0 transition-colors duration-200 ${flow.fieldErrors.password_confirmation ? "text-danger" : "text-icon-input"}`} strokeWidth={1.7} aria-hidden="true" />
             <input
@@ -190,13 +194,13 @@ function NewPasswordStep({
               type={confirmationInputType}
               autoComplete="new-password"
               maxLength={72}
-              placeholder="Repite tu contraseña"
+               placeholder={t("repeatPassword")}
               value={confirmation}
               onChange={(event) => onConfirmationChange(event.target.value)}
               aria-invalid={flow.fieldErrors.password_confirmation ? true : undefined}
               aria-describedby={flow.fieldErrors.password_confirmation ? "confirm-error" : undefined}
             />
-            <button type="button" className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING}`} onClick={onToggleConfirmation} aria-label={confirmationInputType === "text" ? "Ocultar confirmación" : "Mostrar confirmación"}>
+             <button type="button" className={`mr-1 grid size-8 shrink-0 place-items-center rounded border-0 bg-transparent text-muted transition-colors hover:text-accent ${FOCUS_RING}`} onClick={onToggleConfirmation} aria-label={confirmationInputType === "text" ? authT("hidePassword") : authT("showPassword")}>
               {confirmationInputType === "text" ? <EyeOff className="size-4" strokeWidth={1.8} aria-hidden="true" /> : <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />}
             </button>
           </div>
@@ -204,14 +208,14 @@ function NewPasswordStep({
         </div>
 
         <div className="rounded-lg border border-line bg-surface-subtle px-4 py-3" id="password-requirements">
-          <p className="mb-2 text-2xs font-extrabold uppercase tracking-wider text-muted">Requisitos de seguridad:</p>
+           <p className="mb-2 text-2xs font-extrabold uppercase tracking-wider text-muted">{t("requirements")}</p>
           <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {PASSWORD_RULES.map((rule) => {
+             {PASSWORD_RULES.map((rule) => {
               const passes = password.length > 0 && rule.test(password);
-              return (
-                <li key={rule.label} className={`flex items-center gap-2 text-2xs font-bold ${passes ? "text-success" : "text-muted"}`}>
+               return (
+                 <li key={rule.labelKey} className={`flex items-center gap-2 text-2xs font-bold ${passes ? "text-success" : "text-muted"}`}>
                   <span className={`size-1.5 rounded-full ${passes ? "bg-success" : "bg-muted/40"}`} aria-hidden="true" />
-                  {rule.label}
+                   {t(rule.labelKey)}
                 </li>
               );
             })}
@@ -221,7 +225,7 @@ function NewPasswordStep({
         <GlobalError message={flow.error} />
 
         <button className={PRIMARY_BUTTON} type="submit" disabled={flow.isPending}>
-          {flow.isPending ? <><Spinner /> Restableciendo…</> : "Restablecer contraseña"}
+           {flow.isPending ? <><Spinner /> {t("resetting")}</> : t("resetPassword")}
         </button>
       </form>
 
@@ -240,16 +244,19 @@ type OtpStepProps = {
 };
 
 function OtpStep({ flow, onSubmit, onOtpChange, onResend }: OtpStepProps) {
+  const t = useTranslations("auth");
+  const resetT = useTranslations("auth.reset");
+
   return (
     <div className="w-full max-w-96">
       <BrandLogo className="mb-7 h-11 w-auto" />
-      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Código de recuperación</h1>
-      <p className="mt-3 text-sm leading-6 text-muted">Hemos enviado un código de 6 dígitos a tu número {flow.destination}.</p>
+       <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">{resetT("recoveryCode")}</h1>
+       <p className="mt-3 text-sm leading-6 text-muted">{resetT("recoveryDescription", { destination: flow.destination })}</p>
 
       <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={flow.isPending} noValidate>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-2xs font-bold text-ink">Código de seguridad</span>
-          <span className="font-mono text-2xs text-muted tabular-nums" aria-live="polite">{flow.expiresIn > 0 ? formatCountdown(flow.expiresIn) : "Expirado"}</span>
+           <span className="text-2xs font-bold text-ink">{t("securityCode")}</span>
+           <span className="font-mono text-2xs text-muted tabular-nums" aria-live="polite">{flow.expiresIn > 0 ? formatCountdown(flow.expiresIn) : t("expired")}</span>
         </div>
         <OtpCodeInput value={flow.otpDigits} onChange={onOtpChange} disabled={flow.isPending} hasError={Boolean(flow.fieldErrors.code)} />
 
@@ -257,25 +264,27 @@ function OtpStep({ flow, onSubmit, onOtpChange, onResend }: OtpStepProps) {
         <GlobalError message={flow.error} />
 
         <button className={PRIMARY_BUTTON} type="submit" disabled={flow.isPending || flow.expiresIn === 0}>
-          {flow.isPending ? <><Spinner /> Verificando…</> : "Verificar código"}
+           {flow.isPending ? <><Spinner /> {t("verifying")}</> : t("verifyCode")}
         </button>
 
         <p className="text-center text-xs text-muted">
-          ¿No recibiste el código?{" "}
+           {t("noCode")} {" "}
           <button className={`border-0 bg-transparent p-0 text-xs font-bold text-accent ${FOCUS_RING}`} type="button" onClick={onResend} disabled={flow.resendAfter > 0 || flow.isPending}>
-            {flow.resendAfter > 0 ? `Reenviar en ${formatCountdown(flow.resendAfter)}` : "Reenviar"}
+             {flow.resendAfter > 0 ? t("resendIn", { seconds: flow.resendAfter }) : t("resend")}
           </button>
         </p>
       </form>
 
       <p className="mt-6 text-center">
-        <Link href="/" className={`text-xs font-bold text-accent hover:underline ${FOCUS_RING}`}>Volver al inicio de sesión</Link>
+         <Link href="/" className={`text-xs font-bold text-accent hover:underline ${FOCUS_RING}`}>{t("backToSignIn")}</Link>
       </p>
     </div>
   );
 }
 
 export function PasswordResetFlow() {
+  const t = useTranslations("auth");
+  const resetT = useTranslations("auth.reset");
   const router = useRouter();
   const challengeId = useRef("");
   const verifiedCode = useRef("");
@@ -292,12 +301,12 @@ export function PasswordResetFlow() {
   const resolvedIdentifier = useRef("");
 
   const documentTitle = flow.step === "identifier"
-    ? "Recuperar contraseña"
+    ? resetT("title")
     : flow.step === "otp"
-      ? "Código de recuperación"
+      ? resetT("recoveryCode")
       : flow.step === "new-password"
-        ? "Nueva contraseña"
-        : "Contraseña actualizada";
+        ? resetT("newPassword")
+        : resetT("updated");
 
   useAuthDocumentTitle(documentTitle);
 
@@ -322,7 +331,7 @@ export function PasswordResetFlow() {
     }
     dispatch({
       type: "error",
-      message: caughtError instanceof Error ? caughtError.message : "No pudimos conectar con el servicio. Inténtalo nuevamente.",
+       message: caughtError instanceof Error ? caughtError.message : t("serviceUnavailable"),
     });
   }
 
@@ -333,7 +342,7 @@ export function PasswordResetFlow() {
     try {
       identifier = toE164PhoneNumber(phone, country);
     } catch (caughtError) {
-      dispatch({ type: "validationFailed", errors: { identifier: caughtError instanceof Error ? caughtError.message : "Ingresa un número válido." } });
+       dispatch({ type: "validationFailed", errors: { identifier: caughtError instanceof Error ? caughtError.message : resetT("invalidPhone") } });
       return;
     }
 
@@ -357,7 +366,7 @@ export function PasswordResetFlow() {
     event.preventDefault();
     const code = flow.otpDigits.join("");
     if (code.length !== 6) {
-      dispatch({ type: "validationFailed", errors: { code: "Completa los seis dígitos del código." } });
+       dispatch({ type: "validationFailed", errors: { code: t("validationCodeRequired") } });
       return;
     }
     verifiedCode.current = code;
@@ -385,14 +394,14 @@ export function PasswordResetFlow() {
 
     const errors: FieldErrors = {};
     if (!password) {
-      errors.password = "Ingresa tu nueva contraseña.";
+       errors.password = resetT("passwordRequired");
     } else if (!PASSWORD_RULES.every((rule) => rule.test(password))) {
-      errors.password = "La contraseña no cumple los requisitos de seguridad.";
+       errors.password = resetT("passwordInvalid");
     }
     if (!confirmation) {
-      errors.password_confirmation = "Confirma tu nueva contraseña.";
+       errors.password_confirmation = resetT("confirmationRequired");
     } else if (password !== confirmation) {
-      errors.password_confirmation = "Las contraseñas no coinciden.";
+       errors.password_confirmation = resetT("passwordMismatch");
     }
     if (Object.keys(errors).length > 0) {
       dispatch({ type: "validationFailed", errors });
@@ -431,10 +440,10 @@ export function PasswordResetFlow() {
         <span className="mx-auto mb-6 grid size-16 place-items-center rounded-full border-[0.65rem] border-success-soft bg-success text-white motion-safe:animate-[field-error-enter_300ms_cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true">
           <Check className="size-5" strokeWidth={3} />
         </span>
-        <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">¡Contraseña actualizada!</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">Tu contraseña ha sido restablecida correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
+         <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">{resetT("updated")}</h1>
+         <p className="mt-3 text-sm leading-6 text-muted">{resetT("updatedDescription")}</p>
         <button className={`${PRIMARY_BUTTON} mt-7`} type="button" onClick={goToLogin} disabled={isNavigating}>
-          {isNavigating ? <><Spinner /> Redirigiendo…</> : "Ir al inicio de sesión"}
+           {isNavigating ? <><Spinner /> {resetT("redirecting")}</> : resetT("goToSignIn")}
         </button>
       </div>
     );
@@ -477,12 +486,12 @@ export function PasswordResetFlow() {
   return (
     <div className="w-full max-w-96">
       <BrandLogo className="mb-7 h-11 w-auto" />
-      <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">Recuperar contraseña</h1>
-      <p className="mt-3 text-sm leading-6 text-muted">Ingresa tu número de celular y te enviaremos un código para restablecer tu contraseña.</p>
+       <h1 className="text-balance text-[clamp(1.5rem,3.5vw,2rem)] leading-[1.15] font-extrabold tracking-[-0.045em]">{resetT("title")}</h1>
+       <p className="mt-3 text-sm leading-6 text-muted">{resetT("description")}</p>
 
       <form className="mt-6 grid gap-5" onSubmit={submitIdentifier} aria-busy={flow.isPending} noValidate>
         <div className="grid gap-2">
-          <label className="text-2xs font-bold text-ink" htmlFor="reset-phone">Número de celular</label>
+           <label className="text-2xs font-bold text-ink" htmlFor="reset-phone">{resetT("phoneLabel")}</label>
           <div className="flex items-center gap-0">
             <CountrySelect value={country} onChange={(value) => { setCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }} hasError={Boolean(flow.fieldErrors.identifier)} ariaDescribedBy={flow.fieldErrors.identifier ? "identifier-error" : undefined} />
             <div className={`${FIELD_CONTAINER} flex-1 rounded-l-none border-l-0 ${flow.fieldErrors.identifier ? INVALID_FIELD : ""}`}>
@@ -510,12 +519,12 @@ export function PasswordResetFlow() {
         <GlobalError message={flow.error} />
 
         <button className={PRIMARY_BUTTON} type="submit" disabled={flow.isPending}>
-          {flow.isPending ? <><Spinner /> Enviando código…</> : "Enviar código"}
+           {flow.isPending ? <><Spinner /> {t("sendingCode")}</> : resetT("sendCode")}
         </button>
       </form>
 
       <p className="mt-6 text-center">
-        <Link href="/" className={`text-xs font-bold text-accent hover:underline ${FOCUS_RING}`}>Volver al inicio de sesión</Link>
+         <Link href="/" className={`text-xs font-bold text-accent hover:underline ${FOCUS_RING}`}>{t("backToSignIn")}</Link>
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { CountryCode } from "@/shared/ui/country-flag";
+import type { AppLocale } from "@/i18n/config";
 
 export const PLATFORM_SETTINGS_UPDATED_EVENT = "platform-settings-updated";
 
@@ -14,9 +15,13 @@ export type PlatformSettings = {
 
 export type PublicPlatformSettings = {
   defaultCountryCode: CountryCode;
+  localization: {
+    defaultLocale: AppLocale;
+    enabledLocales: AppLocale[];
+  };
 };
 
-export type LocaleCode = "es-MX" | "es-PE" | "en-US";
+export type LocaleCode = AppLocale;
 export type AiModel = "respiratory" | "dengue" | "gastrointestinal" | "hospital_occupancy";
 export type AiConfiguration = {
   frequency: "every_12_hours" | "daily" | "weekly";

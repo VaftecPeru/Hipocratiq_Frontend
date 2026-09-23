@@ -11,14 +11,9 @@ export default function UnauthorizedPage() {
   return (
     <StatusPage
       code="403"
-      eyebrow="Acceso restringido"
-      title="Tu sesión no tiene acceso a esta área."
-      description="La cuenta está activa, pero el rol actual no incluye permisos para consultar esta sección."
-      detail="Vuelve a tu panel o inicia sesión con una cuenta que tenga la autorización necesaria."
+      status="unauthorized"
       icon={LockKeyhole}
-      primaryLabel="Volver al inicio"
       primaryHref="/"
-      secondaryLabel="Ir a mi panel"
       secondaryHref="/dashboard"
     />
   );

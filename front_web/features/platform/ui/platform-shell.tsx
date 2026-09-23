@@ -26,9 +26,8 @@ import { useTranslations } from "next-intl";
 import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
-import { LocaleSwitcher } from "@/shared/ui/locale-switcher";
 import { NotificationBell } from "@/features/platform/ui/notification-bell";
-import { ThemeToggle } from "@/shared/ui/theme-toggle";
+import { PreferenceControls } from "@/shared/ui/preference-controls";
 import {
   SUPERADMIN_NAVIGATION_INVALIDATED_EVENT,
   type SuperadminNavigationScope,
@@ -360,8 +359,7 @@ export function PlatformShell({ children, userName }: PlatformShellProps) {
         </form>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
-          <LocaleSwitcher />
-          <ThemeToggle />
+          <PreferenceControls idPrefix="platform-header" />
           <NotificationBell />
           <div className="hidden h-8 w-px bg-line sm:block" aria-hidden="true" />
           <div className="flex items-center gap-2">

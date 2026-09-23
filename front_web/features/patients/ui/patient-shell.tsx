@@ -3,6 +3,7 @@
 import {
   BrainCircuit,
   CalendarDays,
+  ClipboardCheck,
   CreditCard,
   FileText,
   FlaskConical,
@@ -16,11 +17,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
+import { PreferenceControls } from "@/shared/ui/preference-controls";
 
 type NavigationItem = {
-  label: string;
+  labelKey: string;
   href: string;
   icon: typeof LayoutDashboard;
   enabled: boolean;
@@ -57,69 +60,48 @@ function PatientAvatar({ userName }: { userName: string }) {
   );
 }
 
-function pageMeta(pathname: string, userName: string) {
+type PatientTranslator = (key: string, values?: Record<string, string | number>) => string;
+
+function pageMeta(pathname: string, userName: string, t: PatientTranslator) {
   const firstName = userName.trim().split(/\s+/)[0] || "Paciente";
 
   if (pathname.includes("/citas")) {
-    return {
-      title: "Mis Citas",
-      subtitle: "Consulta las citas registradas y sus datos de atención.",
-    };
+    return { title: t("page.appointments.title"), subtitle: t("page.appointments.subtitle") };
   }
 
   if (pathname.includes("/triaje")) {
-    return {
-      title: "Dashboard Paciente · Triaje",
-      subtitle: "Completa tus signos vitales y motivo de consulta antes de la atención.",
-    };
+    return { title: t("page.triage.title"), subtitle: t("page.triage.subtitle") };
+  }
+
+  if (pathname.includes("/historia-clinica")) {
+    return { title: t("page.intake.title"), subtitle: t("page.intake.subtitle") };
   }
 
   if (pathname.includes("/resultados")) {
-    return {
-      title: "Resultados",
-      subtitle: "Consulta los estudios de laboratorio vinculados a tu perfil.",
-    };
+    return { title: t("page.results.title"), subtitle: t("page.results.subtitle") };
   }
 
   if (pathname.includes("/historial")) {
-    return {
-      title: "Historial Clínico",
-      subtitle: "Revisa las consultas finalizadas o firmadas disponibles.",
-    };
+    return { title: t("page.history.title"), subtitle: t("page.history.subtitle") };
   }
 
   if (pathname.includes("/recetas")) {
-    return {
-      title: "Recetas",
-      subtitle: "Consulta las recetas registradas por tus profesionales.",
-    };
+    return { title: t("page.prescriptions.title"), subtitle: t("page.prescriptions.subtitle") };
   }
 
   if (pathname.includes("/ia")) {
-    return {
-      title: "IA Epidemiológica",
-      subtitle: "Consulta si existe una fuente epidemiológica vinculada a tu cuenta.",
-    };
+    return { title: t("page.epidemiology.title"), subtitle: t("page.epidemiology.subtitle") };
   }
 
   if (pathname.includes("/membresia")) {
-    return {
-      title: "Membresía",
-      subtitle: "Consulta si existe una membresía individual persistida para tu cuenta.",
-    };
+    return { title: t("page.membership.title"), subtitle: t("page.membership.subtitle") };
   }
 
   if (pathname.includes("/perfil")) {
-    return {
-      title: "Mi Perfil",
-      subtitle: "Gestiona tu información personal, datos de contacto y preferencias.",
-    };
+    return { title: t("page.profile.title"), subtitle: t("page.profile.subtitle") };
   }
 
-  return {
-    title: `Bienvenida de nuevo, ${firstName}`,
-    subtitle: "Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.",
-  };
+  return { title: t("page.default.title", { name: firstName }), subtitle: t("page.default.subtitle") };
 }
 
 export function PatientShell({
@@ -129,12 +111,13 @@ export function PatientShell({
   children: React.ReactNode;
   userName: string;
 }) {
+  const t = useTranslations("patient");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuWasOpenRef = useRef(false);
   const pathname = usePathname();
-  const meta = pageMeta(pathname, userName);
+  const meta = pageMeta(pathname, userName, t);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -201,15 +184,16 @@ export function PatientShell({
   }, [menuOpen]);
 
   const navigation: NavigationItem[] = [
-    { label: "Mi Panel", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
-    { label: "Mis Citas", href: "/patient/citas", icon: CalendarDays, enabled: true },
-    { label: "Triaje", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true },
-    { label: "Resultados", href: "/patient/resultados", icon: FlaskConical, enabled: true },
-    { label: "Historial Clínico", href: "/patient/historial", icon: FileText, enabled: true },
-    { label: "Recetas", href: "/patient/recetas", icon: HeartPulse, enabled: true },
-    { label: "IA Epidemiológica", href: "/patient/ia", icon: BrainCircuit, enabled: true },
-    { label: "Membresía", href: "/patient/membresia", icon: CreditCard, enabled: true },
-    { label: "Mi Perfil", href: "/patient/perfil", icon: UserRound, enabled: true },
+    { labelKey: "dashboard", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
+    { labelKey: "appointments", href: "/patient/citas", icon: CalendarDays, enabled: true },
+    { labelKey: "triage", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true },
+    { labelKey: "intake", href: "/patient/historia-clinica", icon: ClipboardCheck, enabled: true },
+    { labelKey: "results", href: "/patient/resultados", icon: FlaskConical, enabled: true },
+    { labelKey: "history", href: "/patient/historial", icon: FileText, enabled: true },
+    { labelKey: "prescriptions", href: "/patient/recetas", icon: HeartPulse, enabled: true },
+    { labelKey: "epidemiology", href: "/patient/ia", icon: BrainCircuit, enabled: true },
+    { labelKey: "membership", href: "/patient/membresia", icon: CreditCard, enabled: true },
+    { labelKey: "profile", href: "/patient/perfil", icon: UserRound, enabled: true },
   ];
 
   function isActive(href: string) {
@@ -235,11 +219,11 @@ export function PatientShell({
           <PatientAvatar userName={userName} />
           <div className="patient-user-card__copy">
             <p>{userName || "Paciente"}</p>
-            <span>Cuenta autenticada</span>
+          <span>{t("account")}</span>
           </div>
         </div>
 
-        <nav className="patient-nav" aria-label="Navegación del paciente">
+        <nav className="patient-nav" aria-label={t("navigation.ariaLabel")}>
           <ul>
             {navigation.map((item) => {
               const Icon = item.icon;
@@ -255,12 +239,12 @@ export function PatientShell({
                       aria-current={active ? "page" : undefined}
                     >
                       <Icon className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-                      <span>{item.label}</span>
+                       <span>{t(`navigation.${item.labelKey}`)}</span>
                     </Link>
                   ) : (
                     <span className="patient-nav__item patient-nav__item--disabled" aria-disabled="true">
                       <Icon className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
-                      <span>{item.label}</span>
+                       <span>{t(`navigation.${item.labelKey}`)}</span>
                     </span>
                   )}
                 </li>
@@ -278,7 +262,7 @@ export function PatientShell({
         <button
           className="patient-sidebar__overlay"
           type="button"
-          aria-label="Cerrar menú"
+           aria-label={t("closeMenu")}
           onClick={() => setMenuOpen(false)}
         />
       ) : null}
@@ -289,7 +273,7 @@ export function PatientShell({
             ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
-            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+             aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
             aria-expanded={menuOpen}
             aria-controls="patient-mobile-navigation"
             onClick={() => setMenuOpen((open) => !open)}
@@ -300,6 +284,10 @@ export function PatientShell({
           <div className="patient-topbar__heading">
             <h1>{meta.title}</h1>
             <p>{meta.subtitle}</p>
+          </div>
+
+          <div className="patient-topbar__actions">
+            <PreferenceControls idPrefix="patient-header" />
           </div>
 
         </header>

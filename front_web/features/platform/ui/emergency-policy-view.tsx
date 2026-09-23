@@ -25,7 +25,7 @@ function newResponsibleKey(): string {
 function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : dateFormatters[locale === "en" ? "en" : "es"].format(date);
+  return Number.isNaN(date.getTime()) ? value : dateFormatters[locale.toLowerCase().startsWith("en") ? "en" : "es"].format(date);
 }
 
 export function EmergencyPolicyView({ initialData }: { initialData: EmergencyPolicyData }) {

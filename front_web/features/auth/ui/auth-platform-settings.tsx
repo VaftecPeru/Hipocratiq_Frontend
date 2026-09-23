@@ -5,7 +5,13 @@ import { getPublicPlatformSettings } from "@/features/platform/api/browser-platf
 import type { PublicPlatformSettings } from "@/features/platform/model/platform-settings.types";
 import { PLATFORM_SETTINGS_UPDATED_EVENT } from "@/features/platform/model/platform-settings.types";
 
-const FALLBACK_SETTINGS: PublicPlatformSettings = { defaultCountryCode: "MX" };
+const FALLBACK_SETTINGS: PublicPlatformSettings = {
+  defaultCountryCode: "MX",
+  localization: {
+    defaultLocale: "es-MX",
+    enabledLocales: ["es-MX", "en-US"],
+  },
+};
 
 const AuthPlatformSettingsContext = createContext<PublicPlatformSettings | null>(null);
 

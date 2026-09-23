@@ -139,7 +139,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
         id={controlId}
         name={name}
         type="button"
-        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
+        className={`flex items-center gap-2.5 border bg-surface-input px-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:bg-surface-hover focus-visible:z-10 focus-visible:border-accent focus-visible:bg-surface focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-focus/30 ${isCountryField ? "min-h-10 w-full justify-between rounded-lg" : "h-10 rounded-l-lg"} ${hasError ? "border-danger" : "border-line"}`}
         onClick={toggle}
         onKeyDown={handleKeyDown}
         role="combobox"
@@ -167,7 +167,7 @@ export function CountrySelect({ id, name, value, onChange, hasError, ariaDescrib
           ref={listRef}
           role="listbox"
           aria-label={countryLabel}
-          className={`absolute top-[calc(100%+0.4rem)] left-0 z-50 max-h-64 overflow-y-auto rounded-xl border border-line bg-white py-1.5 shadow-[0_10px_32px_rgb(16_27_51/14%),0_2px_8px_rgb(16_27_51/8%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)] ${isCountryField ? "w-full min-w-60" : "w-60"}`}
+          className={`absolute top-[calc(100%+0.4rem)] left-0 z-50 max-h-64 overflow-y-auto rounded-xl border border-line bg-surface py-1.5 shadow-[0_10px_32px_rgb(16_27_51/14%),0_2px_8px_rgb(16_27_51/8%)] motion-safe:animate-[field-error-enter_150ms_cubic-bezier(0.22,1,0.36,1)] ${isCountryField ? "w-full min-w-60" : "w-60"}`}
         >
           {COUNTRY_CODES.map((code, index) => {
             const ItemFlag = FLAGS[code];

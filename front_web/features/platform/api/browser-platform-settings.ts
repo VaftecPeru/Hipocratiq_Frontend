@@ -1,5 +1,6 @@
 import { ApiError, getFromApi, patchToApi } from "@/shared/api/http-client";
 import { parseApiList } from "@/shared/api/parse-api-list";
+import { APP_LOCALES, DEFAULT_LOCALE, isAppLocale } from "@/i18n/config";
 import type {
   AiModel,
   LocaleCode,
@@ -24,11 +25,14 @@ type ApiPlatformSettingsResponse = {
 };
 
 type ApiPublicPlatformSettingsResponse = {
-  data?: { default_country_code?: unknown };
+  data?: {
+    default_country_code?: unknown;
+    localization?: { default_locale?: unknown; enabled_locales?: unknown };
+  };
 };
 
 const COUNTRY_CODES = ["MX", "PE", "US"] as const satisfies readonly CountryCode[];
-const LOCALES = ["es-MX", "es-PE", "en-US"] as const satisfies readonly LocaleCode[];
+const LOCALES = APP_LOCALES satisfies readonly LocaleCode[];
 const AI_MODELS = ["respiratory", "dengue", "gastrointestinal", "hospital_occupancy"] as const satisfies readonly AiModel[];
 
 function isCountryCode(value: unknown): value is CountryCode {
@@ -114,7 +118,21 @@ function mapPublicSettings(payload: ApiPublicPlatformSettingsResponse): PublicPl
     throw new ApiError("El servidor devolvió una configuración regional incompleta.", 502);
   }
 
-  return { defaultCountryCode };
+  const defaultLocale = isLocale(payload.data?.localization?.default_locale)
+    ? payload.data.localization.default_locale
+    : DEFAULT_LOCALE;
+  const configuredEnabledLocales = payload.data?.localization?.enabled_locales;
+  const enabledLocales = Array.isArray(configuredEnabledLocales)
+    ? configuredEnabledLocales.filter(isAppLocale)
+    : [];
+
+  return {
+    defaultCountryCode,
+    localization: {
+      defaultLocale,
+      enabledLocales: Array.from(new Set([defaultLocale, ...enabledLocales])),
+    },
+  };
 }
 
 export async function getPublicPlatformSettings(signal?: AbortSignal): Promise<PublicPlatformSettings> {

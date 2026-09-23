@@ -40,8 +40,8 @@ export function PlanStep({ plans, selected, cycle, pending, error, subject = "cl
       <p className="mt-2.5 text-xs text-muted">Puedes cambiar de plan más adelante.</p>
 
       <div className="mt-6 inline-flex rounded-lg bg-surface-subtle p-1 text-xs font-bold">
-        <button className={`min-h-9 rounded-md px-4 ${cycle === "monthly" ? "bg-white text-accent shadow-sm" : "text-muted"}`} type="button" onClick={() => onCycleChange("monthly")}>Mensual</button>
-        <button className={`min-h-9 rounded-md px-4 ${cycle === "annual" ? "bg-white text-accent shadow-sm" : "text-muted"}`} type="button" onClick={() => onCycleChange("annual")}>Anual · ahorra 20%</button>
+        <button className={`min-h-9 rounded-md px-4 ${cycle === "monthly" ? "bg-surface text-accent shadow-sm" : "text-muted"}`} type="button" onClick={() => onCycleChange("monthly")}>Mensual</button>
+        <button className={`min-h-9 rounded-md px-4 ${cycle === "annual" ? "bg-surface text-accent shadow-sm" : "text-muted"}`} type="button" onClick={() => onCycleChange("annual")}>Anual · ahorra 20%</button>
       </div>
 
       <div className="mt-7 divide-y divide-line border-y border-line">

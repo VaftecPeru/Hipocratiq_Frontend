@@ -2,34 +2,32 @@
 
 import { CalendarDays, CheckCircle2, ClipboardList, Clock3, FilePenLine, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 import { getDoctorDashboard, type DoctorDashboard, type DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
 import { DoctorAvatar, DoctorCard, MetricCard, SectionHeading, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
 import { Spinner } from "@/shared/ui/spinner";
 
 type DashboardTone = "blue" | "green" | "orange" | "red" | "violet" | "slate";
 
-const timeFormatter = new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit" });
-const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-
 function initialsOf(name: string | null | undefined): string {
   return (name ?? "Paciente").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "PA";
 }
 
-function formatTime(value: string | null): string {
+function formatTime(value: string | null, formatter: Intl.DateTimeFormat): string {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : timeFormatter.format(date);
+    : formatter.format(date);
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, formatter: Intl.DateTimeFormat): string {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : dateTimeFormatter.format(date);
+    : formatter.format(date);
 }
 
 function statusTone(status: DoctorConsultationStatus): DashboardTone {
@@ -66,6 +64,9 @@ function DashboardLoading() {
 }
 
 export default function DoctorDashboardPage() {
+  const locale = useLocale();
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }), [locale]);
+  const dateTimeFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }), [locale]);
   const [dashboard, setDashboard] = useState<DoctorDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +125,7 @@ export default function DoctorDashboardPage() {
             <ol className="divide-y divide-line px-4 sm:px-5">
               {dashboard.todayAppointments.map((appointment) => (
                 <li className="flex min-h-[58px] items-center gap-3 py-2.5" key={appointment.id}>
-                  <time className="w-12 shrink-0 font-mono text-[0.68rem] font-extrabold" dateTime={appointment.scheduledAt ?? undefined}>{formatTime(appointment.scheduledAt)}</time>
+                  <time className="w-12 shrink-0 font-mono text-[0.68rem] font-extrabold" dateTime={appointment.scheduledAt ?? undefined}>{formatTime(appointment.scheduledAt, timeFormatter)}</time>
                   <DoctorAvatar initials={initialsOf(appointment.patient.name)} tone={appointment.id % 2 === 0 ? "blue" : "orange"} size="sm" />
                   <div className="min-w-0 flex-1"><p className="truncate text-[0.66rem] font-extrabold">{appointment.patient.name ?? "Paciente"}</p><p className="mt-0.5 truncate text-[0.58rem] font-bold text-ink-secondary">{appointment.appointmentType}</p></div>
                   <StatusBadge tone={appointmentTone(appointment.status)}>{appointment.statusLabel}</StatusBadge>
@@ -143,7 +144,7 @@ export default function DoctorDashboardPage() {
               {dashboard.recentConsultations.map((consultation) => (
                 <li className="flex items-center gap-2.5 py-3" key={consultation.id}>
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><ClipboardList className="size-4" aria-hidden="true" /></span>
-                  <div className="min-w-0 flex-1"><p className="truncate text-[0.65rem] font-extrabold">{consultation.patientName ?? "Paciente"}</p><p className="mt-0.5 truncate text-[0.57rem] font-bold text-ink-secondary">{consultation.chiefComplaint}</p><time className="mt-0.5 block text-[0.53rem] font-bold text-muted" dateTime={consultation.createdAt ?? undefined}>{formatDateTime(consultation.createdAt)}</time></div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-[0.65rem] font-extrabold">{consultation.patientName ?? "Paciente"}</p><p className="mt-0.5 truncate text-[0.57rem] font-bold text-ink-secondary">{consultation.chiefComplaint}</p><time className="mt-0.5 block text-[0.53rem] font-bold text-muted" dateTime={consultation.createdAt ?? undefined}>{formatDateTime(consultation.createdAt, dateTimeFormatter)}</time></div>
                   <StatusBadge tone={statusTone(consultation.status)}>{consultation.statusLabel}</StatusBadge>
                 </li>
               ))}

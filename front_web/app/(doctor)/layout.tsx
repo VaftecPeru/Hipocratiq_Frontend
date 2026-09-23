@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { DoctorShell } from "@/features/doctors/ui/doctor-shell";
 
-const doctorDateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "full" });
-
 export default async function DoctorLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getAuthenticatedSession();
+  const locale = await getLocale();
   if (!session) redirect("/");
   if (session.actor_context !== "doctor" || !session.user.doctor) redirect("/dashboard");
 
@@ -18,7 +18,7 @@ export default async function DoctorLayout({ children }: Readonly<{ children: Re
   const practiceDetail = session.user.doctor.practice_type === "clinic"
     ? "Contexto clínico activo"
     : `Plan ${session.user.doctor.plan ?? "activo"}`;
-  const currentDate = doctorDateFormatter.format(new Date());
+  const currentDate = new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(new Date());
 
   return <DoctorShell userName={session.user.name} subtitle={subtitle} practiceName={practiceName} practiceDetail={practiceDetail} currentDate={currentDate}>{children}</DoctorShell>;
 }

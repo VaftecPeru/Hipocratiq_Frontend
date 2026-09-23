@@ -15,19 +15,20 @@ import {
   type DoctorPatient,
 } from "@/features/doctors/api/doctor-clinical";
 import { Spinner } from "@/shared/ui/spinner";
-
-const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+import { getClientLocale } from "@/shared/i18n/runtime-locale";
 
 function formatDateTime(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : dateTimeFormatter.format(date);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat(getClientLocale(), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function initialsOf(name: string | null | undefined): string {

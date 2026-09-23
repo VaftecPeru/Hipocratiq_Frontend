@@ -14,13 +14,14 @@ import {
 } from "@/features/doctors/api/doctor-clinical";
 import { DoctorAvatar, DoctorCard, MetricCard, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
 import { DoctorModuleAlert, DoctorModuleEmpty, DoctorModuleError, DoctorModuleLoading } from "@/features/doctors/ui/doctor-module-state";
-
-const dateFormatter = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+import { getClientLocale } from "@/shared/i18n/runtime-locale";
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat(getClientLocale(), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function initialsOf(name: string | null): string {

@@ -34,7 +34,7 @@ export function ClinicalNotificationBell({
   const isOpen = !isDrawerOpen && (controlledIsOpen ?? internalIsOpen);
   const [data, setData] = useState<ClinicalNotificationCenterData | null>(null);
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
+    () => new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
     [locale],
   );
 

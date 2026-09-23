@@ -23,41 +23,44 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { ClinicalNotificationBell } from "@/features/platform/ui/clinical-notification-bell";
+import { PreferenceControls } from "@/shared/ui/preference-controls";
 
 type NavigationItem = {
-  label: string;
+  labelKey: string;
   href: string;
   icon: LucideIcon;
   available?: boolean;
 };
 
 const navigation: NavigationItem[] = [
-  { label: "Inicio", href: "/doctor/dashboard", icon: House, available: true },
-  { label: "Agenda", href: "/doctor/agenda", icon: CalendarDays, available: true },
-  { label: "Pacientes", href: "/doctor/pacientes", icon: Users, available: true },
-  { label: "Consultas", href: "/doctor/consultas", icon: ClipboardList, available: true },
-  { label: "Recetas", href: "/doctor/recetas", icon: FileText, available: true },
-  { label: "Laboratorio", href: "/doctor/laboratorio", icon: FlaskConical, available: true },
-  { label: "Imagenología", href: "/doctor/imagenologia", icon: ImageIcon },
-  { label: "Telemedicina", href: "/doctor/telemedicina", icon: Video, available: true },
-  { label: "Mensajes", href: "/doctor/mensajes", icon: MessageSquare, available: true },
-  { label: "Reportes", href: "/doctor/reportes", icon: BarChart3, available: true },
-  { label: "IA Epidemiológica", href: "/doctor/epidemiologia", icon: BrainCircuit, available: true },
-  { label: "Configuración", href: "/doctor/configuracion", icon: Settings, available: true },
+  { labelKey: "home", href: "/doctor/dashboard", icon: House, available: true },
+  { labelKey: "agenda", href: "/doctor/agenda", icon: CalendarDays, available: true },
+  { labelKey: "patients", href: "/doctor/pacientes", icon: Users, available: true },
+  { labelKey: "consultations", href: "/doctor/consultas", icon: ClipboardList, available: true },
+  { labelKey: "prescriptions", href: "/doctor/recetas", icon: FileText, available: true },
+  { labelKey: "laboratory", href: "/doctor/laboratorio", icon: FlaskConical, available: true },
+  { labelKey: "imaging", href: "/doctor/imagenologia", icon: ImageIcon },
+  { labelKey: "telemedicine", href: "/doctor/telemedicina", icon: Video, available: true },
+  { labelKey: "messages", href: "/doctor/mensajes", icon: MessageSquare, available: true },
+  { labelKey: "reports", href: "/doctor/reportes", icon: BarChart3, available: true },
+  { labelKey: "epidemiology", href: "/doctor/epidemiologia", icon: BrainCircuit, available: true },
+  { labelKey: "settings", href: "/doctor/configuracion", icon: Settings, available: true },
 ];
 
 function SidebarLink({ item, pathname, closeMenu }: Readonly<{ item: NavigationItem; pathname: string; closeMenu: () => void }>) {
+  const t = useTranslations("doctor");
   const Icon = item.icon;
   const isActive = pathname === item.href;
 
   if (!item.available) {
     return (
-      <span className="flex min-h-9 items-center gap-3 rounded-lg px-3 text-[0.7rem] font-extrabold text-ink-secondary/80" aria-disabled="true" title="Disponible próximamente">
+        <span className="flex min-h-9 items-center gap-3 rounded-lg px-3 text-[0.7rem] font-extrabold text-ink-secondary/80" aria-disabled="true" title={t("navigation.soon")}>
         <Icon className="size-[15px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-        {item.label}
+        {t(`navigation.${item.labelKey}`)}
       </span>
     );
   }
@@ -70,7 +73,7 @@ function SidebarLink({ item, pathname, closeMenu }: Readonly<{ item: NavigationI
       aria-current={isActive ? "page" : undefined}
     >
       <Icon className="size-[15px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
-      {item.label}
+      {t(`navigation.${item.labelKey}`)}
     </Link>
   );
 }
@@ -90,6 +93,7 @@ export function DoctorShell({
   practiceDetail: string;
   currentDate: string;
 }) {
+  const t = useTranslations("doctor");
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const initials = userName.split(/\s+/).map((name) => name[0]).join("").slice(0, 2).toUpperCase() || "DR";
@@ -106,7 +110,7 @@ export function DoctorShell({
           </Link>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Navegación médica">
+        <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label={t("navigation.ariaLabel")}>
           <ul className="grid gap-1">
             {navigation.map((item) => (
               <li key={item.href}>
@@ -137,7 +141,7 @@ export function DoctorShell({
         <button
           className="grid size-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
-          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+           aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((open) => !open)}
         >
@@ -146,8 +150,8 @@ export function DoctorShell({
 
         <label className="flex h-9 min-w-0 max-w-[550px] flex-1 items-center gap-2 rounded-[9px] border border-line bg-surface-input px-3 text-muted focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/20">
           <Search className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-          <span className="sr-only">Buscar</span>
-          <input className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-placeholder" placeholder="Buscar pacientes, expedientes, consultas..." />
+           <span className="sr-only">{t("searchLabel")}</span>
+           <input className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-placeholder" placeholder={t("searchPlaceholder")} />
         </label>
 
         <div className="ml-auto hidden items-center gap-3 text-[0.66rem] font-extrabold text-ink-secondary xl:flex">
@@ -155,16 +159,17 @@ export function DoctorShell({
             <CalendarDays className="size-4 text-ink" strokeWidth={1.8} aria-hidden="true" />
              {currentDate}
            </span>
-            <Link className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" href="/doctor/mensajes" aria-label="Ver mensajes">
+             <Link className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" href="/doctor/mensajes" aria-label={t("viewMessages")}>
              <Mail className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
            </Link>
-          <button className="grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Ayuda">
+           <button className="grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={t("help")}>
             <span className="grid size-4 place-items-center rounded-full border border-current text-[0.65rem] font-extrabold">?</span>
           </button>
          </div>
 
-         <ClinicalNotificationBell />
-         <button className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label="Abrir perfil de usuario">
+          <PreferenceControls idPrefix="doctor-header" />
+          <ClinicalNotificationBell />
+          <button className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={t("profile")}>
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-[0.6rem] font-extrabold text-white ring-2 ring-accent-soft">{initials}</span>
           <span className="hidden min-w-0 sm:block">
             <span className="block max-w-28 truncate text-[0.68rem] font-extrabold">{userName}</span>
@@ -172,8 +177,8 @@ export function DoctorShell({
           </span>
           <span className="hidden text-muted sm:block" aria-hidden="true">⌄</span>
         </button>
-        <span className="hidden items-center gap-1.5 rounded-full bg-success-soft px-2 py-1 text-[0.56rem] font-extrabold text-success md:inline-flex">
-          <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />En línea
+         <span className="hidden items-center gap-1.5 rounded-full bg-success-soft px-2 py-1 text-[0.56rem] font-extrabold text-success md:inline-flex">
+           <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />{t("online")}
         </span>
       </header>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
@@ -24,13 +25,29 @@ const LOGIN_ROLE_REQUESTS = {
   support: { actorContext: "staff", requestedRole: "super_admin" },
 } satisfies Record<LoginRole, { actorContext: LoginActorContext; requestedRole: LoginRequestedRole }>;
 
-const LOGIN_CREDENTIAL_TITLES = {
-  healthcare: "Iniciar sesión — Profesional de salud",
-  receptionist: "Iniciar sesión — Recepción",
-  patient: "Iniciar sesión — Paciente",
-  administrator: "Iniciar sesión — Administrador de clínica",
-  support: "Iniciar sesión — Superadministrador",
-} satisfies Record<LoginRole, string>;
+const LOGIN_CREDENTIAL_TITLE_KEYS = {
+  healthcare: "healthcare",
+  receptionist: "receptionist",
+  patient: "patient",
+  administrator: "administrator",
+  support: "supportAccess",
+} satisfies Record<LoginRole, "healthcare" | "receptionist" | "patient" | "administrator" | "supportAccess">;
+
+const LOGIN_ROLE_TITLE_OVERRIDES: Partial<Record<LoginRole, { es: string; en: string }>> = {
+  administrator: { es: "Administrador de clínica", en: "Clinic administrator" },
+  support: { es: "Superadministrador", en: "Superadministrator" },
+};
+
+const OTP_DESTINATION_COPY = {
+  es: {
+    registeredEmail: "el correo electrónico registrado en tu cuenta",
+    enteredEmail: "tu correo electrónico",
+  },
+  en: {
+    registeredEmail: "the email registered to your account",
+    enteredEmail: "your email address",
+  },
+} as const;
 
 type FlowState = {
   step: AuthStep;
@@ -118,6 +135,8 @@ function flowReducer(state: FlowState, action: FlowAction): FlowState {
 }
 
 export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
+  const locale = useLocale();
+  const t = useTranslations("auth");
   const router = useRouter();
   const { defaultCountryCode } = useAuthPlatformSettings();
   const challengeId = useRef("");
@@ -135,11 +154,16 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   const dashboardPath = useRef("/dashboard");
   const country = selectedCountry ?? defaultCountryCode;
   const { actorContext, requestedRole } = LOGIN_ROLE_REQUESTS[loginRole];
+  const roleTitleOverride = LOGIN_ROLE_TITLE_OVERRIDES[loginRole];
+  const localizedRoleTitle = roleTitleOverride
+    ? roleTitleOverride[locale.startsWith("en") ? "en" : "es"]
+    : t(LOGIN_CREDENTIAL_TITLE_KEYS[loginRole]);
+  const otpDestinationCopy = locale.startsWith("en") ? OTP_DESTINATION_COPY.en : OTP_DESTINATION_COPY.es;
   const documentTitle = flow.step === "otp"
-    ? "Verificar identidad"
+    ? t("verifyIdentity")
     : flow.step === "success"
-      ? "Acceso confirmado"
-      : LOGIN_CREDENTIAL_TITLES[loginRole];
+      ? t("identityConfirmed")
+      : `${t("signInAs")} — ${localizedRoleTitle}`;
 
   useAuthDocumentTitle(documentTitle);
 
@@ -155,9 +179,9 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   function getIdentifierValidationMessage(): string | null {
     if (identifierType === "email") {
       const normalizedEmail = email.trim();
-      if (!normalizedEmail) return "Ingresa tu correo electrónico.";
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-        return "Usa un correo válido, por ejemplo nombre@organizacion.com.";
+       if (!normalizedEmail) return t("validationEmailRequired");
+       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+         return t("validationEmailInvalid");
       }
       return null;
     }
@@ -166,7 +190,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       toE164PhoneNumber(phone, country);
       return null;
     } catch (caughtError) {
-      return caughtError instanceof Error ? caughtError.message : "Ingresa un número de celular válido.";
+       return caughtError instanceof Error ? caughtError.message : t("validationPhoneRequired");
     }
   }
 
@@ -196,7 +220,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       type: "error",
       message: caughtError instanceof Error
         ? caughtError.message
-        : "No pudimos conectar con el servicio. Inténtalo nuevamente.",
+        : t("serviceUnavailable"),
     });
   }
 
@@ -204,7 +228,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
     const identifierMessage = getIdentifierValidationMessage();
     const fieldErrors: FieldErrors = {
       identifier: identifierMessage ?? undefined,
-      password: actorContext === "staff" && !password ? "Ingresa tu contraseña." : undefined,
+      password: actorContext === "staff" && !password ? t("validationPasswordRequired") : undefined,
     };
 
     if (Object.values(fieldErrors).some(Boolean)) {
@@ -229,8 +253,8 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       expiresIn: response.data.expires_in,
       resendAfter: response.data.resend_after,
       destination: identifierType === "phone"
-        ? "el correo electrónico registrado en tu cuenta"
-        : "tu correo electrónico",
+        ? otpDestinationCopy.registeredEmail
+        : otpDestinationCopy.enteredEmail,
     });
   }
 
@@ -254,7 +278,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
     event.preventDefault();
     const code = flow.otpDigits.join("");
     if (code.length !== 6) {
-      dispatch({ type: "validationFailed", errors: { code: "Completa los seis dígitos del código." } });
+      dispatch({ type: "validationFailed", errors: { code: t("validationCodeRequired") } });
       return;
     }
     dispatch({ type: "pending", value: true });
@@ -377,7 +401,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
         if (actorContext !== "staff") return;
         dispatch(password
           ? { type: "fieldCleared", field: "password" }
-          : { type: "fieldInvalid", field: "password", message: "Ingresa tu contraseña." });
+          : { type: "fieldInvalid", field: "password", message: t("validationPasswordRequired") });
       }}
       onSubmit={submitCredentials}
     />
