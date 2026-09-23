@@ -101,14 +101,11 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
           });
       }, 300);
 
-    return () => { window.clearTimeout(timer), controller.abort()};
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [isOpen, search]);
-
-  useEffect(() => {
-    if (status === "pending") {
-      setPaymentMethod(null);
-    }
-  }, [status]);
 
   function resetForm(): void {
     setPatients([]);
@@ -486,14 +483,13 @@ export function ClinicInvoiceCreateModal({  isOpen,  onClose,  onCreated,}: Read
               <select
                 id="invoice-status"
                 value={status}
-                onChange={(
-                  event,
-                ) =>
-                  setStatus(
-                    event.target
-                      .value as InvoiceStatus,
-                  )
-                }
+                onChange={(event) => {
+                  const nextStatus = event.target.value as InvoiceStatus;
+                  setStatus(nextStatus);
+                  if (nextStatus === "pending") {
+                    setPaymentMethod(null);
+                  }
+                }}
                 className="mt-2 min-h-10 w-full rounded-xl border border-line bg-surface px-3 text-xs outline-none focus:border-accent"
               >
                 <option value="pending">
