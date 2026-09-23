@@ -1,29 +1,51 @@
-# HipocratiQ Mobile
+# HIPOCRATIQ Mobile
 
-Flutter mobile authentication for HipocratiQ. The current slice supports patient, doctor, clinic administrator, and receptionist access with OTP verification, secure device-bound tokens, registration drafts, password recovery, and a separate HTTPS support-portal handoff.
+Aplicación Flutter de HIPOCRATIQ para Android e iOS. La versión móvil prioriza tareas rápidas y portables mientras la administración pesada permanece en la versión web.
 
-## Current flows
+## Alcance actual
 
-- Patient login and registration with deferred plan selection.
-- Doctor registration for independent practice or an active clinic.
-- Clinic registration with plan selection and OTP verification.
-- Receptionist activation through a single-use clinic invitation.
-- Password recovery through the registered phone; superadmin and support access remain web-only.
+- Autenticación OTP, recuperación de contraseña y sesiones seguras ligadas al dispositivo.
+- Registro de paciente, médico, clínica y activación de recepción.
+- Dashboard móvil conectado al mismo backend Laravel según rol:
+  - Paciente: próximas citas, consultas, recetas activas y resultados.
+  - Médico: agenda del día, pendientes, pacientes y consultas del mes.
+  - Recepción: citas, pacientes, caja/saldos y actividad operativa.
+  - Administrador de clínica: resumen móvil; configuración avanzada continúa en web.
+- Navegación móvil Inicio / Actividad / Cuenta.
+- Cierre de sesión por dispositivo o global.
+- Launcher icon Android/iOS generado desde `assets/branding/hipocratiq-mark.webp`.
+- Identificadores:
+  - Android: `com.vaftec.hipocratiq`
+  - iOS: `com.vaftec.hipocratiq`
 
-## Run locally
+## Ejecutar localmente
 
 ```bash
 flutter pub get
-flutter run --dart-define=BACKEND_URL=https://api.example.test --dart-define=SUPPORT_PORTAL_URL=https://support.example.test
+dart run flutter_launcher_icons
+flutter run \
+  --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
+  --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 ```
 
-`BACKEND_URL` is required for API calls. `SUPPORT_PORTAL_URL` must use HTTPS; when it is absent, the mobile app keeps the support action disabled instead of collecting support credentials.
+`BACKEND_URL` es obligatorio para consumir la API. En compilaciones release se rechazan endpoints HTTP sin TLS.
 
-## Validate
+## Validación
 
 ```bash
-dart format lib test
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
-flutter build apk --debug
+dart run flutter_launcher_icons
+flutter build apk --debug --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+flutter build appbundle --debug --dart-define=BACKEND_URL=https://hipocratiq.com/backend
 ```
+
+Para iOS:
+
+```bash
+flutter build ios --release --no-codesign \
+  --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+```
+
+El workflow `.github/workflows/mobile-ci.yml` ejecuta estas validaciones y publica artefactos temporales de CI para Android e iOS. La firma de producción y publicación en Google Play/App Store requieren las credenciales de las cuentas de tienda y se gestionan en la fase de release.
