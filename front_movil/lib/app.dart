@@ -22,7 +22,7 @@ class HipocratiqApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'HipocratiQ',
+      title: 'HIPOCRATIQ',
       theme: buildAppTheme(),
       home: AuthGate(
         config: config,
