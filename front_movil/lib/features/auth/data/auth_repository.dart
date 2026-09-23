@@ -774,7 +774,7 @@ class AuthRepository implements AuthGateway {
   }
 
   String _moneyMinor(int value) {
-    return '${(value / 100).toStringAsFixed(2)}';
+    return (value / 100).toStringAsFixed(2);
   }
 
   String actorContextLabelFallback(String actorContext) {
