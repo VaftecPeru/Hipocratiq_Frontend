@@ -39,7 +39,14 @@ jobs:
 
       - name: Check formatting
         working-directory: front_movil
-        run: dart format --output=none --set-exit-if-changed lib test
+        shell: bash
+        run: |
+          dart format lib test
+          if ! git diff --exit-code -- lib test; then
+            echo "::error::Dart formatting changes are required."
+            git diff -- lib test
+            exit 1
+          fi
 
       - name: Analyze
         working-directory: front_movil
