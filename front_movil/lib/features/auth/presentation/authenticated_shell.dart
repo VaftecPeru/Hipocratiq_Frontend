@@ -264,7 +264,9 @@ class _HomeTab extends StatelessWidget {
           const SizedBox(height: 18),
           _SectionTitle(
             title: 'Resumen',
-            helper: loading ? 'Actualizando datos clínicos…' : 'Datos sincronizados con HIPOCRATIQ',
+            helper: loading
+                ? 'Actualizando datos clínicos…'
+                : 'Datos sincronizados con HIPOCRATIQ',
           ),
           const SizedBox(height: 10),
           if (loading && snapshot.metrics.isEmpty)
@@ -280,7 +282,8 @@ class _HomeTab extends StatelessWidget {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
-              itemBuilder: (context, index) => _MetricCard(metric: snapshot.metrics[index]),
+              itemBuilder: (context, index) =>
+                  _MetricCard(metric: snapshot.metrics[index]),
             ),
           const SizedBox(height: 20),
           const _SectionTitle(
@@ -288,10 +291,12 @@ class _HomeTab extends StatelessWidget {
             helper: 'Información prioritaria para uso móvil',
           ),
           const SizedBox(height: 10),
-          ...snapshot.modules.map((module) => Padding(
-            padding: const EdgeInsets.only(bottom: 9),
-            child: _ModuleCard(module: module),
-          )),
+          ...snapshot.modules.map(
+            (module) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: _ModuleCard(module: module),
+            ),
+          ),
         ],
       ),
     );
@@ -331,10 +336,12 @@ class _ActivityTab extends StatelessWidget {
             helper: 'No hay registros recientes para mostrar en este momento.',
           )
         else
-          ...snapshot.items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _ActivityCard(item: item),
-          )),
+          ...snapshot.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ActivityCard(item: item),
+            ),
+          ),
       ],
     );
   }
@@ -410,9 +417,8 @@ class _AccountTab extends StatelessWidget {
                 onPressed: () async {
                   await Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
-                      builder: (context) => ReceptionistInvitationPage(
-                        authGateway: authGateway,
-                      ),
+                      builder: (context) =>
+                          ReceptionistInvitationPage(authGateway: authGateway),
                     ),
                   );
                 },
@@ -545,14 +551,21 @@ class _ModuleCard extends StatelessWidget {
               color: AppColors.accentSoft,
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(_iconFor(module.icon), color: AppColors.accent, size: 21),
+            child: Icon(
+              _iconFor(module.icon),
+              color: AppColors.accent,
+              size: 21,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(module.label, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  module.label,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   module.helper,
@@ -584,16 +597,29 @@ class _ActivityCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.event_note_rounded, color: AppColors.accent, size: 22),
+          const Icon(
+            Icons.event_note_rounded,
+            color: AppColors.accent,
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  item.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 if (item.subtitle.isNotEmpty) ...[
                   const SizedBox(height: 3),
-                  Text(item.subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 7),
                 Text(
@@ -667,7 +693,11 @@ class _ErrorCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           TextButton(onPressed: onRetry, child: const Text('Reintentar')),
@@ -690,7 +720,11 @@ class _LoadingPanel extends StatelessWidget {
 }
 
 class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({required this.icon, required this.title, required this.helper});
+  const _EmptyCard({
+    required this.icon,
+    required this.title,
+    required this.helper,
+  });
 
   final IconData icon;
   final String title;
@@ -711,7 +745,11 @@ class _EmptyCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text(helper, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+          Text(
+            helper,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
         ],
       ),
     );
