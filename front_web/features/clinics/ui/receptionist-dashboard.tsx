@@ -16,7 +16,6 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import type {
   ClinicAppointment,
   ClinicDashboardData,
@@ -96,7 +95,6 @@ function EmptyState({ label }: Readonly<{ label: string }>) {
 }
 
 export function ReceptionistDashboard({ dashboard, clinicName, userName }: ReceptionistDashboardProps) {
-  const [notice, setNotice] = useState<string | null>(null);
   const summary = dashboard?.appointmentSummary ?? {
     todayTotal: 0,
     confirmed: 0,
@@ -111,20 +109,8 @@ export function ReceptionistDashboard({ dashboard, clinicName, userName }: Recep
   const clinicPatients = dashboard?.metrics.patientsTotal ?? 0;
   const occupiedAppointments = summary.confirmed + summary.waiting + summary.inConsultation;
 
-  function showNotice(message: string): void {
-    setNotice(message);
-    window.setTimeout(() => setNotice(null), 2600);
-  }
-
   return (
     <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-      {notice ? (
-        <div className="fixed right-4 bottom-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-bold text-white shadow-xl" role="status">
-          <Activity className="size-4 text-success" aria-hidden="true" />
-          {notice}
-        </div>
-      ) : null}
-
       <header className="flex flex-col justify-between gap-4 border-b border-line pb-5 sm:flex-row sm:items-end">
         <div>
           <p className="font-mono text-[0.62rem] font-bold tracking-[0.14em] text-accent uppercase">Recepción · {clinicName}</p>
@@ -132,14 +118,13 @@ export function ReceptionistDashboard({ dashboard, clinicName, userName }: Recep
           <p className="mt-1 text-xs text-muted">Resumen operativo del área de recepción para hoy.</p>
         </div>
         <div className="grid grid-cols-1 gap-2 min-[17.5rem]:grid-cols-2 sm:flex">
-          <button
+          <Link
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-3 text-[0.68rem] font-extrabold text-ink shadow-sm transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-4"
-            type="button"
-            onClick={() => showNotice("El registro de pacientes se abrirá en el módulo Pacientes.")}
+            href="/clinic/registro-pacientes"
           >
             <UserPlus className="size-3.5" aria-hidden="true" />
             Registrar paciente
-          </button>
+          </Link>
           <Link
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-[0.68rem] font-extrabold text-white shadow-[0_0.55rem_1.2rem_rgb(8_98_221/18%)] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-4"
             href="/clinic/agenda"
