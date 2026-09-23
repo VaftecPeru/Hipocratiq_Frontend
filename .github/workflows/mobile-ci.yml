@@ -1,0 +1,114 @@
+name: Mobile CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - front_movil/**
+      - .github/workflows/mobile-ci.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - front_movil/**
+      - .github/workflows/mobile-ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Flutter Android CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Flutter 3.44.4
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: front_movil
+        run: flutter pub get
+
+      - name: Check formatting
+        working-directory: front_movil
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        working-directory: front_movil
+        run: flutter analyze
+
+      - name: Run tests
+        working-directory: front_movil
+        run: flutter test
+
+      - name: Generate HIPOCRATIQ launcher icons
+        working-directory: front_movil
+        run: dart run flutter_launcher_icons
+
+      - name: Build Android APK
+        working-directory: front_movil
+        run: >-
+          flutter build apk --debug
+          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+
+      - name: Build Android AAB
+        working-directory: front_movil
+        run: >-
+          flutter build appbundle --debug
+          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+
+      - name: Upload Android validation builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: hipocratiq-android-validation
+          if-no-files-found: error
+          path: |
+            front_movil/build/app/outputs/flutter-apk/app-debug.apk
+            front_movil/build/app/outputs/bundle/debug/app-debug.aab
+
+  ios:
+    name: Flutter iOS CI
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Flutter 3.44.4
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: front_movil
+        run: flutter pub get
+
+      - name: Generate HIPOCRATIQ launcher icons
+        working-directory: front_movil
+        run: dart run flutter_launcher_icons
+
+      - name: Build iOS without code signing
+        working-directory: front_movil
+        run: >-
+          flutter build ios --release --no-codesign
+          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+
+      - name: Upload iOS validation build
+        uses: actions/upload-artifact@v4
+        with:
+          name: hipocratiq-ios-validation
+          if-no-files-found: error
+          path: front_movil/build/ios/iphoneos/Runner.app
