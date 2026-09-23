@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   Clock3,
   CreditCard,
+  Download,
   Eye,
   Landmark,
   Loader2,
@@ -449,9 +450,66 @@ function InvoiceDetailModal({
   isLoading: boolean;
   onClose: () => void;
 }>) {
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
   if (!invoice) return null;
+  const selectedInvoice = invoice;
+
+  async function handleExport(): Promise<void> {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      const [{ pdf }, { ClinicInvoicePdf }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("@/features/clinics/ui/clinic-invoice-pdf"),
+      ]);
+      const blob = await pdf(<ClinicInvoicePdf invoice={selectedInvoice} />).toBlob();
+
+      if (blob.type !== "application/pdf") {
+        throw new Error("La exportación no devolvió un archivo PDF válido.");
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const safeInvoiceNumber = selectedInvoice.invoiceNumber.replace(/[^a-zA-Z0-9._-]+/g, "-");
+      link.href = url;
+      link.download = `hipocratiq-factura-${safeInvoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      setExportError(error instanceof Error ? error.message : "No pudimos generar la factura en PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Factura ${invoice.invoiceNumber}`} description={invoice.patient.name ?? "Paciente sin nombre"} size="md" footer={<ModalSecondaryButton onClick={onClose}>Cerrar</ModalSecondaryButton>}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Factura ${invoice.invoiceNumber}`}
+      description={invoice.patient.name ?? "Paciente sin nombre"}
+      size="md"
+      footer={(
+        <>
+          <button
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold text-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            onClick={() => void handleExport()}
+            disabled={exporting || isLoading}
+          >
+            <Download className="size-3.5" aria-hidden="true" />
+            {exporting ? "Generando PDF..." : "Descargar A4"}
+          </button>
+          <ModalSecondaryButton onClick={onClose}>Cerrar</ModalSecondaryButton>
+        </>
+      )}
+    >
+      {exportError ? <p className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs font-bold text-danger" role="alert">{exportError}</p> : null}
       {isLoading ? <div className="grid min-h-32 place-items-center text-xs font-semibold text-muted" role="status"><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Cargando detalle...</div> : <div className="space-y-4 text-xs">
         <dl className="divide-y divide-line rounded-lg border border-line bg-surface-subtle px-3"><div className="flex justify-between gap-3 py-2.5"><dt className="font-semibold text-muted">Emisión</dt><dd className="font-mono font-bold">{invoiceDate(invoice.issueDate)}</dd></div><div className="flex justify-between gap-3 py-2.5"><dt className="font-semibold text-muted">Total</dt><dd className="font-mono font-bold">{formatMoney(invoice.totalMinor, invoice.currency)}</dd></div><div className="flex justify-between gap-3 py-2.5"><dt className="font-semibold text-muted">Pagado</dt><dd className="font-mono font-bold text-success">{formatMoney(invoice.paidMinor, invoice.currency)}</dd></div><div className="flex justify-between gap-3 py-2.5"><dt className="font-semibold text-muted">Pendiente</dt><dd className="font-mono font-bold">{formatMoney(invoice.outstandingMinor, invoice.currency)}</dd></div></dl>
         <section><h3 className="font-extrabold">Conceptos</h3><ul className="mt-2 divide-y divide-line rounded-lg border border-line">{(invoice.items ?? []).map((item) => <li className="flex justify-between gap-3 px-3 py-2.5" key={item.id}><span>{item.description} × {item.quantity}</span><strong className="font-mono">{formatMoney(item.lineTotalMinor, invoice.currency)}</strong></li>)}{invoice.items?.length === 0 ? <li className="px-3 py-2.5 text-muted">Sin conceptos detallados.</li> : null}</ul></section>

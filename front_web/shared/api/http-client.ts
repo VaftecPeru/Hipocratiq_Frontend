@@ -238,6 +238,45 @@ export async function deleteFromApi(path: string): Promise<void> {
   await requestMutation<unknown>("DELETE", path);
 }
 
+export type ApiFileResponse = {
+  blob: Blob;
+  filename: string | null;
+};
+
+export async function getFileFromApi(
+  path: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<ApiFileResponse> {
+  const response = await fetch(`${API_PREFIX}${path}`, {
+    credentials: "include",
+    headers: apiHeaders(),
+    cache: "no-store",
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorData = await readJson<ApiErrorPayload>(response);
+
+    throw new ApiError(
+      localizedErrorMessage(
+        response.status,
+        errorData?.message ?? null,
+        response.headers.get("retry-after"),
+      ),
+      response.status,
+      errorData?.errors,
+    );
+  }
+
+  const disposition = response.headers.get("content-disposition");
+  const filenameMatch = disposition?.match(/filename="?([^";]+)"?/i);
+
+  return {
+    blob: await response.blob(),
+    filename: filenameMatch?.[1] ?? null,
+  };
+}
+
 export async function getFromApi<T>(
   path: string,
   options: { signal?: AbortSignal } = {},
