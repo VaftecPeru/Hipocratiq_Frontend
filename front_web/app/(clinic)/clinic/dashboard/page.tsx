@@ -429,7 +429,7 @@ export default async function ClinicDashboardPage() {
             </p>
           </div>
           <Link
-            href="/clinic/pacientes"
+            href="/clinic/medicos"
             className="inline-flex min-h-9 w-fit items-center gap-2 rounded-xl px-3 text-xs font-extrabold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             Ver directorio
