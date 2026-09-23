@@ -454,6 +454,7 @@ function InvoiceDetailModal({
   const [exportError, setExportError] = useState<string | null>(null);
 
   if (!invoice) return null;
+  const selectedInvoice = invoice;
 
   async function handleExport(): Promise<void> {
     setExporting(true);
@@ -464,7 +465,7 @@ function InvoiceDetailModal({
         import("@react-pdf/renderer"),
         import("@/features/clinics/ui/clinic-invoice-pdf"),
       ]);
-      const blob = await pdf(<ClinicInvoicePdf invoice={invoice} />).toBlob();
+      const blob = await pdf(<ClinicInvoicePdf invoice={selectedInvoice} />).toBlob();
 
       if (blob.type !== "application/pdf") {
         throw new Error("La exportación no devolvió un archivo PDF válido.");
@@ -472,7 +473,7 @@ function InvoiceDetailModal({
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const safeInvoiceNumber = invoice.invoiceNumber.replace(/[^a-zA-Z0-9._-]+/g, "-");
+      const safeInvoiceNumber = selectedInvoice.invoiceNumber.replace(/[^a-zA-Z0-9._-]+/g, "-");
       link.href = url;
       link.download = `hipocratiq-factura-${safeInvoiceNumber}.pdf`;
       document.body.appendChild(link);
