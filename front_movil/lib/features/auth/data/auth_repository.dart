@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_store.dart';
 import '../domain/auth_models.dart';
 import '../domain/registration_models.dart';
+import '../../workspace/domain/mobile_workspace.dart';
 import 'registration_repository.dart';
 
 abstract interface class AuthGateway {
@@ -423,6 +424,235 @@ class AuthRepository implements AuthGateway {
       password: password,
       passwordConfirmation: passwordConfirmation,
     );
+  }
+
+  Future<MobileWorkspaceSnapshot> loadMobileWorkspace(
+    AuthenticatedSession session,
+  ) async {
+    final token = await _secureStore.readAccessToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const ApiException(
+        message: 'Tu sesión móvil expiró. Vuelve a iniciar sesión.',
+        statusCode: 401,
+      );
+    }
+
+    return switch (session.actorContext) {
+      'patient' => _loadPatientWorkspace(token),
+      'doctor' => _loadDoctorWorkspace(token),
+      'receptionist' => _loadClinicWorkspace(token, receptionist: true),
+      'clinic_admin' => _loadClinicWorkspace(token, receptionist: false),
+      _ => MobileWorkspaceSnapshot(
+        roleTitle: actorContextLabelFallback(session.actorContext),
+        headline: 'Sesión móvil activa',
+        helper: 'Este rol se administra principalmente desde la versión web.',
+        metrics: const <MobileWorkspaceMetric>[],
+        items: const <MobileWorkspaceItem>[],
+        modules: const <MobileWorkspaceModule>[],
+        generatedAt: DateTime.now(),
+      ),
+    };
+  }
+
+  Future<MobileWorkspaceSnapshot> _loadPatientWorkspace(String token) async {
+    final responses = await Future.wait<Map<String, dynamic>>([
+      _apiClient.getJson('/api/v1/auth/patient/appointments', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/patient/history', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/patient/prescriptions', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/patient/results', accessToken: token),
+    ]);
+
+    final appointments = _items(responses[0]);
+    final appointmentMeta = _meta(responses[0]);
+    final historyMeta = _meta(responses[1]);
+    final prescriptionMeta = _meta(responses[2]);
+    final resultMeta = _meta(responses[3]);
+
+    return MobileWorkspaceSnapshot(
+      roleTitle: 'Paciente',
+      headline: 'Tu atención de hoy',
+      helper: 'Consulta citas, historia, recetas y resultados desde tu sesión segura.',
+      metrics: <MobileWorkspaceMetric>[
+        MobileWorkspaceMetric(
+          label: 'Próximas citas',
+          value: _integer(appointmentMeta['upcoming']).toString(),
+          icon: 'calendar',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Consultas',
+          value: _integer(historyMeta['total']).toString(),
+          icon: 'history',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Recetas activas',
+          value: _integer(prescriptionMeta['active']).toString(),
+          icon: 'prescription',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Resultados',
+          value: _integer(resultMeta['available']).toString(),
+          icon: 'laboratory',
+        ),
+      ],
+      items: appointments.take(5).map((item) {
+        final doctor = _map(item['doctor']);
+        final scheduledAt = _text(item['scheduled_at']) ?? _text(item['scheduled_date']) ?? 'Fecha pendiente';
+        return MobileWorkspaceItem(
+          title: _text(item['appointment_type']) ?? 'Cita médica',
+          subtitle: [_text(doctor?['name']), scheduledAt].whereType<String>().join(' · '),
+          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
+        );
+      }).toList(growable: false),
+      modules: const <MobileWorkspaceModule>[
+        MobileWorkspaceModule(label: 'Citas', helper: 'Agenda y próximas atenciones', icon: 'calendar'),
+        MobileWorkspaceModule(label: 'Historia', helper: 'Consultas verificadas', icon: 'history'),
+        MobileWorkspaceModule(label: 'Recetas', helper: 'Indicaciones vigentes', icon: 'prescription'),
+        MobileWorkspaceModule(label: 'Resultados', helper: 'Laboratorio disponible', icon: 'laboratory'),
+      ],
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  Future<MobileWorkspaceSnapshot> _loadDoctorWorkspace(String token) async {
+    final responses = await Future.wait<Map<String, dynamic>>([
+      _apiClient.getJson('/api/v1/auth/doctor/dashboard', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/doctor/prescriptions', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/doctor/laboratory', accessToken: token),
+    ]);
+    final dashboard = _dataMap(responses[0]);
+    final metrics = _map(dashboard['metrics']) ?? const <String, dynamic>{};
+    final appointments = _list(dashboard['today_appointments']);
+
+    return MobileWorkspaceSnapshot(
+      roleTitle: 'Médico',
+      headline: 'Jornada clínica',
+      helper: 'Prioriza agenda, pacientes y pendientes desde el móvil.',
+      metrics: <MobileWorkspaceMetric>[
+        MobileWorkspaceMetric(label: 'Citas hoy', value: _integer(metrics['today_appointments']).toString(), icon: 'calendar'),
+        MobileWorkspaceMetric(label: 'Pendientes', value: _integer(metrics['today_pending']).toString(), icon: 'pending'),
+        MobileWorkspaceMetric(label: 'Pacientes', value: _integer(metrics['patients_total']).toString(), icon: 'patients'),
+        MobileWorkspaceMetric(label: 'Consultas mes', value: _integer(metrics['month_consultations']).toString(), icon: 'history'),
+      ],
+      items: appointments.take(5).map((item) {
+        final patient = _map(item['patient']);
+        return MobileWorkspaceItem(
+          title: _text(patient?['name']) ?? _text(item['patient_name']) ?? 'Paciente',
+          subtitle: [_text(item['time']), _text(item['appointment_type'])].whereType<String>().join(' · '),
+          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
+        );
+      }).toList(growable: false),
+      modules: <MobileWorkspaceModule>[
+        const MobileWorkspaceModule(label: 'Agenda', helper: 'Citas y estados del día', icon: 'calendar'),
+        const MobileWorkspaceModule(label: 'Pacientes', helper: 'Expedientes vinculados', icon: 'patients'),
+        MobileWorkspaceModule(label: 'Recetas', helper: '${_items(responses[1]).length} registros cargados', icon: 'prescription'),
+        MobileWorkspaceModule(label: 'Laboratorio', helper: '${_items(responses[2]).length} órdenes cargadas', icon: 'laboratory'),
+      ],
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  Future<MobileWorkspaceSnapshot> _loadClinicWorkspace(
+    String token, {
+    required bool receptionist,
+  }) async {
+    final now = DateTime.now();
+    final from = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-01';
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    final to = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}';
+    final responses = await Future.wait<Map<String, dynamic>>([
+      _apiClient.getJson('/api/v1/auth/clinic/dashboard', accessToken: token),
+      _apiClient.getJson('/api/v1/auth/clinic/billing/report?from=$from&to=$to', accessToken: token),
+    ]);
+    final dashboard = _dataMap(responses[0]);
+    final metrics = _map(dashboard['metrics']) ?? const <String, dynamic>{};
+    final summary = _map(dashboard['appointment_summary']) ?? const <String, dynamic>{};
+    final appointments = _list(dashboard['today_appointments']);
+    final billing = _dataMap(responses[1]);
+    final currencies = _map(billing['by_currency']) ?? const <String, dynamic>{};
+    var pendingMinor = 0;
+    for (final value in currencies.values) {
+      pendingMinor += _integer(_map(value)?['outstanding_minor']);
+    }
+
+    return MobileWorkspaceSnapshot(
+      roleTitle: receptionist ? 'Recepción' : 'Administrador de clínica',
+      headline: receptionist ? 'Recepción de hoy' : 'Operación de clínica',
+      helper: receptionist
+          ? 'Agenda, pacientes y caja priorizados para atención rápida.'
+          : 'Resumen móvil de la operación; la administración avanzada permanece en web.',
+      metrics: <MobileWorkspaceMetric>[
+        MobileWorkspaceMetric(label: 'Citas hoy', value: _integer(summary['today_total']).toString(), icon: 'calendar'),
+        MobileWorkspaceMetric(label: 'Pendientes', value: _integer(summary['pending']).toString(), icon: 'pending'),
+        MobileWorkspaceMetric(label: 'Pacientes', value: _integer(metrics['patients_total']).toString(), icon: 'patients'),
+        MobileWorkspaceMetric(label: 'Por cobrar', value: _moneyMinor(pendingMinor), icon: 'billing'),
+      ],
+      items: appointments.take(5).map((item) {
+        final patient = _map(item['patient']);
+        final doctor = _map(item['doctor']);
+        return MobileWorkspaceItem(
+          title: _text(patient?['name']) ?? 'Paciente',
+          subtitle: [_text(item['time']), _text(doctor?['name'])].whereType<String>().join(' · '),
+          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
+        );
+      }).toList(growable: false),
+      modules: const <MobileWorkspaceModule>[
+        MobileWorkspaceModule(label: 'Agenda', helper: 'Citas y llegadas del día', icon: 'calendar'),
+        MobileWorkspaceModule(label: 'Pacientes', helper: 'Registro y búsqueda rápida', icon: 'patients'),
+        MobileWorkspaceModule(label: 'Caja', helper: 'Cobros y saldos pendientes', icon: 'billing'),
+        MobileWorkspaceModule(label: 'Mensajes', helper: 'Comunicación operativa', icon: 'messages'),
+      ],
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> _dataMap(Map<String, dynamic> response) {
+    return _map(response['data']) ?? const <String, dynamic>{};
+  }
+
+  Map<String, dynamic> _meta(Map<String, dynamic> response) {
+    return _map(response['meta']) ?? const <String, dynamic>{};
+  }
+
+  List<Map<String, dynamic>> _items(Map<String, dynamic> response) {
+    return _list(response['data']);
+  }
+
+  List<Map<String, dynamic>> _list(Object? value) {
+    if (value is! List) return const <Map<String, dynamic>>[];
+    return value
+        .whereType<Map>()
+        .map((item) => item.map((key, value) => MapEntry(key.toString(), value)))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic>? _map(Object? value) {
+    if (value is! Map) return null;
+    return value.map((key, item) => MapEntry(key.toString(), item));
+  }
+
+  String? _text(Object? value) {
+    return value is String && value.trim().isNotEmpty ? value.trim() : null;
+  }
+
+  int _integer(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String _moneyMinor(int value) {
+    return '${(value / 100).toStringAsFixed(2)}';
+  }
+
+  String actorContextLabelFallback(String actorContext) {
+    return switch (actorContext) {
+      'clinic_admin' => 'Administrador de clínica',
+      'receptionist' => 'Recepción',
+      'doctor' => 'Médico',
+      'patient' => 'Paciente',
+      _ => 'Cuenta autenticada',
+    };
   }
 
   Future<OtpChallenge> _requestChallenge(Map<String, dynamic> payload) async {
