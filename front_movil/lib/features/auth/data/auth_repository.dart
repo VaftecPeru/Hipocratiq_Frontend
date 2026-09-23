@@ -456,9 +456,15 @@ class AuthRepository implements AuthGateway {
 
   Future<MobileWorkspaceSnapshot> _loadPatientWorkspace(String token) async {
     final responses = await Future.wait<Map<String, dynamic>>([
-      _apiClient.getJson('/api/v1/auth/patient/appointments', accessToken: token),
+      _apiClient.getJson(
+        '/api/v1/auth/patient/appointments',
+        accessToken: token,
+      ),
       _apiClient.getJson('/api/v1/auth/patient/history', accessToken: token),
-      _apiClient.getJson('/api/v1/auth/patient/prescriptions', accessToken: token),
+      _apiClient.getJson(
+        '/api/v1/auth/patient/prescriptions',
+        accessToken: token,
+      ),
       _apiClient.getJson('/api/v1/auth/patient/results', accessToken: token),
     ]);
 
@@ -471,7 +477,8 @@ class AuthRepository implements AuthGateway {
     return MobileWorkspaceSnapshot(
       roleTitle: 'Paciente',
       headline: 'Tu atención de hoy',
-      helper: 'Consulta citas, historia, recetas y resultados desde tu sesión segura.',
+      helper:
+          'Consulta citas, historia, recetas y resultados desde tu sesión segura.',
       metrics: <MobileWorkspaceMetric>[
         MobileWorkspaceMetric(
           label: 'Próximas citas',
@@ -494,20 +501,48 @@ class AuthRepository implements AuthGateway {
           icon: 'laboratory',
         ),
       ],
-      items: appointments.take(5).map((item) {
-        final doctor = _map(item['doctor']);
-        final scheduledAt = _text(item['scheduled_at']) ?? _text(item['scheduled_date']) ?? 'Fecha pendiente';
-        return MobileWorkspaceItem(
-          title: _text(item['appointment_type']) ?? 'Cita médica',
-          subtitle: [_text(doctor?['name']), scheduledAt].whereType<String>().join(' · '),
-          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
-        );
-      }).toList(growable: false),
+      items: appointments
+          .take(5)
+          .map((item) {
+            final doctor = _map(item['doctor']);
+            final scheduledAt =
+                _text(item['scheduled_at']) ??
+                _text(item['scheduled_date']) ??
+                'Fecha pendiente';
+            return MobileWorkspaceItem(
+              title: _text(item['appointment_type']) ?? 'Cita médica',
+              subtitle: [
+                _text(doctor?['name']),
+                scheduledAt,
+              ].whereType<String>().join(' · '),
+              status:
+                  _text(item['status_label']) ??
+                  _text(item['status']) ??
+                  'Programada',
+            );
+          })
+          .toList(growable: false),
       modules: const <MobileWorkspaceModule>[
-        MobileWorkspaceModule(label: 'Citas', helper: 'Agenda y próximas atenciones', icon: 'calendar'),
-        MobileWorkspaceModule(label: 'Historia', helper: 'Consultas verificadas', icon: 'history'),
-        MobileWorkspaceModule(label: 'Recetas', helper: 'Indicaciones vigentes', icon: 'prescription'),
-        MobileWorkspaceModule(label: 'Resultados', helper: 'Laboratorio disponible', icon: 'laboratory'),
+        MobileWorkspaceModule(
+          label: 'Citas',
+          helper: 'Agenda y próximas atenciones',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Historia',
+          helper: 'Consultas verificadas',
+          icon: 'history',
+        ),
+        MobileWorkspaceModule(
+          label: 'Recetas',
+          helper: 'Indicaciones vigentes',
+          icon: 'prescription',
+        ),
+        MobileWorkspaceModule(
+          label: 'Resultados',
+          helper: 'Laboratorio disponible',
+          icon: 'laboratory',
+        ),
       ],
       generatedAt: DateTime.now(),
     );
@@ -516,7 +551,10 @@ class AuthRepository implements AuthGateway {
   Future<MobileWorkspaceSnapshot> _loadDoctorWorkspace(String token) async {
     final responses = await Future.wait<Map<String, dynamic>>([
       _apiClient.getJson('/api/v1/auth/doctor/dashboard', accessToken: token),
-      _apiClient.getJson('/api/v1/auth/doctor/prescriptions', accessToken: token),
+      _apiClient.getJson(
+        '/api/v1/auth/doctor/prescriptions',
+        accessToken: token,
+      ),
       _apiClient.getJson('/api/v1/auth/doctor/laboratory', accessToken: token),
     ]);
     final dashboard = _dataMap(responses[0]);
@@ -528,24 +566,68 @@ class AuthRepository implements AuthGateway {
       headline: 'Jornada clínica',
       helper: 'Prioriza agenda, pacientes y pendientes desde el móvil.',
       metrics: <MobileWorkspaceMetric>[
-        MobileWorkspaceMetric(label: 'Citas hoy', value: _integer(metrics['today_appointments']).toString(), icon: 'calendar'),
-        MobileWorkspaceMetric(label: 'Pendientes', value: _integer(metrics['today_pending']).toString(), icon: 'pending'),
-        MobileWorkspaceMetric(label: 'Pacientes', value: _integer(metrics['patients_total']).toString(), icon: 'patients'),
-        MobileWorkspaceMetric(label: 'Consultas mes', value: _integer(metrics['month_consultations']).toString(), icon: 'history'),
+        MobileWorkspaceMetric(
+          label: 'Citas hoy',
+          value: _integer(metrics['today_appointments']).toString(),
+          icon: 'calendar',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Pendientes',
+          value: _integer(metrics['today_pending']).toString(),
+          icon: 'pending',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Pacientes',
+          value: _integer(metrics['patients_total']).toString(),
+          icon: 'patients',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Consultas mes',
+          value: _integer(metrics['month_consultations']).toString(),
+          icon: 'history',
+        ),
       ],
-      items: appointments.take(5).map((item) {
-        final patient = _map(item['patient']);
-        return MobileWorkspaceItem(
-          title: _text(patient?['name']) ?? _text(item['patient_name']) ?? 'Paciente',
-          subtitle: [_text(item['time']), _text(item['appointment_type'])].whereType<String>().join(' · '),
-          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
-        );
-      }).toList(growable: false),
+      items: appointments
+          .take(5)
+          .map((item) {
+            final patient = _map(item['patient']);
+            return MobileWorkspaceItem(
+              title:
+                  _text(patient?['name']) ??
+                  _text(item['patient_name']) ??
+                  'Paciente',
+              subtitle: [
+                _text(item['time']),
+                _text(item['appointment_type']),
+              ].whereType<String>().join(' · '),
+              status:
+                  _text(item['status_label']) ??
+                  _text(item['status']) ??
+                  'Programada',
+            );
+          })
+          .toList(growable: false),
       modules: <MobileWorkspaceModule>[
-        const MobileWorkspaceModule(label: 'Agenda', helper: 'Citas y estados del día', icon: 'calendar'),
-        const MobileWorkspaceModule(label: 'Pacientes', helper: 'Expedientes vinculados', icon: 'patients'),
-        MobileWorkspaceModule(label: 'Recetas', helper: '${_items(responses[1]).length} registros cargados', icon: 'prescription'),
-        MobileWorkspaceModule(label: 'Laboratorio', helper: '${_items(responses[2]).length} órdenes cargadas', icon: 'laboratory'),
+        const MobileWorkspaceModule(
+          label: 'Agenda',
+          helper: 'Citas y estados del día',
+          icon: 'calendar',
+        ),
+        const MobileWorkspaceModule(
+          label: 'Pacientes',
+          helper: 'Expedientes vinculados',
+          icon: 'patients',
+        ),
+        MobileWorkspaceModule(
+          label: 'Recetas',
+          helper: '${_items(responses[1]).length} registros cargados',
+          icon: 'prescription',
+        ),
+        MobileWorkspaceModule(
+          label: 'Laboratorio',
+          helper: '${_items(responses[2]).length} órdenes cargadas',
+          icon: 'laboratory',
+        ),
       ],
       generatedAt: DateTime.now(),
     );
@@ -556,19 +638,26 @@ class AuthRepository implements AuthGateway {
     required bool receptionist,
   }) async {
     final now = DateTime.now();
-    final from = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-01';
+    final from =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-01';
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
-    final to = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}';
+    final to =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}';
     final responses = await Future.wait<Map<String, dynamic>>([
       _apiClient.getJson('/api/v1/auth/clinic/dashboard', accessToken: token),
-      _apiClient.getJson('/api/v1/auth/clinic/billing/report?from=$from&to=$to', accessToken: token),
+      _apiClient.getJson(
+        '/api/v1/auth/clinic/billing/report?from=$from&to=$to',
+        accessToken: token,
+      ),
     ]);
     final dashboard = _dataMap(responses[0]);
     final metrics = _map(dashboard['metrics']) ?? const <String, dynamic>{};
-    final summary = _map(dashboard['appointment_summary']) ?? const <String, dynamic>{};
+    final summary =
+        _map(dashboard['appointment_summary']) ?? const <String, dynamic>{};
     final appointments = _list(dashboard['today_appointments']);
     final billing = _dataMap(responses[1]);
-    final currencies = _map(billing['by_currency']) ?? const <String, dynamic>{};
+    final currencies =
+        _map(billing['by_currency']) ?? const <String, dynamic>{};
     var pendingMinor = 0;
     for (final value in currencies.values) {
       pendingMinor += _integer(_map(value)?['outstanding_minor']);
@@ -581,25 +670,66 @@ class AuthRepository implements AuthGateway {
           ? 'Agenda, pacientes y caja priorizados para atención rápida.'
           : 'Resumen móvil de la operación; la administración avanzada permanece en web.',
       metrics: <MobileWorkspaceMetric>[
-        MobileWorkspaceMetric(label: 'Citas hoy', value: _integer(summary['today_total']).toString(), icon: 'calendar'),
-        MobileWorkspaceMetric(label: 'Pendientes', value: _integer(summary['pending']).toString(), icon: 'pending'),
-        MobileWorkspaceMetric(label: 'Pacientes', value: _integer(metrics['patients_total']).toString(), icon: 'patients'),
-        MobileWorkspaceMetric(label: 'Por cobrar', value: _moneyMinor(pendingMinor), icon: 'billing'),
+        MobileWorkspaceMetric(
+          label: 'Citas hoy',
+          value: _integer(summary['today_total']).toString(),
+          icon: 'calendar',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Pendientes',
+          value: _integer(summary['pending']).toString(),
+          icon: 'pending',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Pacientes',
+          value: _integer(metrics['patients_total']).toString(),
+          icon: 'patients',
+        ),
+        MobileWorkspaceMetric(
+          label: 'Por cobrar',
+          value: _moneyMinor(pendingMinor),
+          icon: 'billing',
+        ),
       ],
-      items: appointments.take(5).map((item) {
-        final patient = _map(item['patient']);
-        final doctor = _map(item['doctor']);
-        return MobileWorkspaceItem(
-          title: _text(patient?['name']) ?? 'Paciente',
-          subtitle: [_text(item['time']), _text(doctor?['name'])].whereType<String>().join(' · '),
-          status: _text(item['status_label']) ?? _text(item['status']) ?? 'Programada',
-        );
-      }).toList(growable: false),
+      items: appointments
+          .take(5)
+          .map((item) {
+            final patient = _map(item['patient']);
+            final doctor = _map(item['doctor']);
+            return MobileWorkspaceItem(
+              title: _text(patient?['name']) ?? 'Paciente',
+              subtitle: [
+                _text(item['time']),
+                _text(doctor?['name']),
+              ].whereType<String>().join(' · '),
+              status:
+                  _text(item['status_label']) ??
+                  _text(item['status']) ??
+                  'Programada',
+            );
+          })
+          .toList(growable: false),
       modules: const <MobileWorkspaceModule>[
-        MobileWorkspaceModule(label: 'Agenda', helper: 'Citas y llegadas del día', icon: 'calendar'),
-        MobileWorkspaceModule(label: 'Pacientes', helper: 'Registro y búsqueda rápida', icon: 'patients'),
-        MobileWorkspaceModule(label: 'Caja', helper: 'Cobros y saldos pendientes', icon: 'billing'),
-        MobileWorkspaceModule(label: 'Mensajes', helper: 'Comunicación operativa', icon: 'messages'),
+        MobileWorkspaceModule(
+          label: 'Agenda',
+          helper: 'Citas y llegadas del día',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Pacientes',
+          helper: 'Registro y búsqueda rápida',
+          icon: 'patients',
+        ),
+        MobileWorkspaceModule(
+          label: 'Caja',
+          helper: 'Cobros y saldos pendientes',
+          icon: 'billing',
+        ),
+        MobileWorkspaceModule(
+          label: 'Mensajes',
+          helper: 'Comunicación operativa',
+          icon: 'messages',
+        ),
       ],
       generatedAt: DateTime.now(),
     );
@@ -621,7 +751,9 @@ class AuthRepository implements AuthGateway {
     if (value is! List) return const <Map<String, dynamic>>[];
     return value
         .whereType<Map>()
-        .map((item) => item.map((key, value) => MapEntry(key.toString(), value)))
+        .map(
+          (item) => item.map((key, value) => MapEntry(key.toString(), value)),
+        )
         .toList(growable: false);
   }
 
