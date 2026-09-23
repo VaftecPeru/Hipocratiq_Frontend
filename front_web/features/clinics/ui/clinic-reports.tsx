@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowUpRight, CalendarDays, CheckCircle2, CircleDollarSign, Clock3, Loader2, Percent, RefreshCw, UserRoundCheck, XCircle } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CheckCircle2, CircleDollarSign, Clock3, Download, Loader2, Percent, RefreshCw, UserRoundCheck, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { getClinicAppointments, getClinicBillingReport, getClinicDashboard } from "@/features/clinics/api/browser-clinic-dashboard";
+import { exportClinicBillingReport, getClinicAppointments, getClinicBillingReport, getClinicDashboard } from "@/features/clinics/api/browser-clinic-dashboard";
 import type { ClinicAppointment, ClinicAppointmentSummary, ClinicBillingReport, ClinicDashboardData } from "@/features/clinics/model/clinic-admin.types";
 import { AdminMetric, Notice, SectionCard, useNotice } from "./clinic-admin-primitives";
 
@@ -82,6 +82,7 @@ export function ClinicReports() {
   const [dashboard, setDashboard] = useState<ClinicDashboardData | null>(null);
   const [billingReport, setBillingReport] = useState<ClinicBillingReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const { notice, showNotice } = useNotice();
   const range = useMemo(() => periodRange(period), [period]);
@@ -109,13 +110,33 @@ export function ClinicReports() {
     return () => { active = false; controller.abort(); };
   }, [range.from, range.to, refreshToken, showNotice]);
 
+  async function handleExport(): Promise<void> {
+    setIsExporting(true);
+    try {
+      const { blob, filename } = await exportClinicBillingReport(range.from, range.to);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showNotice("Reporte exportado correctamente. El CSV es compatible con Excel.");
+    } catch (error: unknown) {
+      showNotice(error instanceof Error ? error.message : "No pudimos exportar el reporte.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   const currentCurrency = Object.values(billingReport?.byCurrency ?? {}).find((item) => item.currency === "MXN") ?? Object.values(billingReport?.byCurrency ?? {})[0];
   const completedAppointments = appointments.filter((appointment) => appointment.status === "completed").length;
   const noShowAppointments = appointments.filter((appointment) => appointment.status === "no_show").length;
 
   return <div className="mx-auto w-full max-w-400 px-4 py-5 sm:px-6 lg:px-7">
     <Notice message={notice} />
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Inteligencia operativa</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Reportes</h1><p className="mt-1 text-xs text-muted">Indicadores operativos y facturación clínica respaldados por datos reales.</p></div><button className="inline-flex min-h-10 items-center gap-2 self-start rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto" type="button" onClick={() => setRefreshToken((token) => token + 1)} disabled={isLoading}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" />Actualizar</button></header>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><p className="font-mono text-[0.62rem] font-bold tracking-[0.13em] text-accent uppercase">Inteligencia operativa</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">Reportes</h1><p className="mt-1 text-xs text-muted">Indicadores operativos y facturación clínica respaldados por datos reales.</p></div><div className="flex flex-wrap gap-2 self-start sm:self-auto"><button className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={() => void handleExport()} disabled={isLoading || isExporting}><Download className={`size-3.5 ${isExporting ? "animate-pulse" : ""}`} aria-hidden="true" />{isExporting ? "Exportando..." : "Exportar Excel/CSV"}</button><button className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-xs font-extrabold hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={() => setRefreshToken((token) => token + 1)} disabled={isLoading}><RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" />Actualizar</button></div></header>
     <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><AdminMetric icon={CircleDollarSign} label="Cobrado en el periodo" value={currentCurrency ? formatMoney(currentCurrency.paidMinor, currentCurrency.currency) : "—"} helper={currentCurrency?.currency ?? "Reporte no disponible"} tone="bg-accent-soft text-accent" /><AdminMetric icon={UserRoundCheck} label="Pacientes registrados" value={dashboard ? String(dashboard.metrics.patientsTotal) : "—"} helper="Perfiles de la clínica" tone="bg-success-soft text-success" /><AdminMetric icon={CheckCircle2} label="Citas completadas" value={isLoading ? "—" : String(completedAppointments)} helper="Agenda del periodo" tone="bg-violet-soft text-violet" /><AdminMetric icon={XCircle} label="No asistieron" value={isLoading ? "—" : String(noShowAppointments)} helper="Seguimiento requerido" tone="bg-danger-soft text-danger" /></section>
     {isLoading ? <div className="mt-4 grid min-h-64 place-items-center rounded-xl border border-line bg-surface text-xs font-semibold text-muted" role="status"><Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />Cargando reportes...</div> : <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0 space-y-4"><div className="flex flex-wrap items-center gap-2"><div className="flex rounded-lg bg-surface-subtle p-1">{reportPeriods.map((item) => <button className={`min-h-8 rounded-md px-3 text-[0.56rem] font-bold ${period === item ? "bg-surface text-accent shadow-sm" : "text-muted"}`} type="button" key={item} onClick={() => setPeriod(item)}>{item}</button>)}</div><span className="text-[0.58rem] text-muted">{range.from} — {range.to}</span></div><div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"><SectionCard className="p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="text-xs font-extrabold">Citas registradas</h2><p className="mt-1 text-[0.56rem] text-muted">Agenda clínica del periodo seleccionado.</p></div><CalendarDays className="size-4 text-accent" aria-hidden="true" /></div><AppointmentBars appointments={appointments} period={period} /></SectionCard><SectionCard className="p-4"><h2 className="text-xs font-extrabold">Estado de citas</h2><StatusDonut summary={summary} /></SectionCard></div><SectionCard className="p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="text-xs font-extrabold">Facturación de pacientes</h2><p className="mt-1 text-[0.56rem] text-muted">El reporte excluye la suscripción de la plataforma.</p></div><CircleDollarSign className="size-4 text-accent" aria-hidden="true" /></div><BillingReportCard report={billingReport} /></SectionCard><SectionCard className="p-4"><h2 className="text-xs font-extrabold">Fuentes disponibles</h2><dl className="mt-3 divide-y divide-line text-[0.6rem]"><div className="flex items-center gap-2 py-2.5"><CheckCircle2 className="size-3.5 text-success" aria-hidden="true" /><dt className="flex-1 text-muted">Agenda clínica</dt><dd className="font-bold">{appointments.length} citas</dd></div><div className="flex items-center gap-2 py-2.5"><CheckCircle2 className="size-3.5 text-success" aria-hidden="true" /><dt className="flex-1 text-muted">Directorio de pacientes</dt><dd className="font-bold">{dashboard?.metrics.patientsTotal ?? "—"}</dd></div><div className="flex items-center gap-2 py-2.5"><Clock3 className="size-3.5 text-muted" aria-hidden="true" /><dt className="flex-1 text-muted">Ocupación por consultorio</dt><dd className="font-bold text-muted">No disponible</dd></div></dl></SectionCard></div>
