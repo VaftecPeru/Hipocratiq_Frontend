@@ -1,4 +1,4 @@
-import { ApiError, deleteFromApi, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
+import { ApiError, deleteFromApi, getFileFromApi, getFromApi, patchToApi, postToApi } from "@/shared/api/http-client";
 import type {
   ClinicAdminInfo,
   ClinicAppointment,
@@ -834,6 +834,23 @@ export async function getClinicBillingReport(
         paidMinor: summary.paid_minor,
       }]),
     ),
+  };
+}
+
+export async function exportClinicBillingReport(
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; filename: string }> {
+  const query = new URLSearchParams({ from, to });
+  const file = await getFileFromApi(
+    `/api/v1/auth/clinic/billing/report/export?${query.toString()}`,
+    { signal },
+  );
+
+  return {
+    blob: file.blob,
+    filename: file.filename ?? `hipocratiq-facturacion-${from}-${to}.csv`,
   };
 }
 
