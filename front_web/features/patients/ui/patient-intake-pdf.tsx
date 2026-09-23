@@ -1,6 +1,6 @@
 "use client";
 
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { PatientIntakeDraft, PatientNarrativeDraft } from "@/features/patients/api/patient-intake";
 
 const styles = StyleSheet.create({
@@ -18,6 +18,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginBottom: 16,
     paddingBottom: 12,
+  },
+  brandRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 7,
+  },
+  logo: {
+    height: 32,
+    objectFit: "contain",
+    width: 32,
+  },
+  brandName: {
+    color: "#101b33",
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: 1.2,
   },
   eyebrow: {
     color: "#0862dd",
@@ -191,7 +208,13 @@ export function PatientIntakePdf({ draft }: { draft: PatientIntakeDraft }) {
     >
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>HipocratiQ · expediente de atención</Text>
+          <View style={styles.brandRow}>
+            <Image src="/logo_hipogratiq_1.png" style={styles.logo} />
+            <View>
+              <Text style={styles.brandName}>HIPOCRATIQ</Text>
+              <Text style={styles.eyebrow}>Expediente de atención</Text>
+            </View>
+          </View>
           <Text style={styles.title}>Historia clínica</Text>
           <Text style={styles.subtitle}>Formulario virtual de ingreso clínico aportado por el paciente.</Text>
         </View>
