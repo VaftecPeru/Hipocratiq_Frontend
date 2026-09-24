@@ -42,7 +42,7 @@ function nextStatus(status: TeleconsultationStatus): { value: TeleconsultationSt
   return null;
 }
 
-const EMPTY_META: DoctorTeleconsultationMeta = { total: 0, scheduled: 0, waiting: 0, in_progress: 0, completed: 0, connection: { status: "not_configured", message: "", } };
+const EMPTY_META: DoctorTeleconsultationMeta = { total: 0, scheduled: 0, waiting: 0, in_progress: 0, completed: 0, connection: { status: "not_configured", provider: "unavailable", message: "" } };
 
 export default function DoctorTelemedicinePage() {
   const [sessions, setSessions] = useState<DoctorTeleconsultation[]>([]);
