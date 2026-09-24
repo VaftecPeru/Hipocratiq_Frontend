@@ -37,6 +37,10 @@ jobs:
         working-directory: front_web
         run: npm ci --no-audit --no-fund
 
+      - name: Audit production dependencies
+        working-directory: front_web
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck frontend
         working-directory: front_web
         run: npm run typecheck
