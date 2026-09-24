@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { DoctorShell } from "@/features/doctors/ui/doctor-shell";
+import { dashboardPathForActorContext } from "@/features/auth/lib/dashboard-path";
 
 export default async function DoctorLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getAuthenticatedSession();
   const locale = await getLocale();
   if (!session) redirect("/");
-  if (session.actor_context !== "doctor" || !session.user.doctor) redirect("/dashboard");
+  if (session.actor_context !== "doctor") redirect(dashboardPathForActorContext(session.actor_context));
+  if (!session.user.doctor) redirect("/unauthorized?reason=doctor-profile-required");
 
   const subtitle = session.user.doctor.practice_type === "clinic"
     ? session.user.doctor.clinic?.name ?? "Médico afiliado"
