@@ -10,6 +10,7 @@ import { CredentialsStep, OtpStep, SuccessStep } from "@/features/auth/ui/auth-s
 import { useAuthPlatformSettings } from "@/features/auth/ui/auth-platform-settings";
 import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 import { ApiError } from "@/shared/api/http-client";
+import { dashboardPathForActorContext } from "@/features/auth/lib/dashboard-path";
 
 type FieldName = "identifier" | "password" | "code";
 type FieldErrors = Partial<Record<FieldName, string>>;
@@ -286,13 +287,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
     startTransition(async () => {
       try {
         const response = await verifyLoginOtp(challengeId.current, code);
-        const destination = response.data.actor_context === "clinic_admin" || response.data.actor_context === "receptionist"
-          ? "/clinic/dashboard"
-          : response.data.actor_context === "doctor"
-            ? "/doctor/dashboard"
-            : response.data.actor_context === "patient"
-              ? "/patient/dashboard"
-              : "/dashboard";
+        const destination = dashboardPathForActorContext(response.data.actor_context);
 
         setPassword("");
         dashboardPath.current = destination;
