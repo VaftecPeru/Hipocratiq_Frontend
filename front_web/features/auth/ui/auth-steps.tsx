@@ -110,8 +110,8 @@ export function CredentialsStep({
   const isSupportLogin = loginRole === "support";
   const administratorLabel = locale.startsWith("en") ? "Clinic administrator" : "Administrador de clínica";
   const supportAccessLabel = locale.startsWith("en")
-    ? "Superadministrator / VAFTEC support access"
-    : "Acceso de Superadministrador / Soporte VAFTEC";
+    ? "Superadministrator access"
+    : "Acceso de Superadministrador";
 
   return (
     <div className="w-full max-w-[38rem]">

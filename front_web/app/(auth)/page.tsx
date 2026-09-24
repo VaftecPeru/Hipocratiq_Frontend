@@ -5,6 +5,7 @@ import { LoginFlow } from "@/features/auth/ui/login-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { PreferenceControls } from "@/shared/ui/preference-controls";
+import { dashboardPathForActorContext } from "@/features/auth/lib/dashboard-path";
 
 export const metadata: Metadata = {
   title: "Iniciar sesión",
@@ -18,7 +19,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getAuthenticatedSession();
 
   if (session) {
-    redirect(session.actor_context === "clinic_admin" || session.actor_context === "receptionist" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : session.actor_context === "patient" ? "/patient/dashboard" : "/dashboard");
+    redirect(dashboardPathForActorContext(session.actor_context));
   }
 
   const requestedRole = await searchParams;
@@ -38,7 +39,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <footer className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-[clamp(1.25rem,4vw,3rem)] py-1 text-2xs text-footer-text">
           <span className="shrink-0 whitespace-nowrap">© {currentYear} Hipocratiq</span>
-          <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Superadministrador / Soporte</Link>
+          <Link href="/?role=support" className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap transition-colors hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring">Superadministrador</Link>
         </footer>
       </section>
 
