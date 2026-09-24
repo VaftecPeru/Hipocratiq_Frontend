@@ -32,6 +32,7 @@ import type {
 } from "@/features/users/model/admin-user.types";
 import {
   CreateUserModal,
+  DoctorCredentialVerificationModal,
   UserDetailModal,
   EditUserModal,
   SendMessageModal,
@@ -286,6 +287,7 @@ export default function UsersPage() {
   const [detailUserOpen, setDetailUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [messageUserOpen, setMessageUserOpen] = useState(false);
+  const [credentialVerificationOpen, setCredentialVerificationOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
   const [filters, setFilters] = useState<AdminUsersFilters>(INITIAL_FILTERS);
   const [search, setSearch] = useState("");
@@ -502,6 +504,10 @@ export default function UsersPage() {
           setDetailUserOpen(false);
           setMessageUserOpen(true);
         }}
+        onVerifyCredentials={() => {
+          setDetailUserOpen(false);
+          setCredentialVerificationOpen(true);
+        }}
         user={
           selectedUser
             ? {
@@ -516,9 +522,19 @@ export default function UsersPage() {
                 status: selectedUser.status,
                 lastAccess: selectedUser.lastAccess,
                 createdAt: selectedUser.createdAt,
+                professionalCredential: selectedUser.professionalCredential,
               }
             : null
         }
+      />
+      <DoctorCredentialVerificationModal
+        isOpen={credentialVerificationOpen}
+        onClose={() => setCredentialVerificationOpen(false)}
+        onVerified={() => {
+          notifySuperadminNavigationMutation(["users"]);
+          setRefreshVersion((current) => current + 1);
+        }}
+        user={selectedUser}
       />
       <EditUserModal
         isOpen={editUserOpen}
