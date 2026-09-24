@@ -5,6 +5,7 @@ import { LoginFlow } from "@/features/auth/ui/login-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { PreferenceControls } from "@/shared/ui/preference-controls";
+import { dashboardPathForActorContext } from "@/features/auth/lib/dashboard-path";
 
 export const metadata: Metadata = {
   title: "Iniciar sesión",
@@ -18,7 +19,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getAuthenticatedSession();
 
   if (session) {
-    redirect(session.actor_context === "clinic_admin" || session.actor_context === "receptionist" ? "/clinic/dashboard" : session.actor_context === "doctor" ? "/doctor/dashboard" : session.actor_context === "patient" ? "/patient/dashboard" : "/dashboard");
+    redirect(dashboardPathForActorContext(session.actor_context));
   }
 
   const requestedRole = await searchParams;
