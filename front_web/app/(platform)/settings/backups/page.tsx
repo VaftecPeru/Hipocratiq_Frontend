@@ -45,7 +45,16 @@ export default async function BackupsPage() {
         </SettingsCard>
       </section>
       <SettingsCard className="mt-4" title="Historial verificado" description="Manifiestos emitidos por el proveedor de respaldos." icon={History} titleId="backup-history">
-        <div className="mt-4 rounded-lg border border-dashed border-line px-4 py-10 text-center"><History className="mx-auto size-6 text-muted" /><p className="mt-2 text-xs font-bold">No hay manifiestos disponibles</p><p className="mt-1 text-2xs text-muted">La vista ya no muestra respaldos de ejemplo ni fechas ficticias.</p></div>
+        {backup.history.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-dashed border-line px-4 py-10 text-center"><History className="mx-auto size-6 text-muted" /><p className="mt-2 text-xs font-bold">No hay manifiestos disponibles</p><p className="mt-1 text-2xs text-muted">Aún no se ha generado un respaldo real en el almacenamiento configurado.</p></div>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-line">
+            <table className="w-full min-w-180 text-left text-xs">
+              <thead className="bg-surface-subtle text-2xs font-extrabold text-muted"><tr><th className="px-3 py-2.5">Respaldo</th><th className="px-3 py-2.5">Fecha</th><th className="px-3 py-2.5">Tamaño</th><th className="px-3 py-2.5">Integridad</th></tr></thead>
+              <tbody>{backup.history.map((item) => <tr className="border-t border-line" key={item.id}><td className="px-3 py-2.5 font-mono text-2xs">{item.id}</td><td className="px-3 py-2.5">{new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}</td><td className="px-3 py-2.5">{(item.sizeBytes / 1024 / 1024).toFixed(2)} MB</td><td className="px-3 py-2.5">{item.verifiedAt ? <span className="font-bold text-success">SHA-256 verificado</span> : <span className="font-bold text-warning">Pendiente de verificar</span>}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
       </SettingsCard>
     </div>
   );

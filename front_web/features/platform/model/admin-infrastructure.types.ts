@@ -1,12 +1,24 @@
 export type InfrastructureStatus = "configured" | "not_configured" | "sandbox" | "local";
 
+export type AdminBackupManifest = {
+  id: string;
+  provider: string;
+  database: string;
+  disk: string;
+  dumpPath: string;
+  sha256: string;
+  sizeBytes: number;
+  createdAt: string;
+  verifiedAt: string | null;
+};
+
 export type AdminBackupInfrastructure = {
   status: InfrastructureStatus;
   provider: string | null;
   storageDisk: string | null;
   retentionDays: number;
   schedule: string | null;
-  history: unknown[];
+  history: AdminBackupManifest[];
   capabilities: { create: boolean; download: boolean; restore: boolean; verify: boolean };
   message: string;
 };

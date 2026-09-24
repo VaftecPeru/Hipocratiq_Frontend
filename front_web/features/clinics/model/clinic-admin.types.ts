@@ -376,7 +376,7 @@ export type ClinicEpidemiologyData = {
     monitoredPatients: number;
     activeAlerts: number;
     highRiskCases: number;
-    trend: "not_configured";
+    trend: "not_configured" | "stable" | "rising" | "falling" | "mixed";
     appointments: number;
     consultations: number;
     laboratoryOrders: number;
@@ -385,7 +385,7 @@ export type ClinicEpidemiologyData = {
   };
   trend: Array<{ month: string; label: string; appointments: number; consultations: number; laboratoryOrders: number }>;
   forecasts: Array<Record<string, string | number>>;
-  alerts: string[];
+  alerts: Array<{ title?: string; detail?: string; severity?: "info" | "warning" | "critical" }>;
   recommendations: string[];
   map: { status: "not_configured"; message: string };
   sources: Record<string, { status: "available" | "no_data"; label: string; count: number }>;

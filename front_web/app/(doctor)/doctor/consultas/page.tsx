@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, ClipboardList, FilePenLine, Play, Plus, UserRound } from "lucide-react";
 import { DoctorAvatar, DoctorCard, MetricCard, SectionHeading, StatusBadge } from "@/features/doctors/ui/doctor-primitives";
 import { ConsultationForm, type ConsultationFormValues } from "@/features/doctors/ui/consultation-form";
@@ -51,6 +52,9 @@ function statusTone(status: string): "blue" | "green" | "orange" | "red" | "viol
 }
 
 export default function DoctorConsultationsPage() {
+  const searchParams = useSearchParams();
+  const requestedPatientId = searchParams.get("patient_id");
+  const requestedAppointmentId = searchParams.get("appointment_id");
   const [patients, setPatients] = useState<DoctorPatient[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
@@ -68,7 +72,12 @@ export default function DoctorConsultationsPage() {
       .then(([patientList, consultationList]) => {
         setPatients(patientList);
         setConsultations(consultationList);
-        if (patientList.length > 0) setSelectedPatientId(String(patientList[0].id));
+        if (patientList.length > 0) {
+          const requested = requestedPatientId && patientList.some((patient) => String(patient.id) === requestedPatientId)
+            ? requestedPatientId
+            : String(patientList[0].id);
+          setSelectedPatientId(requested);
+        }
       })
       .catch((caught: unknown) => {
         if (!(caught instanceof DOMException && caught.name === "AbortError")) {
@@ -77,7 +86,7 @@ export default function DoctorConsultationsPage() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [requestedPatientId]);
 
   const metrics = useMemo(() => {
     const total = consultations.length;
@@ -134,6 +143,7 @@ export default function DoctorConsultationsPage() {
     setSuccess(null);
     try {
       const payload = {
+        appointment_id: mode === "create" && requestedAppointmentId ? Number(requestedAppointmentId) : undefined,
         chief_complaint: values.chiefComplaint,
         objective: values.objective,
         status: values.status,

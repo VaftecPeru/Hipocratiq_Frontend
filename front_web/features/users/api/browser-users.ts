@@ -7,6 +7,7 @@ import type {
   AdminUsersDashboardData,
   AdminUsersFilters,
   AdminUserStatus,
+  ProfessionalCredentialStatus,
 } from "@/features/users/model/admin-user.types";
 import type { CountryCode } from "@/shared/ui/country-flag";
 
@@ -19,6 +20,19 @@ type ApiUser = {
   role: AdminUserRole;
   assignable_roles?: AdminAssignableRole[];
   clinic: { id: number; name: string; address: string } | null;
+  professional_credential: {
+    doctor_profile_id: number;
+    medical_license: string;
+    country_code: string | null;
+    issuer: string | null;
+    verification_status: ProfessionalCredentialStatus;
+    verified_at: string | null;
+    verification_reference: string | null;
+    specialty_license: string | null;
+    specialty_verification_status: ProfessionalCredentialStatus;
+    specialty_verified_at: string | null;
+    specialty_verification_reference: string | null;
+  } | null;
   last_login_at: string | null;
   status: AdminUserStatus;
   created_at: string;
@@ -92,6 +106,19 @@ function mapUser(user: ApiUser): AdminUser {
     role: user.role,
     assignableRoles: user.assignable_roles ?? fallbackAssignableRoles,
     clinic: user.clinic,
+    professionalCredential: user.professional_credential ? {
+      doctorProfileId: user.professional_credential.doctor_profile_id,
+      medicalLicense: user.professional_credential.medical_license,
+      countryCode: user.professional_credential.country_code,
+      issuer: user.professional_credential.issuer,
+      verificationStatus: user.professional_credential.verification_status,
+      verifiedAt: user.professional_credential.verified_at,
+      verificationReference: user.professional_credential.verification_reference,
+      specialtyLicense: user.professional_credential.specialty_license,
+      specialtyVerificationStatus: user.professional_credential.specialty_verification_status,
+      specialtyVerifiedAt: user.professional_credential.specialty_verified_at,
+      specialtyVerificationReference: user.professional_credential.specialty_verification_reference,
+    } : null,
     lastAccess: formatDate(user.last_login_at, true),
     status: user.status,
     createdAt: formatDate(user.created_at),
@@ -221,4 +248,24 @@ export async function getAdminUsers(
       total: payload.meta.total,
     },
   };
+}
+
+
+export type VerifyDoctorCredentialPayload = {
+  credentialType: "professional" | "specialty";
+  status: "verified" | "rejected";
+  reference: string | null;
+  notes: string | null;
+};
+
+export async function verifyDoctorCredential(
+  doctorProfileId: number,
+  payload: VerifyDoctorCredentialPayload,
+): Promise<void> {
+  await postToApi(`/api/v1/auth/admin/doctors/${doctorProfileId}/credentials/verify`, {
+    credential_type: payload.credentialType,
+    status: payload.status,
+    reference: payload.reference,
+    notes: payload.notes,
+  });
 }

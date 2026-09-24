@@ -184,7 +184,7 @@ export function ConsultationForm({
           </div>
 
           <div className="mt-3 grid gap-3">
-            {CLINICAL_SECTIONS.map((section) => (
+            {CLINICAL_SECTIONS.filter((section) => section.key !== "clinician_identification").map((section) => (
               <fieldset key={section.key} className="rounded-lg border border-line p-3">
                 <legend className="px-1 text-[0.68rem] font-extrabold text-ink">{section.title}</legend>
                 <p className="mb-2 text-[0.55rem] font-bold text-ink-secondary">{section.description}</p>
@@ -201,6 +201,12 @@ export function ConsultationForm({
                 </div>
               </fieldset>
             ))}
+          </div>
+          <div className="mt-3 rounded-lg border border-accent/20 bg-accent-soft p-3">
+            <p className="text-[0.62rem] font-extrabold text-accent">Identificación del clínico</p>
+            <p className="mt-1 text-[0.56rem] font-bold leading-4 text-ink-secondary">
+              HIPOCRATIQ completa automáticamente nombre, cédula profesional, cédula de especialidad y unidad al firmar la consulta. Estos datos no son editables desde la ficha clínica.
+            </p>
           </div>
         </DoctorCard>
 

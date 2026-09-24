@@ -5,6 +5,22 @@ export type AdminAssignableRole = Exclude<AdminUserRole, "unassigned">;
 export type AdminUserRoleLabel = "Superadministrador" | "Administrador de Clínica" | "Recepcionista" | "Médico" | "Paciente" | "Sin rol";
 export type AdminUserStatus = "pending_verification" | "active" | "suspended" | "disabled";
 
+export type ProfessionalCredentialStatus = "unverified" | "verified" | "rejected" | "not_applicable";
+
+export type AdminProfessionalCredential = {
+  doctorProfileId: number;
+  medicalLicense: string;
+  countryCode: string | null;
+  issuer: string | null;
+  verificationStatus: ProfessionalCredentialStatus;
+  verifiedAt: string | null;
+  verificationReference: string | null;
+  specialtyLicense: string | null;
+  specialtyVerificationStatus: ProfessionalCredentialStatus;
+  specialtyVerifiedAt: string | null;
+  specialtyVerificationReference: string | null;
+};
+
 export type AdminUser = {
   id: number;
   name: string;
@@ -14,6 +30,7 @@ export type AdminUser = {
   role: AdminUserRole;
   assignableRoles: AdminAssignableRole[];
   clinic: { id: number; name: string; address: string } | null;
+  professionalCredential: AdminProfessionalCredential | null;
   lastAccess: string;
   status: AdminUserStatus;
   createdAt: string;

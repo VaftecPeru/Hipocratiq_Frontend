@@ -1,9 +1,9 @@
 "use client";
 
-import { Send, Shield, UserPlus } from "lucide-react";
+import { BadgeCheck, Send, Shield, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { createAdminUser, sendAdminUserMessage, updateAdminUser } from "@/features/users/api/browser-users";
+import { createAdminUser, sendAdminUserMessage, updateAdminUser, verifyDoctorCredential } from "@/features/users/api/browser-users";
 import type { AdminUser, AdminUserRoleLabel, AdminUsersDashboardData, AdminUserStatus } from "@/features/users/model/admin-user.types";
 import { CountryFlag, type CountryCode } from "@/shared/ui/country-flag";
 import { Modal } from "@/shared/ui/modal";
@@ -32,6 +32,7 @@ type UserFormData = {
 type UserDetailData = UserFormData & {
   lastAccess: string;
   createdAt: string;
+  professionalCredential: AdminUser["professionalCredential"];
 };
 
 const STATUS_LABELS: Record<AdminUserStatus, string> = {
@@ -127,11 +128,13 @@ export function UserDetailModal({
   isOpen,
   onClose,
   onMessage,
+  onVerifyCredentials,
   user,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onMessage: () => void;
+  onVerifyCredentials: () => void;
   user: UserDetailData | null;
 }) {
   if (!user) return null;
@@ -161,6 +164,9 @@ export function UserDetailModal({
           {user.clinic ? <ModalDetailRow label="Clínica">{user.clinic}</ModalDetailRow> : null}
           <ModalDetailRow label="Último acceso">{user.lastAccess}</ModalDetailRow>
           <ModalDetailRow label="Fecha de registro">{user.createdAt}</ModalDetailRow>
+          {user.professionalCredential ? <ModalDetailRow label="Cédula profesional">{user.professionalCredential.medicalLicense}</ModalDetailRow> : null}
+          {user.professionalCredential ? <ModalDetailRow label="Verificación">{user.professionalCredential.verificationStatus === "verified" ? "Verificada" : user.professionalCredential.verificationStatus === "rejected" ? "Rechazada" : "Pendiente"}</ModalDetailRow> : null}
+          {user.professionalCredential?.specialtyLicense ? <ModalDetailRow label="Cédula de especialidad">{user.professionalCredential.specialtyLicense}</ModalDetailRow> : null}
         </dl>
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -168,11 +174,90 @@ export function UserDetailModal({
             <Send className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             Enviar mensaje
           </button>
+          {user.professionalCredential ? <button className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-xs font-bold text-success transition-colors hover:opacity-90 focus-visible:outline-3 focus-visible:outline-focus sm:min-h-9" type="button" onClick={onVerifyCredentials}>
+            <BadgeCheck className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
+            Verificar cédula
+          </button> : null}
           <Link className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus-visible:outline-3 focus-visible:outline-focus sm:min-h-9" href={`/roles-permissions?search=${encodeURIComponent(user.email === "Sin correo" ? user.name : user.email)}`}>
             <Shield className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             Permisos
           </Link>
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+export function DoctorCredentialVerificationModal({
+  isOpen,
+  onClose,
+  onVerified,
+  user,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onVerified: () => void;
+  user: AdminUser | null;
+}) {
+  const credential = user?.professionalCredential;
+  const [credentialType, setCredentialType] = useState<"professional" | "specialty">("professional");
+  const [status, setStatus] = useState<"verified" | "rejected">("verified");
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  if (!user || !credential) return null;
+  const selectedCredential = credential;
+
+  async function handleSubmit() {
+    if (isLoading || (status === "verified" && !reference.trim())) return;
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await verifyDoctorCredential(selectedCredential.doctorProfileId, {
+        credentialType,
+        status,
+        reference: reference.trim() || null,
+        notes: notes.trim() || null,
+      });
+      onVerified();
+      onClose();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No pudimos registrar la verificación.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      title="Verificar cédula profesional"
+      description={user.name}
+      footer={<><ModalSecondaryButton onClick={onClose} disabled={isLoading}>Cancelar</ModalSecondaryButton><ModalPrimaryButton onClick={handleSubmit} disabled={isLoading || (status === "verified" && !reference.trim())}>{isLoading ? "Guardando..." : "Registrar verificación"}</ModalPrimaryButton></>}
+    >
+      <div className="space-y-4">
+        <div className="rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+          <p className="font-extrabold text-ink">Cédula profesional: {credential.medicalLicense}</p>
+          <p className="mt-1 text-2xs text-muted">País: {credential.countryCode ?? "—"} · Emisor: {credential.issuer ?? "Pendiente"}</p>
+          {credential.specialtyLicense ? <p className="mt-1 font-bold text-ink-secondary">Cédula de especialidad: {credential.specialtyLicense}</p> : null}
+        </div>
+        <ModalSelect id="credential-type" label="Credencial" value={credentialType} onChange={(value) => setCredentialType(value as "professional" | "specialty")} options={[
+          { value: "professional", label: "Cédula profesional" },
+          ...(credential.specialtyLicense ? [{ value: "specialty", label: "Cédula de especialidad" }] : []),
+        ]} required />
+        <ModalSelect id="credential-status" label="Resultado" value={status} onChange={(value) => setStatus(value as "verified" | "rejected")} options={[
+          { value: "verified", label: "Verificada" },
+          { value: "rejected", label: "Rechazada" },
+        ]} required />
+        <ModalField id="credential-reference" label="Referencia / evidencia" value={reference} onChange={(event) => setReference(event.target.value)} required={status === "verified"} placeholder="Referencia de consulta o evidencia administrativa" />
+        <ModalTextarea id="credential-notes" label="Notas" value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} />
+        <p className="rounded-lg border border-warning/25 bg-warning-soft p-3 text-2xs leading-5 text-warning">Este registro deja trazabilidad administrativa. No afirma una integración automática con un registro externo si no existe una API oficial configurada.</p>
+        {error ? <p className="rounded-lg border border-danger/25 bg-danger-soft p-3 text-xs text-danger" role="alert">{error}</p> : null}
       </div>
     </Modal>
   );
