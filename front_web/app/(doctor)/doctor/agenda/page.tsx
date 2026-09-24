@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   CalendarCheck2,
   CalendarDays,
@@ -7,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Filter,
+  FileText,
   HeartPulse,
   Pencil,
   Plus,
@@ -422,7 +424,7 @@ export default function DoctorAgendaPage() {
                     <td className="px-3 py-2.5"><div className="flex items-center gap-2.5"><DoctorAvatar initials={initialsOf(appointment.patient.name)} tone={appointment.id % 2 === 0 ? "blue" : "orange"} size="md" /><div><p className="text-[0.63rem] font-extrabold">{appointment.patient.name ?? "Paciente"}</p><p className="mt-0.5 text-[0.55rem] font-bold text-ink-secondary">{appointment.patient.patientCode}</p></div></div></td>
                     <td className="px-3 py-2.5"><StatusBadge tone={appointment.appointmentType.toLowerCase().includes("tele") ? "blue" : "slate"}>{appointment.appointmentType}</StatusBadge></td>
                     <td className="px-3 py-2.5"><StatusBadge tone={statusTone(appointment.status)}>{appointment.statusLabel}</StatusBadge></td>
-                    <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><button className="grid size-7 place-items-center rounded-md border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={`Editar cita de ${appointment.patient.name ?? "paciente"}`} onClick={() => openEditForm(appointment)}><Pencil className="size-3" aria-hidden="true" /></button>{!(["completed", "canceled", "no_show"] as DoctorAppointmentStatus[]).includes(appointment.status) ? <button className="grid size-7 place-items-center rounded-md border border-danger/20 text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="button" aria-label={`Cancelar cita de ${appointment.patient.name ?? "paciente"}`} disabled={pending} onClick={() => void handleCancel(appointment)}><X className="size-3" aria-hidden="true" /></button> : null}</div></td>
+                    <td className="px-3 py-2.5"><div className="flex items-center gap-1.5"><Link className="grid size-7 place-items-center rounded-md border border-accent/20 text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus" href={`/doctor/consultas?patient_id=${appointment.patient.id}&appointment_id=${appointment.id}`} aria-label={`Registrar historia clínica de ${appointment.patient.name ?? "paciente"}`}><FileText className="size-3" aria-hidden="true" /></Link><button className="grid size-7 place-items-center rounded-md border border-line text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={`Editar cita de ${appointment.patient.name ?? "paciente"}`} onClick={() => openEditForm(appointment)}><Pencil className="size-3" aria-hidden="true" /></button>{!(["completed", "canceled", "no_show"] as DoctorAppointmentStatus[]).includes(appointment.status) ? <button className="grid size-7 place-items-center rounded-md border border-danger/20 text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" type="button" aria-label={`Cancelar cita de ${appointment.patient.name ?? "paciente"}`} disabled={pending} onClick={() => void handleCancel(appointment)}><X className="size-3" aria-hidden="true" /></button> : null}</div></td>
                    </tr>)}</tbody>
                  </table>
                  {visibleAppointments.some((appointment) => nextAppointmentStatus(appointment.status) !== null) ? <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/15 bg-accent-soft px-3 py-2"><span className="text-[0.56rem] font-extrabold text-ink-secondary">Avanzar estado:</span>{visibleAppointments.map((appointment) => { const nextStatus = nextAppointmentStatus(appointment.status); return nextStatus ? <button className="rounded-md border border-accent/20 bg-surface px-2 py-1 text-[0.54rem] font-extrabold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60" key={appointment.id} type="button" disabled={pending} onClick={() => void handleStatusChange(appointment, nextStatus.value)}>{appointment.patient.name ?? "Paciente"}: {nextStatus.label}</button> : null; })}</div> : null}
