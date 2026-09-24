@@ -1,4 +1,4 @@
-package com.example.front_movil
+package com.vaftec.hipocratiq
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -2,7 +2,7 @@ class AppConfig {
   const AppConfig({
     required this.backendUrl,
     required this.supportPortalUrl,
-    this.deviceName = 'HipocratiQ Mobile',
+    this.deviceName = 'HIPOCRATIQ Mobile',
     this.isReleaseBuild = const bool.fromEnvironment('dart.vm.product'),
   });
 
@@ -12,7 +12,7 @@ class AppConfig {
       supportPortalUrl: String.fromEnvironment('SUPPORT_PORTAL_URL'),
       deviceName: String.fromEnvironment(
         'DEVICE_NAME',
-        defaultValue: 'HipocratiQ Mobile',
+        defaultValue: 'HIPOCRATIQ Mobile',
       ),
     );
   }
