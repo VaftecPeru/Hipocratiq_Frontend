@@ -303,7 +303,13 @@ export type DoctorTeleconsultation = {
   startedAt: string | null;
   endedAt: string | null;
   notes: string | null;
-  connection: { status: "not_configured"; message: string; joinable: false };
+  connection: {
+    status: "configured" | "not_configured";
+    provider: string;
+    message: string;
+    joinable: boolean;
+    joinUrl: string | null;
+  };
 };
 
 export type DoctorTeleconsultationPayload = {
@@ -320,7 +326,7 @@ export type DoctorTeleconsultationMeta = {
   waiting: number;
   in_progress: number;
   completed: number;
-  connection: { status: "not_configured"; message: string };
+  connection: { status: "configured" | "not_configured"; provider: string; message: string };
 };
 
 export type DoctorMessage = {
@@ -813,7 +819,13 @@ type ApiTeleconsultation = {
   started_at: string | null;
   ended_at: string | null;
   notes: string | null;
-  connection: { status: "not_configured"; message: string; joinable: false };
+  connection: {
+    status: "configured" | "not_configured";
+    provider: string;
+    message: string;
+    joinable: boolean;
+    join_url: string | null;
+  };
 };
 
 type ApiDoctorMessage = {
@@ -880,7 +892,13 @@ function mapTeleconsultation(session: ApiTeleconsultation): DoctorTeleconsultati
     startedAt: session.started_at,
     endedAt: session.ended_at,
     notes: session.notes,
-    connection: session.connection,
+    connection: {
+      status: session.connection.status,
+      provider: session.connection.provider,
+      message: session.connection.message,
+      joinable: session.connection.joinable,
+      joinUrl: session.connection.join_url,
+    },
   };
 }
 
