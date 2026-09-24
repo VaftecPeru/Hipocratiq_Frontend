@@ -7,6 +7,13 @@ export type DoctorProfile = {
   phoneNumber: string;
   countryCode: "MX" | "PE" | "US";
   medicalLicense: string;
+  medicalLicenseCountryCode: string | null;
+  medicalLicenseIssuer: string | null;
+  medicalLicenseVerificationStatus: "unverified" | "verified" | "rejected";
+  medicalLicenseVerifiedAt: string | null;
+  specialtyLicense: string | null;
+  specialtyLicenseVerificationStatus: "not_applicable" | "unverified" | "verified" | "rejected";
+  specialtyLicenseVerifiedAt: string | null;
   specialty: string;
   specialtyId: number | null;
   subspecialtyId: number | null;
@@ -21,6 +28,13 @@ type ApiDoctorProfile = {
   phone_number: string;
   country_code: DoctorProfile["countryCode"];
   medical_license: string;
+  medical_license_country_code: string | null;
+  medical_license_issuer: string | null;
+  medical_license_verification_status: DoctorProfile["medicalLicenseVerificationStatus"];
+  medical_license_verified_at: string | null;
+  specialty_license: string | null;
+  specialty_license_verification_status: DoctorProfile["specialtyLicenseVerificationStatus"];
+  specialty_license_verified_at: string | null;
   specialty: string;
   specialty_id: number | null;
   subspecialty_id: number | null;
@@ -36,6 +50,13 @@ function mapProfile(profile: ApiDoctorProfile): DoctorProfile {
     phoneNumber: profile.phone_number,
     countryCode: profile.country_code,
     medicalLicense: profile.medical_license,
+    medicalLicenseCountryCode: profile.medical_license_country_code,
+    medicalLicenseIssuer: profile.medical_license_issuer,
+    medicalLicenseVerificationStatus: profile.medical_license_verification_status,
+    medicalLicenseVerifiedAt: profile.medical_license_verified_at,
+    specialtyLicense: profile.specialty_license,
+    specialtyLicenseVerificationStatus: profile.specialty_license_verification_status,
+    specialtyLicenseVerifiedAt: profile.specialty_license_verified_at,
     specialty: profile.specialty,
     specialtyId: profile.specialty_id,
     subspecialtyId: profile.subspecialty_id,
@@ -51,7 +72,7 @@ export function getDoctorProfile(signal?: AbortSignal): Promise<DoctorProfile> {
   });
 }
 
-export type UpdateDoctorProfilePayload = Partial<Pick<DoctorProfile, "name" | "email" | "phoneNumber" | "countryCode" | "medicalLicense" | "specialtyId" | "subspecialtyId">>;
+export type UpdateDoctorProfilePayload = Partial<Pick<DoctorProfile, "name" | "email" | "phoneNumber" | "countryCode" | "medicalLicense" | "specialtyLicense" | "specialtyId" | "subspecialtyId">>;
 
 export function updateDoctorProfile(payload: UpdateDoctorProfilePayload): Promise<DoctorProfile> {
   return patchToApi<{ data: ApiDoctorProfile }>("/api/v1/auth/doctor/profile", {
@@ -60,6 +81,7 @@ export function updateDoctorProfile(payload: UpdateDoctorProfilePayload): Promis
     phone_number: payload.phoneNumber,
     country_code: payload.countryCode,
     medical_license: payload.medicalLicense,
+    specialty_license: payload.specialtyLicense,
     specialty_id: payload.specialtyId,
     subspecialty_id: payload.subspecialtyId,
   }).then((response) => {
