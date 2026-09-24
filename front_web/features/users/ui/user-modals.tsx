@@ -208,6 +208,7 @@ export function DoctorCredentialVerificationModal({
   const [isLoading, setIsLoading] = useState(false);
 
   if (!user || !credential) return null;
+  const selectedCredential = credential;
 
   async function handleSubmit() {
     if (isLoading || (status === "verified" && !reference.trim())) return;
@@ -215,7 +216,7 @@ export function DoctorCredentialVerificationModal({
     setError(null);
 
     try {
-      await verifyDoctorCredential(credential.doctorProfileId, {
+      await verifyDoctorCredential(selectedCredential.doctorProfileId, {
         credentialType,
         status,
         reference: reference.trim() || null,
