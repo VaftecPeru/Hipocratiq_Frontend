@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:security": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@fontsource-variable/roboto-mono": "^5.2.9",
@@ -15,7 +16,7 @@
     "boneyard-js": "^1.9.0",
     "country-flag-icons": "^1.6.20",
     "lucide-react": "^1.24.0",
-    "next": "16.2.12",
+    "next": "16.3.6",
     "next-intl": "^4.14.2",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -26,12 +27,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
     "postcss": "8.5.25",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   }
 }
