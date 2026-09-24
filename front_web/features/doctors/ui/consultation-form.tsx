@@ -201,6 +201,7 @@ export function ConsultationForm({
                 </div>
               </fieldset>
             ))}
+          </div>
           <div className="mt-3 rounded-lg border border-accent/20 bg-accent-soft p-3">
             <p className="text-[0.62rem] font-extrabold text-accent">Identificación del clínico</p>
             <p className="mt-1 text-[0.56rem] font-bold leading-4 text-ink-secondary">
