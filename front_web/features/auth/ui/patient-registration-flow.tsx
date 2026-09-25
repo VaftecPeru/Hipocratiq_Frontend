@@ -12,7 +12,7 @@ import {
   type PatientRegistrationDraft,
 } from "@/features/auth/api/patient-registration";
 import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { CountryCode } from "@/features/auth/model/auth.types";
+import type { CountryCode, GoogleIdentityProfile } from "@/features/auth/model/auth.types";
 import { ClinicOtpStep, RegistrationSuccessStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/auth/ui/clinic-registration-ui";
 import { PatientRegistrationForm } from "@/features/auth/ui/patient-registration-form";
@@ -44,10 +44,25 @@ function validateDraft(draft: PatientRegistrationDraft): RegistrationFieldErrors
   return errors;
 }
 
-export function PatientRegistrationFlow({ onBack }: { onBack: () => void }) {
+type PatientRegistrationFlowProps = {
+  onBack: () => void;
+  googleIdentity?: GoogleIdentityProfile;
+  googleRegistrationToken?: string;
+};
+
+export function PatientRegistrationFlow({
+  onBack,
+  googleIdentity,
+  googleRegistrationToken,
+}: PatientRegistrationFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<"details" | "otp" | "success">("details");
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState<PatientRegistrationDraft>({
+    ...initialDraft,
+    name: googleIdentity?.name ?? "",
+    email: googleIdentity?.email ?? "",
+    google_registration_token: googleRegistrationToken,
+  });
   const [clinics, setClinics] = useState<PatientRegistrationClinic[]>([]);
   const [challengeId, setChallengeId] = useState("");
   const [expiresIn, setExpiresIn] = useState(0);
