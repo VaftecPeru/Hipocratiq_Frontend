@@ -50,3 +50,36 @@ export type OtpChallengeResponse = {
     resends_remaining: number;
   };
 };
+
+
+export type GoogleRegistrationType = "clinic" | "doctor" | "patient";
+
+export type GoogleIdentityProfile = {
+  name: string;
+  email: string;
+  avatar: string | null;
+};
+
+export type GoogleAuthCompleteResponse = {
+  success: true;
+  data:
+    | {
+        status: "authenticated";
+        user: AuthenticatedUser;
+        actor_context: AuthenticatedSession["actor_context"];
+      }
+    | {
+        status: "registration_required";
+        registration_type: GoogleRegistrationType;
+        registration_token: string;
+        identity: GoogleIdentityProfile;
+      };
+};
+
+export type GoogleRegistrationProfileResponse = {
+  success: true;
+  data: {
+    registration_type: GoogleRegistrationType;
+    identity: GoogleIdentityProfile;
+  };
+};
