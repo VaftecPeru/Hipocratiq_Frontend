@@ -14,7 +14,7 @@ const landingCases: RoleCase[] = [
   { cookieRole: "patient", expectedPath: "/patient/dashboard" },
 ];
 
-async function useRole(page: Page, role: string) {
+async function setRoleSession(page: Page, role: string) {
   await page.context().addCookies([
     { name: "e2e-role", value: role, domain: "127.0.0.1", path: "/" },
     { name: "hipocratiq_e2e_session", value: "active", domain: "127.0.0.1", path: "/" },
@@ -23,7 +23,7 @@ async function useRole(page: Page, role: string) {
 
 for (const { cookieRole, expectedPath } of landingCases) {
   test(`${cookieRole} lands on ${expectedPath}`, async ({ page }) => {
-    await useRole(page, cookieRole);
+    await setRoleSession(page, cookieRole);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(`${expectedPath.replaceAll("/", "\\/")}(?:\\?.*)?$`));
   });
@@ -39,14 +39,14 @@ test("cross-role protected routes return the user to the coherent dashboard", as
 
   for (const item of cases) {
     await page.context().clearCookies();
-    await useRole(page, item.role);
+    await setRoleSession(page, item.role);
     await page.goto(item.requested, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(`${item.expected.replaceAll("/", "\\/")}(?:\\?.*)?$`));
   }
 });
 
 test("clinic actor without a resolved clinic stops on unauthorized instead of redirect looping", async ({ page }) => {
-  await useRole(page, "clinic_admin_no_clinic");
+  await setRoleSession(page, "clinic_admin_no_clinic");
   await page.goto("/clinic/dashboard", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/unauthorized\?reason=clinic-context-required$/);
 });
