@@ -259,6 +259,11 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
     });
   }
 
+  function startGoogleSignIn() {
+    const query = new URLSearchParams({ requested_role: requestedRole });
+    window.location.assign(`/backend/api/v1/auth/google/redirect?${query.toString()}`);
+  }
+
   function submitCredentials(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!validateCredentials()) return;
@@ -398,6 +403,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
           ? { type: "fieldCleared", field: "password" }
           : { type: "fieldInvalid", field: "password", message: t("validationPasswordRequired") });
       }}
+      onGoogleSignIn={startGoogleSignIn}
       onSubmit={submitCredentials}
     />
   );
