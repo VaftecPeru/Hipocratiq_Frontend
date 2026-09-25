@@ -1,11 +1,14 @@
 import type {
+  GoogleAuthCompleteResponse,
+  GoogleRegistrationProfileResponse,
+  GoogleRegistrationType,
   LoginActorContext,
   LoginRequestedRole,
   OtpChallengeResponse,
   WebLoginVerificationResponse,
 } from "@/features/auth/model/auth.types";
 import { invalidatePlatformData } from "@/features/platform/model/platform-data-cache";
-import { ApiError, postToApi } from "@/shared/api/http-client";
+import { ApiError, getFromApi, postToApi } from "@/shared/api/http-client";
 
 type RequestLoginOtpInput =
   | { identifier: string; actorContext: "staff"; requestedRole: Exclude<LoginRequestedRole, "patient">; password: string }
@@ -89,4 +92,23 @@ export async function logout(): Promise<void> {
     clearLegacyBrowserToken();
     invalidatePlatformData(["audit", "emergency", "support"]);
   }
+}
+
+
+export function completeGoogleAuth(handoff: string): Promise<GoogleAuthCompleteResponse> {
+  clearLegacyBrowserToken();
+  invalidatePlatformData(["audit", "emergency", "support"]);
+
+  return postToApi<GoogleAuthCompleteResponse>("/api/v1/auth/google/complete", { handoff });
+}
+
+export function getGoogleRegistrationProfile(
+  token: string,
+  type: GoogleRegistrationType,
+): Promise<GoogleRegistrationProfileResponse> {
+  const query = new URLSearchParams({ token, type });
+
+  return getFromApi<GoogleRegistrationProfileResponse>(
+    `/api/v1/auth/google/registration-profile?${query.toString()}`,
+  );
 }
