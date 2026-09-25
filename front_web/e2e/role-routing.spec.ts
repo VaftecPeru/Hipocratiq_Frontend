@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 type RoleCase = {
   cookieRole: string;
@@ -14,7 +14,7 @@ const landingCases: RoleCase[] = [
   { cookieRole: "patient", expectedPath: "/patient/dashboard" },
 ];
 
-async function useRole(page: Parameters<typeof test>[0] extends never ? never : any, role: string) {
+async function useRole(page: Page, role: string) {
   await page.context().addCookies([
     { name: "e2e-role", value: role, domain: "127.0.0.1", path: "/" },
     { name: "hipocratiq_e2e_session", value: "active", domain: "127.0.0.1", path: "/" },
