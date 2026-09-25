@@ -14,6 +14,7 @@ export type PatientRegistrationDraft = {
   phone_number: string;
   clinic_id: number | null;
   terms_accepted: boolean;
+  google_registration_token?: string;
 };
 
 export type PatientChallengeData = {
