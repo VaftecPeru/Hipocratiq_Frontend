@@ -21,6 +21,7 @@ export type ClinicRegistrationDraft = {
   password: string;
   password_confirmation: string;
   terms_accepted: boolean;
+  google_registration_token?: string;
 };
 
 type PlansResponse = { data: ClinicPlan[] };
