@@ -14,17 +14,16 @@ type Props = {
 
 export function GoogleAuthCallback({ handoff, errorCode }: Props) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(
-    errorCode ? "No pudimos completar el acceso con Google." : null,
+  const [error, setError] = useState<string | null>(() =>
+    errorCode
+      ? "No pudimos completar el acceso con Google."
+      : !handoff
+        ? "La respuesta de Google no contiene una sesión válida."
+        : null,
   );
 
   useEffect(() => {
-    if (errorCode || !handoff) {
-      if (!errorCode && !handoff) {
-        setError("La respuesta de Google no contiene una sesión válida.");
-      }
-      return;
-    }
+    if (errorCode || !handoff) return;
 
     let active = true;
 
