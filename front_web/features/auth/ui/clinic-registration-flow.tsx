@@ -117,7 +117,6 @@ export function ClinicRegistrationFlow({
     if (!googleRegistrationToken || !googleRegistrationType) return;
 
     let active = true;
-    setGoogleLoading(true);
     getGoogleRegistrationProfile(googleRegistrationToken, googleRegistrationType)
       .then((response) => {
         if (!active) return;
