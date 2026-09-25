@@ -144,6 +144,8 @@
       "eyebrow": "Acceso restringido",
       "title": "Tu sesión no tiene acceso a esta área.",
       "description": "La cuenta está activa, pero el rol actual no incluye permisos para consultar esta sección.",
+      "accountContextDetail": "Tu cuenta no tiene un contexto de acceso válido para esta sección. Contacta al administrador para revisar tu perfil. Puedes cerrar sesión e ingresar con otra cuenta.",
+      "clinicContextDetail": "No pudimos determinar una única clínica activa para tu cuenta. Contacta al administrador para revisar tus membresías. Puedes cerrar sesión e ingresar con otra cuenta.",
       "detail": "Vuelve a tu panel o inicia sesión con una cuenta que tenga la autorización necesaria.",
       "primary": "Volver al inicio",
       "secondary": "Ir a mi panel",

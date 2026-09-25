@@ -109,7 +109,16 @@ export function ConsultationForm({
     initialValues.sections ?? emptyClinicalValues(),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const canSign = mode === "edit" && initialValues.status === "completed";
+  const readOnly = initialValues.status === "signed" || initialValues.status === "canceled";
+  const allowedStatuses: DoctorConsultationStatus[] = mode === "create" || initialValues.status === "draft"
+    ? ["in_progress", "draft", "completed", "canceled"]
+    : initialValues.status === "completed" ? ["completed", "signed"]
+    : readOnly ? [initialValues.status as DoctorConsultationStatus]
+    : ["in_progress", "completed", "canceled"];
+  const statusLabels: Record<DoctorConsultationStatus, string> = {
+    draft: "Borrador", in_progress: "En curso", completed: "Completada",
+    signed: readOnly ? "Firmada" : "Firmar consulta", canceled: "Cancelada",
+  };
 
   function setSectionValue(sectionKey: string, inputKey: string, value: string): void {
     setSections((current) => ({
@@ -129,13 +138,13 @@ export function ConsultationForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (!validate()) return;
+    if (pending || readOnly || !validate()) return;
     void onSubmit({ chiefComplaint: chiefComplaint.trim(), objective: objective.trim(), status, sections });
   }
 
   return (
     <form onSubmit={handleSubmit} aria-busy={pending}>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <fieldset disabled={pending || readOnly} className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <DoctorCard className="min-w-0 p-4">
           <div className="flex items-center gap-2 border-b border-line pb-3">
             <span className="grid size-7 place-items-center rounded-lg bg-accent-soft text-accent" aria-hidden="true">
@@ -221,13 +230,11 @@ export function ConsultationForm({
                 onChange={(event) => setStatus(event.target.value as DoctorConsultationStatus)}
                 aria-label="Estado de la consulta"
               >
-                <option value="in_progress">En curso</option>
-                 <option value="completed">Completada</option>
-                 {canSign || status === "signed" ? <option value="signed">Firmar consulta</option> : null}
-                 <option value="draft">Borrador</option>
+                {allowedStatuses.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}
               </select>
             </label>
             <p className="mt-3 text-[0.56rem] font-bold leading-4 text-ink-secondary">
+              {readOnly ? "Registro de solo lectura. " : "Antes de completar, revisa motivo, antecedentes, exploración, diagnóstico, tratamiento y seguimiento. La firma cierra la edición. "}
               Los valores de los 15 apartados se guardan como historia clínica vinculada a esta consulta. Si no escribes
                un objetivo, se conserva el de la admisión clínica del paciente cuando existe.
             </p>
@@ -245,7 +252,7 @@ export function ConsultationForm({
             <button
               className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60"
               type="submit"
-              disabled={pending}
+              disabled={pending || readOnly}
             >
               {pending ? <Spinner className="size-3.5" /> : <Save className="size-3.5" aria-hidden="true" />}
               {mode === "create" ? "Crear consulta" : "Guardar cambios"}
@@ -254,14 +261,14 @@ export function ConsultationForm({
               className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus"
               type="button"
               onClick={onCancel}
-              disabled={pending}
+              disabled={pending || readOnly}
             >
               <X className="size-3.5" aria-hidden="true" />
               Cancelar
             </button>
           </div>
         </aside>
-      </div>
+      </fieldset>
     </form>
   );
 }

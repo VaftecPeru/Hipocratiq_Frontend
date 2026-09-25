@@ -55,6 +55,10 @@ export default function DoctorConsultationsPage() {
   const searchParams = useSearchParams();
   const requestedPatientId = searchParams.get("patient_id");
   const requestedAppointmentId = searchParams.get("appointment_id");
+  const requestContext = JSON.stringify([requestedPatientId, requestedAppointmentId]);
+  const [loadedContext, setLoadedContext] = useState<string | null>(null);
+  const [appointmentId, setAppointmentId] = useState<string | null>(requestedAppointmentId);
+  const [revision, setRevision] = useState(0);
   const [patients, setPatients] = useState<DoctorPatient[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
@@ -70,23 +74,48 @@ export default function DoctorConsultationsPage() {
     const controller = new AbortController();
     Promise.all([getDoctorPatients(controller.signal), getDoctorConsultations(controller.signal)])
       .then(([patientList, consultationList]) => {
+        if (controller.signal.aborted) return;
+        setMode("create");
+        setEditingId(null);
+        setInitialValues({});
+        setRevision((value) => value + 1);
+        setError(null);
+        setSuccess(null);
+        setSelectedPatientId("");
         setPatients(patientList);
         setConsultations(consultationList);
         if (patientList.length > 0) {
-          const requested = requestedPatientId && patientList.some((patient) => String(patient.id) === requestedPatientId)
-            ? requestedPatientId
+          const requested = requestedPatientId
+            ? (patientList.some((patient) => String(patient.id) === requestedPatientId) ? requestedPatientId : "")
             : String(patientList[0].id);
           setSelectedPatientId(requested);
+          if (!requested) setError("El paciente solicitado no está disponible. Vuelve a la agenda.");
+        }
+        setAppointmentId(requestedAppointmentId);
+        const existing = consultationList.find((item) => String(item.appointmentId) === requestedAppointmentId);
+        if (existing) {
+          setMode("edit");
+          setEditingId(existing.id);
+          setSelectedPatientId(String(existing.patient?.id ?? ""));
+          const payload = consultationToPayload(existing);
+          setInitialValues({ chiefComplaint: payload.chief_complaint, objective: payload.objective ?? "",
+            status: existing.status, sections: { ...emptyClinicalValues(), ...(payload.sections ?? {}) } });
         }
       })
       .catch((caught: unknown) => {
-        if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+        if (!controller.signal.aborted && !(caught instanceof DOMException && caught.name === "AbortError")) {
+          setPatients([]);
+          setConsultations([]);
+          setSelectedPatientId("");
+          setEditingId(null);
+          setMode("create");
+          setInitialValues({});
           setError(caught instanceof Error ? caught.message : "No pudimos cargar las consultas.");
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!controller.signal.aborted) { setLoading(false); setLoadedContext(requestContext); } });
     return () => controller.abort();
-  }, [requestedPatientId]);
+  }, [requestedPatientId, requestedAppointmentId, requestContext]);
 
   const metrics = useMemo(() => {
     const total = consultations.length;
@@ -109,22 +138,21 @@ export default function DoctorConsultationsPage() {
     setInitialValues({});
     setEditingId(null);
     setMode("create");
+    setAppointmentId(null);
+    setRevision((value) => value + 1);
   }
 
   function startCreate(): void {
+    if (pending) return;
     resetForm();
     setError(null);
     setSuccess(null);
   }
 
   function startEdit(consultation: Consultation): void {
-    if (consultation.status === "signed") {
-      setError("Una consulta firmada no se puede modificar.");
-      setSuccess(null);
-      return;
-    }
     setMode("edit");
     setEditingId(consultation.id);
+    setRevision((value) => value + 1);
     setSelectedPatientId(String(consultation.patient?.id ?? ""));
     const payload = consultationToPayload(consultation);
     setInitialValues({
@@ -138,12 +166,13 @@ export default function DoctorConsultationsPage() {
   }
 
   async function handleSubmit(values: ConsultationFormValues): Promise<void> {
+    if (pending) return;
     setPending(true);
     setError(null);
     setSuccess(null);
     try {
       const payload = {
-        appointment_id: mode === "create" && requestedAppointmentId ? Number(requestedAppointmentId) : undefined,
+        appointment_id: mode === "create" && appointmentId ? Number(appointmentId) : undefined,
         chief_complaint: values.chiefComplaint,
         objective: values.objective,
         status: values.status,
@@ -153,8 +182,8 @@ export default function DoctorConsultationsPage() {
       if (mode === "edit" && editingId !== null) {
         const updated = await updateConsultation(editingId, payload);
         setConsultations((current) => current.map((consultation) => (consultation.id === updated.id ? updated : consultation)));
-        setSuccess("Consulta actualizada correctamente.");
-        resetForm();
+        startEdit(updated);
+        setSuccess(updated.status === "signed" ? "Consulta firmada. El registro queda en modo lectura." : "Consulta actualizada correctamente.");
       } else {
         if (!selectedPatientId) {
           setError("Selecciona un paciente para iniciar la consulta.");
@@ -162,8 +191,8 @@ export default function DoctorConsultationsPage() {
         }
         const created = await createConsultation(Number(selectedPatientId), payload);
         setConsultations((current) => [created, ...current]);
-        setSuccess("Consulta creada correctamente.");
-        resetForm();
+        startEdit(created);
+        setSuccess("Consulta creada. Puedes continuar el registro, completarlo y después firmarlo.");
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No pudimos guardar la consulta.");
@@ -172,7 +201,7 @@ export default function DoctorConsultationsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || loadedContext !== requestContext) {
     return (
       <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
         <DoctorCard className="flex min-h-48 items-center justify-center p-6">
@@ -205,6 +234,7 @@ export default function DoctorConsultationsPage() {
           className="inline-flex min-h-9 items-center justify-center gap-2 self-start rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white shadow-[0_5px_14px_rgb(8_98_221/18%)] hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus sm:self-auto"
           type="button"
           onClick={startCreate}
+          disabled={pending}
         >
           <Plus className="size-3.5" aria-hidden="true" />Nueva Consulta
         </button>
@@ -225,7 +255,7 @@ export default function DoctorConsultationsPage() {
 
       <section className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]" aria-label="Gestión de consultas">
         <DoctorCard className="min-w-0 overflow-hidden">
-          <div className="border-b border-line px-4 py-3 sm:px-5"><SectionHeading title="Consultas de hoy" action="Ver historial" /></div>
+          <div className="border-b border-line px-4 py-3 sm:px-5"><SectionHeading title="Historial de consultas" /></div>
           <div className="overflow-x-auto">
             {consultations.length === 0 ? (
               <div className="grid place-items-center px-6 py-12 text-center">
@@ -259,8 +289,9 @@ export default function DoctorConsultationsPage() {
                           className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-accent/20 px-2.5 text-[0.58rem] font-extrabold text-accent hover:bg-accent-soft focus-visible:outline-3 focus-visible:outline-focus"
                           type="button"
                           onClick={() => startEdit(consultation)}
+                          disabled={pending}
                         >
-                          <FilePenLine className="size-3" aria-hidden="true" />Editar
+                          <FilePenLine className="size-3" aria-hidden="true" />{consultation.status === "signed" || consultation.status === "canceled" ? "Ver registro" : "Continuar"}
                         </button>
                       </td>
                     </tr>
@@ -279,7 +310,7 @@ export default function DoctorConsultationsPage() {
                 className="h-9 rounded-lg border border-line bg-surface-input px-2 text-xs text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20 disabled:opacity-60"
                 value={selectedPatientId}
                 onChange={(event) => { setSelectedPatientId(event.target.value); if (mode === "edit") resetForm(); }}
-                disabled={mode === "edit"}
+                disabled={mode === "edit" || pending || Boolean(appointmentId)}
                 aria-label="Seleccionar paciente"
               >
                 <option value="">Selecciona un paciente</option>
@@ -291,7 +322,7 @@ export default function DoctorConsultationsPage() {
           </DoctorCard>
 
           <ConsultationForm
-            key={mode === "edit" ? `edit-${editingId}` : "create"}
+            key={`${mode}-${editingId}-${selectedPatientId}-${revision}`}
             mode={mode}
             patientLabel={`Paciente: ${patientLabel}`}
             pending={pending}
