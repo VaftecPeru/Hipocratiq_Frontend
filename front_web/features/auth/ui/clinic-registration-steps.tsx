@@ -68,7 +68,7 @@ export function PlanStep({ plans, selected, cycle, pending, error, subject = "cl
   );
 }
 
-export function ClinicOtpStep({ challengeId, expiresIn, resendAfter, resendsRemaining, code, setCode, pending, error, recipientDescription = "móvil del administrador clínico", onVerify, onResend, onBack }: { challengeId: string; expiresIn: number; resendAfter: number; resendsRemaining: number; code: string[]; setCode: (code: string[]) => void; pending: boolean; error: string | null; recipientDescription?: string; onVerify: (event: FormEvent<HTMLFormElement>) => void; onResend: () => void; onBack: () => void }) {
+export function ClinicOtpStep({ challengeId, expiresIn, resendAfter, resendsRemaining, code, setCode, pending, error, recipientDescription = "correo del administrador clínico", onVerify, onResend, onBack }: { challengeId: string; expiresIn: number; resendAfter: number; resendsRemaining: number; code: string[]; setCode: (code: string[]) => void; pending: boolean; error: string | null; recipientDescription?: string; onVerify: (event: FormEvent<HTMLFormElement>) => void; onResend: () => void; onBack: () => void }) {
   return (
     <div className="w-full max-w-108 py-4">
       <RegistrationHeader step="otp" onBack={onBack} />
