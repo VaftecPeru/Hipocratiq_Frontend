@@ -175,6 +175,10 @@ export function ClinicRegistrationFlow({
     setError(caught instanceof Error ? caught.message : "No pudimos completar el registro.");
   }
 
+  function backToManualRegistration() {
+    router.replace("/register");
+  }
+
   function clearFieldError(field: RegistrationFieldName) {
     if (!fieldErrors[field]) return;
     setFieldErrors((current) => {
@@ -276,10 +280,10 @@ export function ClinicRegistrationFlow({
     );
   }
 
-  if (isDoctorRegistration) return <DoctorRegistrationFlow onBack={() => setIsDoctorRegistration(false)} googleIdentity={googleIdentity ?? undefined} googleRegistrationToken={googleRegistrationToken} />;
-  if (isPatientRegistration) return <PatientRegistrationFlow onBack={() => setIsPatientRegistration(false)} googleIdentity={googleIdentity ?? undefined} googleRegistrationToken={googleRegistrationToken} />;
+  if (isDoctorRegistration) return <DoctorRegistrationFlow onBack={googleRegistrationType ? backToManualRegistration : () => setIsDoctorRegistration(false)} googleIdentity={googleIdentity ?? undefined} googleRegistrationToken={googleRegistrationToken} />;
+  if (isPatientRegistration) return <PatientRegistrationFlow onBack={googleRegistrationType ? backToManualRegistration : () => setIsPatientRegistration(false)} googleIdentity={googleIdentity ?? undefined} googleRegistrationToken={googleRegistrationToken} />;
   if (step === "role") return <RoleStep onSelectClinic={() => setStep("clinic")} onSelectDoctor={() => setIsDoctorRegistration(true)} onSelectPatient={() => setIsPatientRegistration(true)} />;
-  if (step === "clinic") return <ClinicRegistrationForm draft={draft} setDraft={setDraft} errors={fieldErrors} pending={pending} globalError={error} onClearError={clearFieldError} onBack={() => setStep("role")} onSubmit={submitDraft} />;
+  if (step === "clinic") return <ClinicRegistrationForm draft={draft} setDraft={setDraft} errors={fieldErrors} pending={pending} globalError={error} onClearError={clearFieldError} onBack={googleRegistrationType ? backToManualRegistration : () => setStep("role")} onSubmit={submitDraft} />;
   if (step === "plan") return <PlanStep plans={plans} selected={selectedPlan} cycle={cycle} pending={pending} error={error} onSelect={choosePlan} onCycleChange={setCycle} onBack={() => setStep("clinic")} />;
   if (step === "otp") return <ClinicOtpStep challengeId={challengeId} expiresIn={expiresIn} resendAfter={resendAfter} resendsRemaining={resendsRemaining} code={code} setCode={setCode} pending={pending} error={error} onVerify={verify} onResend={resend} onBack={() => setStep("plan")} />;
   return <RegistrationSuccessStep onContinue={() => router.replace("/clinic/dashboard")} />;
