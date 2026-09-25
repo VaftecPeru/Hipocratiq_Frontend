@@ -1,0 +1,42 @@
+name: Phase 4 Lock Refresh
+
+on:
+  push:
+    branches:
+      - phase4/qa-uat-security-20260925
+    paths:
+      - front_web/package.json
+      - .github/workflows/phase4-lock-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: phase4/qa-uat-security-20260925
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+
+      - name: Refresh package lock from package.json
+        working-directory: front_web
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Commit refreshed lockfile
+        run: |
+          if git diff --quiet -- front_web/package-lock.json; then
+            echo "Lockfile already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add front_web/package-lock.json
+          git commit -m "chore(web): refresh secure dependency lock"
+          git push origin HEAD:phase4/qa-uat-security-20260925
