@@ -45,6 +45,10 @@ jobs:
         working-directory: front_web
         run: npm run typecheck
 
+      - name: Test authentication and clinical flow regressions
+        working-directory: front_web
+        run: node --test tests/*.test.mjs
+
       - name: Lint frontend
         working-directory: front_web
         run: npm run lint

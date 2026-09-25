@@ -5,7 +5,7 @@ import { LoginFlow } from "@/features/auth/ui/login-flow";
 import { getAuthenticatedSession } from "@/features/auth/api/server-session";
 import { AuthVisualPanel } from "@/features/auth/ui/auth-visual-panel";
 import { PreferenceControls } from "@/shared/ui/preference-controls";
-import { dashboardPathForActorContext } from "@/features/auth/lib/dashboard-path";
+import { dashboardPathForSession } from "@/features/auth/lib/dashboard-path";
 
 export const metadata: Metadata = {
   title: "Iniciar sesión",
@@ -19,7 +19,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getAuthenticatedSession();
 
   if (session) {
-    redirect(dashboardPathForActorContext(session.actor_context));
+    redirect(dashboardPathForSession(session));
   }
 
   const requestedRole = await searchParams;
