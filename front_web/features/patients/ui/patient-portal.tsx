@@ -269,7 +269,7 @@ function AppointmentsView({ appointments }: { appointments: PatientAppointment[]
       <Card className="mt-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-extrabold text-ink">Agenda registrada</h2><span className="text-xs font-bold text-muted">{appointments.length} {appointments.length === 1 ? "cita" : "citas"}</span></div>
         <div className="mt-4 space-y-3">{appointments.length ? appointments.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />) : <EmptyState message="No hay citas vinculadas a tu perfil." />}</div>
-        <p className="mt-4 text-xs text-muted">La creación, reprogramación y cancelación de citas no están disponibles desde este portal.</p>
+        <p className="mt-4 text-xs text-muted">Para agendar, reprogramar o cancelar, contacta a recepción de tu clínica o a tu médico. Ellos registran la cita y su confirmación; aquí puedes consultar su estado. Al llegar, recepción registra tu ingreso y el médico continúa tu atención e historial clínico.</p>
       </Card>
     </div>
   );

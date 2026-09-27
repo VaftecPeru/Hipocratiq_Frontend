@@ -48,7 +48,13 @@ function validateDraft(draft: ClinicRegistrationDraft): RegistrationFieldErrors 
   const add = (field: RegistrationFieldName, message: string) => { errors[field] = message; };
 
   if (draft.clinic_name.trim().length < 2) add("clinic_name", "Ingresa el nombre de tu clínica.");
-  if (draft.tax_id.trim().length < 3) add("tax_id", "Ingresa el identificador fiscal de la institución.");
+  const taxId = draft.tax_id.trim().toUpperCase();
+  if (draft.country_code === "MX") {
+    if (![12, 13].includes(taxId.length)) add("tax_id", "El RFC debe tener 12 o 13 caracteres.");
+    else if (!/^[A-Z0-9Ñ&]+$/u.test(taxId)) add("tax_id", "El RFC contiene caracteres no válidos.");
+  } else if (taxId.length < 3) {
+    add("tax_id", "Ingresa el identificador fiscal de la institución.");
+  }
   if (!draft.address.trim()) add("address", "Ingresa la dirección de la institución.");
   if (draft.admin_name.trim().length < 2) add("admin_name", "Ingresa el nombre del administrador.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.admin_email.trim())) add("admin_email", "Usa un correo válido, por ejemplo admin@clinica.com.");

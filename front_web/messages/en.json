@@ -144,6 +144,8 @@
       "eyebrow": "Access restricted",
       "title": "Your session cannot access this area.",
       "description": "The account is active, but its current role does not have permission to view this section.",
+      "accountContextDetail": "Your account does not have a valid access context for this section. Contact your administrator to review your profile. You can sign out and use another account.",
+      "clinicContextDetail": "We could not determine a single active clinic for your account. Contact your administrator to review your memberships. You can sign out and use another account.",
       "detail": "Return to your dashboard or sign in with an account that has the required authorization.",
       "primary": "Return home",
       "secondary": "Go to my dashboard",
