@@ -3,15 +3,17 @@
 import { FileText, Save, X } from "lucide-react";
 import { useState } from "react";
 import { DoctorCard } from "@/features/doctors/ui/doctor-primitives";
-import type { DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
+import type { ClinicalCoding, DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
 import { Spinner } from "@/shared/ui/spinner";
 import { CLINICAL_SECTIONS, emptyClinicalValues, type ClinicalInput } from "@/features/doctors/ui/clinical-sections";
+import { ClinicalCodingsEditor } from "@/features/doctors/ui/clinical-codings-editor";
 
 export type ConsultationFormValues = {
   chiefComplaint: string;
   objective: string;
   status: DoctorConsultationStatus;
   sections: Record<string, Record<string, string>>;
+  codings: ClinicalCoding[];
 };
 
 type ConsultationFormProps = {
@@ -108,6 +110,7 @@ export function ConsultationForm({
   const [sections, setSections] = useState<Record<string, Record<string, string>>>(
     initialValues.sections ?? emptyClinicalValues(),
   );
+  const [codings, setCodings] = useState<ClinicalCoding[]>(initialValues.codings ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const readOnly = initialValues.status === "signed" || initialValues.status === "canceled";
   const allowedStatuses: DoctorConsultationStatus[] = mode === "create" || initialValues.status === "draft"
@@ -132,6 +135,9 @@ export function ConsultationForm({
     if (chiefComplaint.trim().length < 5) {
       nextErrors.chiefComplaint = "El motivo de consulta es obligatorio.";
     }
+    if (codings.some((coding) => !coding.system.trim() || !coding.code.trim() || !coding.display.trim())) {
+      nextErrors.codings = "Completa sistema, código y descripción en cada concepto clínico.";
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -139,7 +145,19 @@ export function ConsultationForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (pending || readOnly || !validate()) return;
-    void onSubmit({ chiefComplaint: chiefComplaint.trim(), objective: objective.trim(), status, sections });
+    void onSubmit({
+      chiefComplaint: chiefComplaint.trim(),
+      objective: objective.trim(),
+      status,
+      sections,
+      codings: codings.map((coding) => ({
+        ...coding,
+        system: coding.system.trim(),
+        code: coding.code.trim(),
+        display: coding.display.trim(),
+        status: coding.status?.trim() || null,
+      })),
+    });
   }
 
   return (
@@ -211,6 +229,13 @@ export function ConsultationForm({
               </fieldset>
             ))}
           </div>
+          <div className="mt-3">
+            <ClinicalCodingsEditor value={codings} onChange={setCodings} disabled={readOnly || pending} />
+            {errors.codings ? (
+              <p className="mt-2 text-[0.55rem] font-bold text-danger" role="alert">{errors.codings}</p>
+            ) : null}
+          </div>
+
           <div className="mt-3 rounded-lg border border-accent/20 bg-accent-soft p-3">
             <p className="text-[0.62rem] font-extrabold text-accent">Identificación del clínico</p>
             <p className="mt-1 text-[0.56rem] font-bold leading-4 text-ink-secondary">
@@ -240,10 +265,10 @@ export function ConsultationForm({
             </p>
           </DoctorCard>
 
-          {serverError || errors.chiefComplaint || errors.objective ? (
+          {serverError || errors.chiefComplaint || errors.objective || errors.codings ? (
             <DoctorCard className="border-danger/30 p-4">
               <p className="text-xs font-bold text-danger" role="alert" aria-live="polite">
-                {serverError ?? (errors.chiefComplaint || errors.objective)}
+                {serverError ?? (errors.chiefComplaint || errors.objective || errors.codings)}
               </p>
             </DoctorCard>
           ) : null}
