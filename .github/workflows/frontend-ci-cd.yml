@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - develop
+      - develop
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
