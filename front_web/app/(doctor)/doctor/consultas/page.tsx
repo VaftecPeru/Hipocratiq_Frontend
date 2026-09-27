@@ -99,7 +99,10 @@ export default function DoctorConsultationsPage() {
           setSelectedPatientId(String(existing.patient?.id ?? ""));
           const payload = consultationToPayload(existing);
           setInitialValues({ chiefComplaint: payload.chief_complaint, objective: payload.objective ?? "",
-            status: existing.status, sections: { ...emptyClinicalValues(), ...(payload.sections ?? {}) } });
+            status: existing.status,
+            sections: { ...emptyClinicalValues(), ...(payload.sections ?? {}) },
+            codings: payload.codings ?? [],
+          });
         }
       })
       .catch((caught: unknown) => {
@@ -160,6 +163,7 @@ export default function DoctorConsultationsPage() {
       objective: payload.objective ?? "",
       status: payload.status ?? "in_progress",
       sections: { ...emptyClinicalValues(), ...(payload.sections ?? {}) },
+      codings: payload.codings ?? [],
     });
     setError(null);
     setSuccess(null);
@@ -177,6 +181,7 @@ export default function DoctorConsultationsPage() {
         objective: values.objective,
         status: values.status,
         sections: values.sections,
+        codings: values.codings,
       };
 
       if (mode === "edit" && editingId !== null) {
