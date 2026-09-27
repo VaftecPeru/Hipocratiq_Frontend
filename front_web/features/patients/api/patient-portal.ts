@@ -31,6 +31,34 @@ export type PatientProfile = {
   clinic: { id: number; name: string } | null;
 };
 
+export type PatientClinicalCoding = {
+  category: "diagnosis" | "problem" | "symptom" | "allergy" | "observation" | "procedure" | "medication";
+  system: string;
+  code: string;
+  display: string;
+  status: string | null;
+};
+
+export type PatientConsentScope =
+  | "clinical_care"
+  | "data_processing"
+  | "whatsapp_notifications"
+  | "telemedicine"
+  | "ai_clinical_assistance"
+  | "epidemiology_anonymized";
+
+export type PatientConsent = {
+  id: number;
+  scope: PatientConsentScope;
+  policyVersion: string;
+  status: "granted" | "revoked" | "expired";
+  source: string;
+  effectiveFrom: string | null;
+  effectiveUntil: string | null;
+  revokedAt: string | null;
+  createdAt: string | null;
+};
+
 export type PatientAppointment = {
   id: number;
   scheduledAt: string | null;
@@ -60,6 +88,7 @@ export type PatientConsultation = {
     objective: string | null;
     sections: Record<string, unknown>;
   } | null;
+  codings: PatientClinicalCoding[];
 };
 
 export type PatientPrescription = {
@@ -202,6 +231,7 @@ type ApiConsultation = {
     objective: string | null;
     sections: Record<string, unknown>;
   } | null;
+  codings?: PatientClinicalCoding[];
 };
 
 type ApiPrescription = {
@@ -251,6 +281,32 @@ type ApiTriage = {
   clinic: { id: number; name: string } | null;
   recorded_by: { id: number; name: string } | null;
 };
+
+type ApiConsent = {
+  id: number;
+  scope: PatientConsentScope;
+  policy_version: string;
+  status: "granted" | "revoked" | "expired";
+  source: string;
+  effective_from: string | null;
+  effective_until: string | null;
+  revoked_at: string | null;
+  created_at: string | null;
+};
+
+function mapConsent(consent: ApiConsent): PatientConsent {
+  return {
+    id: consent.id,
+    scope: consent.scope,
+    policyVersion: consent.policy_version,
+    status: consent.status,
+    source: consent.source,
+    effectiveFrom: consent.effective_from,
+    effectiveUntil: consent.effective_until,
+    revokedAt: consent.revoked_at,
+    createdAt: consent.created_at,
+  };
+}
 
 type ApiUnavailableResponse = {
   data: null;
@@ -313,6 +369,7 @@ function mapConsultation(consultation: ApiConsultation): PatientConsultation {
     signedAt: consultation.signed_at,
     createdAt: consultation.created_at,
     clinicalHistory: consultation.clinical_history,
+    codings: consultation.codings ?? [],
   };
 }
 
@@ -405,6 +462,31 @@ export async function getPatientPrescriptions(signal?: AbortSignal): Promise<Pat
 export async function getPatientResults(signal?: AbortSignal): Promise<PatientLaboratoryResult[]> {
   const response = await getFromApi<{ data: ApiLaboratoryResult[] }>("/api/v1/auth/patient/results", { signal });
   return assertArray(response.data, "El servidor devolvió resultados de laboratorio incompletos.").map(mapResult);
+}
+
+export async function getPatientConsents(signal?: AbortSignal): Promise<PatientConsent[]> {
+  const response = await getFromApi<{ data: ApiConsent[] }>("/api/v1/auth/patient/consents", { signal });
+  return assertArray(response.data, "El servidor devolvió consentimientos incompletos.").map(mapConsent);
+}
+
+export async function grantPatientConsent(
+  scope: PatientConsentScope,
+  policyVersion: string,
+): Promise<PatientConsent> {
+  const response = await postToApi<{ data: ApiConsent }>("/api/v1/auth/patient/consents", {
+    scope,
+    policy_version: policyVersion,
+  });
+  if (!response.data?.id) throw new ApiError("El servidor no devolvió el consentimiento registrado.", 502);
+  return mapConsent(response.data);
+}
+
+export async function revokePatientConsent(consentId: number): Promise<PatientConsent> {
+  const response = await postToApi<{ data: ApiConsent }>(
+    "/api/v1/auth/patient/consents/" + consentId + "/revoke",
+  );
+  if (!response.data?.id) throw new ApiError("El servidor no devolvió el consentimiento revocado.", 502);
+  return mapConsent(response.data);
 }
 
 export async function getPatientTriage(signal?: AbortSignal): Promise<PatientTriage | null> {
