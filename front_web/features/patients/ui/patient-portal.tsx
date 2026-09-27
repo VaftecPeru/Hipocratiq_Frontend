@@ -19,13 +19,18 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { AuthenticatedUser } from "@/features/auth/model/auth.types";
 import {
+  getPatientConsents,
   getPatientPortalData,
+  grantPatientConsent,
+  revokePatientConsent,
   savePatientTriage,
   updatePatientProfile,
   type PatientAppointment,
   type PatientDashboardData,
   type PatientLaboratoryResult,
   type PatientConsultation,
+  type PatientConsent,
+  type PatientConsentScope,
   type PatientPortalData,
   type PatientPortalView,
   type PatientPrescription,
@@ -445,7 +450,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
       <PageIntro title="Historial clínico" description="Solo se muestran consultas finalizadas o firmadas que están vinculadas a tu perfil." />
       <Card>
         <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Consultas visibles</h2><span className="text-xs font-bold text-muted">{consultations.length} {consultations.length === 1 ? "consulta" : "consultas"}</span></div>
-        <div className="mt-4 space-y-4">{consultations.length ? consultations.map((consultation) => <article className="rounded-lg border border-line bg-surface-subtle p-4" key={consultation.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3><p className="mt-1 text-xs text-muted">{formatDate(consultation.createdAt, true)} · {consultation.doctor?.name ?? "Profesional no registrado"} · {consultation.clinic?.name ?? "Clínica no registrada"}</p></div><StatusBadge label={consultation.statusLabel} value={consultation.status} /></div>{consultation.objective ? <p className="mt-3 text-sm leading-relaxed text-ink-secondary"><strong>Objetivo:</strong> {consultation.objective}</p> : null}{consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? <details className="mt-3 rounded-lg border border-line bg-surface p-3"><summary className="cursor-pointer text-xs font-extrabold text-ink">Detalles registrados</summary><dl className="mt-3 grid gap-2 text-xs text-ink-secondary">{Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => <div className="border-t border-line pt-2" key={key}><dt className="font-extrabold text-ink">{key}</dt><dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd></div>)}</dl></details> : null}</article>) : <EmptyState message="No hay consultas finalizadas o firmadas vinculadas a tu perfil." />}</div>
+        <div className="mt-4 space-y-4">{consultations.length ? consultations.map((consultation) => <article className="rounded-lg border border-line bg-surface-subtle p-4" key={consultation.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3><p className="mt-1 text-xs text-muted">{formatDate(consultation.createdAt, true)} · {consultation.doctor?.name ?? "Profesional no registrado"} · {consultation.clinic?.name ?? "Clínica no registrada"}</p></div><StatusBadge label={consultation.statusLabel} value={consultation.status} /></div>{consultation.objective ? <p className="mt-3 text-sm leading-relaxed text-ink-secondary"><strong>Objetivo:</strong> {consultation.objective}</p> : null}{consultation.codings.length ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Conceptos clínicos codificados">{consultation.codings.map((coding, index) => <span className="rounded-full border border-accent/20 bg-accent-soft px-2.5 py-1 text-[0.65rem] font-bold text-accent" key={coding.system + "-" + coding.code + "-" + index}>{coding.display} · {coding.code}</span>)}</div> : null}{consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? <details className="mt-3 rounded-lg border border-line bg-surface p-3"><summary className="cursor-pointer text-xs font-extrabold text-ink">Detalles registrados</summary><dl className="mt-3 grid gap-2 text-xs text-ink-secondary">{Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => <div className="border-t border-line pt-2" key={key}><dt className="font-extrabold text-ink">{key}</dt><dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd></div>)}</dl></details> : null}</article>) : <EmptyState message="No hay consultas finalizadas o firmadas vinculadas a tu perfil." />}</div>
       </Card>
     </div>
   );
@@ -516,6 +521,110 @@ function profileFormFromData(profile: PatientProfile): ProfileForm {
 
 function ProfileField({ id, label, value, onChange, type = "text", required = false, error }: { id: string; label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; error?: string }) {
   return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id}>{label}{required ? <span className="text-danger">*</span> : null}<input id={id} className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={error} /></label>;
+}
+
+const CURRENT_CONSENT_POLICY_VERSION = "2026-09";
+
+const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; description: string }> = [
+  { scope: "clinical_care", title: "Atención clínica", description: "Autoriza registrar y utilizar tus datos en el proceso asistencial." },
+  { scope: "data_processing", title: "Tratamiento de datos", description: "Registra tu consentimiento explícito para el tratamiento de información dentro de HIPOCRATIQ." },
+  { scope: "telemedicine", title: "Telemedicina", description: "Autoriza el uso de tus datos durante atenciones remotas cuando el servicio esté habilitado." },
+  { scope: "ai_clinical_assistance", title: "Asistencia clínica con IA", description: "Autoriza funciones de apoyo clínico con IA; las decisiones continúan a cargo del profesional." },
+  { scope: "epidemiology_anonymized", title: "Analítica epidemiológica anonimizada", description: "Autoriza el uso de datos anonimizados o agregados para análisis epidemiológico." },
+];
+
+function ConsentPreferencesCard() {
+  const [consents, setConsents] = useState<PatientConsent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [changing, setChanging] = useState<PatientConsentScope | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPatientConsents(controller.signal)
+      .then(setConsents)
+      .catch((caught: unknown) => {
+        if (!controller.signal.aborted) setConsentError(errorMessage(caught));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  function activeConsent(scope: PatientConsentScope): PatientConsent | undefined {
+    return consents.find((consent) =>
+      consent.scope === scope
+      && consent.policyVersion === CURRENT_CONSENT_POLICY_VERSION
+      && consent.status === "granted"
+    );
+  }
+
+  async function toggle(scope: PatientConsentScope): Promise<void> {
+    if (changing) return;
+    setChanging(scope);
+    setConsentError(null);
+    try {
+      const active = activeConsent(scope);
+      const updated = active
+        ? await revokePatientConsent(active.id)
+        : await grantPatientConsent(scope, CURRENT_CONSENT_POLICY_VERSION);
+      setConsents((current) => {
+        const withoutUpdated = current.filter((consent) => consent.id !== updated.id);
+        return [updated, ...withoutUpdated];
+      });
+    } catch (caught) {
+      setConsentError(errorMessage(caught));
+    } finally {
+      setChanging(null);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+        <div>
+          <h2 className="text-sm font-extrabold text-ink">Consentimientos clínicos</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            Política {CURRENT_CONSENT_POLICY_VERSION}. Cada autorización se registra por separado, puede revocarse
+            y mantiene trazabilidad.
+          </p>
+        </div>
+      </div>
+      {loading ? (
+        <p className="mt-4 flex items-center gap-2 text-xs font-bold text-muted"><LoaderCircle className="size-4 animate-spin" />Cargando consentimientos…</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {CONSENT_OPTIONS.map((option) => {
+            const active = activeConsent(option.scope);
+            return (
+              <div className="rounded-lg border border-line bg-surface-subtle p-3" key={option.scope}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-ink">{option.title}</h3>
+                    <p className="mt-1 text-[0.7rem] leading-relaxed text-muted">{option.description}</p>
+                  </div>
+                  <button
+                    className={active
+                      ? "rounded-lg border border-danger/25 px-2.5 py-1.5 text-[0.65rem] font-extrabold text-danger hover:bg-danger-soft"
+                      : "rounded-lg border border-success/25 px-2.5 py-1.5 text-[0.65rem] font-extrabold text-success hover:bg-success-soft"}
+                    type="button"
+                    disabled={changing !== null}
+                    onClick={() => void toggle(option.scope)}
+                  >
+                    {changing === option.scope ? "Procesando…" : active ? "Revocar" : "Autorizar"}
+                  </button>
+                </div>
+                <p className="mt-2 text-[0.65rem] font-bold text-muted">{active ? "Activo" : "No autorizado en esta versión"}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {consentError ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-bold text-danger" role="alert">{consentError}</p> : null}
+    </Card>
+  );
 }
 
 function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
@@ -600,6 +709,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
         <aside className="space-y-4">
           <Card><h2 className="text-sm font-extrabold text-ink">Identificación de cuenta</h2><dl className="mt-3 space-y-3 text-sm"><div><dt className="text-xs font-bold text-muted">Código de paciente</dt><dd className="font-extrabold text-ink">{profile.patientCode}</dd></div><div><dt className="text-xs font-bold text-muted">Estado</dt><dd><StatusBadge label={profile.status ?? "No registrado"} value={profile.status ?? "unknown"} /></dd></div><div><dt className="text-xs font-bold text-muted">Clínica vinculada</dt><dd className="font-extrabold text-ink">{profile.clinic?.name ?? "No hay clínica vinculada"}</dd></div></dl></Card>
           <Card><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 size-5 text-success" aria-hidden="true" /><p className="text-xs leading-relaxed text-muted">Tus datos se cargan desde el perfil asociado a la sesión actual. No puedes seleccionar otro paciente desde este portal.</p></div></Card>
+          <ConsentPreferencesCard />
         </aside>
       </form>
     </div>
