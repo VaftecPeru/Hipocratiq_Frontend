@@ -109,6 +109,24 @@ export type ConsultationSections = Record<string, Record<string, string>>;
 
 export type DoctorConsultationStatus = "draft" | "in_progress" | "completed" | "signed" | "canceled";
 
+export type ClinicalCodingCategory =
+  | "diagnosis"
+  | "problem"
+  | "symptom"
+  | "allergy"
+  | "observation"
+  | "procedure"
+  | "medication";
+
+export type ClinicalCoding = {
+  category: ClinicalCodingCategory;
+  system: string;
+  code: string;
+  display: string;
+  status: string | null;
+};
+
+
 export type DoctorWeekday = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
 export type DoctorWorkingHours = Record<DoctorWeekday, { enabled: boolean; start: string; end: string }>;
@@ -206,6 +224,7 @@ export type Consultation = {
   createdAt: string | null;
   updatedAt: string | null;
   clinicalHistory: { id: number; source: string; objective: string | null; sections: ConsultationSections } | null;
+  codings: ClinicalCoding[];
 };
 
 export type ConsultationPayload = {
@@ -214,6 +233,7 @@ export type ConsultationPayload = {
   objective?: string | null;
   status?: DoctorConsultationStatus;
   sections?: ConsultationSections;
+  codings?: ClinicalCoding[];
 };
 
 export type DoctorPrescriptionStatus = "draft" | "active" | "renewal_due" | "completed" | "canceled";
@@ -449,6 +469,13 @@ type ApiConsultation = {
   created_at: string | null;
   updated_at: string | null;
   clinical_history: { id: number; source: string; objective: string | null; sections: ConsultationSections } | null;
+  codings?: Array<{
+    category: ClinicalCodingCategory;
+    system: string;
+    code: string;
+    display: string;
+    status: string | null;
+  }>;
 };
 
 function mapPatient(patient: ApiPatient): DoctorPatient {
@@ -539,6 +566,7 @@ function mapConsultation(consultation: ApiConsultation): Consultation {
     createdAt: consultation.created_at,
     updatedAt: consultation.updated_at,
     clinicalHistory: consultation.clinical_history,
+    codings: consultation.codings ?? [],
   };
 }
 
@@ -772,6 +800,7 @@ export function consultationToPayload(consultation: Consultation): ConsultationP
     objective: consultation.objective,
     status: consultation.status,
     sections: consultation.clinicalHistory?.sections ?? {},
+    codings: consultation.codings,
   };
 }
 
