@@ -64,19 +64,17 @@ class _FakeAuthGateway implements AuthGateway {
   @override
   Future<void> logout({required bool allDevices}) async {}
 
-
   @override
-  Future<List<MobilePatientConsent>> fetchPatientConsents() => _unsupported();
+  Future<List<MobilePatientConsent>> fetchPatientConsents() async => throw UnimplementedError();
 
   @override
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
     String policyVersion = '2026-09',
-  }) => _unsupported();
+  }) async => throw UnimplementedError();
 
   @override
-  Future<MobilePatientConsent> revokePatientConsent(int consentId) =>
-      _unsupported();
+  Future<MobilePatientConsent> revokePatientConsent(int consentId) async => throw UnimplementedError();
 
   @override
   Future<OtpChallenge> requestLogin({
