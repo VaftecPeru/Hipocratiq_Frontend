@@ -849,6 +849,7 @@ function ConsentPreferencesCard() {
   const [loading, setLoading] = useState(true);
   const [changing, setChanging] = useState<PatientConsentScope | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const [consentMessage, setConsentMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -878,6 +879,7 @@ function ConsentPreferencesCard() {
     if (changing || !policyVersion) return;
     setChanging(scope);
     setConsentError(null);
+    setConsentMessage(null);
     try {
       const active = activeConsent(scope);
       const updated = active
@@ -887,6 +889,12 @@ function ConsentPreferencesCard() {
         const withoutUpdated = current.filter((consent) => consent.id !== updated.id);
         return [updated, ...withoutUpdated];
       });
+      const option = CONSENT_OPTIONS.find((item) => item.scope === scope);
+      setConsentMessage(
+        updated.status === "granted"
+          ? `${option?.title ?? "Consentimiento"} autorizado correctamente.`
+          : `${option?.title ?? "Consentimiento"} revocado correctamente.`,
+      );
     } catch (caught) {
       setConsentError(errorMessage(caught));
     } finally {
@@ -921,8 +929,8 @@ function ConsentPreferencesCard() {
                   </div>
                   <button
                     className={active
-                      ? "rounded-lg border border-danger/25 px-2.5 py-1.5 text-[0.65rem] font-extrabold text-danger hover:bg-danger-soft"
-                      : "rounded-lg border border-success/25 px-2.5 py-1.5 text-[0.65rem] font-extrabold text-success hover:bg-success-soft"}
+                      ? "min-h-11 rounded-lg border border-danger/25 px-3 text-[0.65rem] font-extrabold text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus"
+                      : "min-h-11 rounded-lg border border-success/25 px-3 text-[0.65rem] font-extrabold text-success hover:bg-success-soft focus-visible:outline-3 focus-visible:outline-focus"}
                     type="button"
                     disabled={changing !== null}
                     onClick={() => void toggle(option.scope)}
@@ -936,6 +944,10 @@ function ConsentPreferencesCard() {
           })}
         </div>
       )}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {consentMessage}
+      </div>
+      {consentMessage ? <p className="mt-3 rounded-lg bg-success-soft p-3 text-xs font-bold text-success" role="status">{consentMessage}</p> : null}
       {consentError ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-bold text-danger" role="alert">{consentError}</p> : null}
     </Card>
   );
