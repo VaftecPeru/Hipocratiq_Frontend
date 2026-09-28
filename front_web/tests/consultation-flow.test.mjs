@@ -23,6 +23,7 @@ const { ConsultationForm } = loadSource("features/doctors/ui/consultation-form.t
   "@/features/doctors/ui/doctor-primitives": { DoctorCard: "card" },
   "@/shared/ui/spinner": { Spinner: "spinner" },
   "@/features/doctors/ui/clinical-sections": clinical,
+  "@/features/doctors/ui/clinical-codings-editor": { ClinicalCodingsEditor: "codings-editor" },
 });
 function nodes(node) {
   if (Array.isArray(node)) return node.flatMap(nodes);
