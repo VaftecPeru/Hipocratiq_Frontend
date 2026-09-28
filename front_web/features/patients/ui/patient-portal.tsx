@@ -932,7 +932,9 @@ function ConsentPreferencesCard() {
                       ? "min-h-11 rounded-lg border border-danger/25 px-3 text-[0.65rem] font-extrabold text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus"
                       : "min-h-11 rounded-lg border border-success/25 px-3 text-[0.65rem] font-extrabold text-success hover:bg-success-soft focus-visible:outline-3 focus-visible:outline-focus"}
                     type="button"
-                    disabled={changing !== null}
+                    aria-pressed={Boolean(active)}
+                    aria-busy={changing === option.scope}
+                    disabled={changing !== null || !policyVersion}
                     onClick={() => void toggle(option.scope)}
                   >
                     {changing === option.scope ? "Procesando…" : active ? "Revocar" : "Autorizar"}
