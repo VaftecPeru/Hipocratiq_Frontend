@@ -18,6 +18,7 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
   String? _policyVersion;
   MobilePatientConsentScope? _changing;
   String? _error;
+  String? _message;
   bool _loading = true;
 
   @override
@@ -66,6 +67,7 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
     setState(() {
       _changing = scope;
       _error = null;
+      _message = null;
     });
 
     try {
@@ -84,6 +86,9 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
           ..._consents.where((item) => item.id != updated.id),
         ];
         _changing = null;
+        _message = updated.isGranted
+            ? '${scope.label} autorizado correctamente.'
+            : '${scope.label} revocado correctamente.';
       });
     } on Object catch (error) {
       if (!mounted) return;
@@ -155,14 +160,39 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
                       scope != MobilePatientConsentScope.whatsappNotifications,
                 )
                 .map(_consentRow),
+          if (_message != null) ...[
+            const SizedBox(height: 10),
+            Semantics(
+              liveRegion: true,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.successSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _message!,
+                  style: const TextStyle(
+                    color: AppColors.success,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 10),
-            Text(
-              _error!,
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _error!,
+                style: const TextStyle(
+                  color: AppColors.danger,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
