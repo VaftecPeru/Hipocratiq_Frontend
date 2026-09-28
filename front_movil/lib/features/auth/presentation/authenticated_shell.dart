@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
 import '../../workspace/domain/mobile_workspace.dart';
+import '../../workspace/presentation/patient_consents_panel.dart';
 import 'auth_controller.dart';
 import 'receptionist_invitation_page.dart';
 
@@ -411,6 +412,10 @@ class _AccountTab extends StatelessWidget {
                 ],
               ),
             ),
+            if (session.actorContext == 'patient') ...[
+              const SizedBox(height: 14),
+              PatientConsentsPanel(authGateway: authGateway),
+            ],
             if (session.actorContext == 'clinic_admin') ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
