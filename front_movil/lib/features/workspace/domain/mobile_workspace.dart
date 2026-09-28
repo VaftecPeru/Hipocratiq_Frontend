@@ -54,7 +54,6 @@ class MobileWorkspaceSnapshot {
   final DateTime generatedAt;
 }
 
-
 enum MobilePatientConsentScope {
   clinicalCare('clinical_care', 'Atención clínica'),
   dataProcessing('data_processing', 'Tratamiento de datos'),
