@@ -359,7 +359,7 @@ class _CorrectiveAuthGateway implements AuthGateway {
   Future<void> logout({required bool allDevices}) async {}
 
   @override
-  Future<List<MobilePatientConsent>> fetchPatientConsents() => _unsupported();
+  Future<MobilePatientConsentSettings> fetchPatientConsents() => _unsupported();
 
   @override
   Future<MobilePatientConsent> grantPatientConsent(
