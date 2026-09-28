@@ -27,7 +27,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <main id="main-content" className="fixed inset-0 grid overflow-hidden bg-surface min-[900px]:grid-cols-2">
+    <main id="main-content" className="fixed inset-0 grid overflow-hidden bg-surface min-[900px]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <section className="grid h-dvh min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden bg-surface pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" aria-label="Inicio de sesión">
         <header className="relative z-30 flex flex-wrap items-center justify-end gap-3 px-[clamp(1.25rem,5vw,4.5rem)] pt-4 pb-2 text-2xs text-footer-text sm:pt-6" aria-label="Utilidades de autenticación">
           <PreferenceControls className="shrink-0" idPrefix="auth-login" menuAlign="right" />
