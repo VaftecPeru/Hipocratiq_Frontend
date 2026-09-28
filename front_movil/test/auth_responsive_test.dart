@@ -310,7 +310,7 @@ class _AuthTestGateway implements AuthGateway {
   @override
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
-    String policyVersion = '2026-09',
+    required String policyVersion,
   }) => _unsupported();
 
   @override
