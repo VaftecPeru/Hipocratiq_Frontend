@@ -435,6 +435,69 @@ class AuthRepository implements AuthGateway {
     );
   }
 
+  @override
+  Future<List<MobilePatientConsent>> fetchPatientConsents() async {
+    final token = await _secureStore.readAccessToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const ApiException(
+        message: 'Tu sesión móvil expiró. Vuelve a iniciar sesión.',
+        statusCode: 401,
+      );
+    }
+
+    final response = await _apiClient.getJson(
+      '/api/v1/auth/patient/consents',
+      accessToken: token,
+    );
+
+    return _list(response['data'])
+        .map(MobilePatientConsent.fromJson)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<MobilePatientConsent> grantPatientConsent(
+    MobilePatientConsentScope scope, {
+    String policyVersion = '2026-09',
+  }) async {
+    final token = await _secureStore.readAccessToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const ApiException(
+        message: 'Tu sesión móvil expiró. Vuelve a iniciar sesión.',
+        statusCode: 401,
+      );
+    }
+
+    final response = await _apiClient.postJson(
+      '/api/v1/auth/patient/consents',
+      accessToken: token,
+      body: <String, dynamic>{
+        'scope': scope.value,
+        'policy_version': policyVersion,
+      },
+    );
+
+    return MobilePatientConsent.fromJson(_data(response));
+  }
+
+  @override
+  Future<MobilePatientConsent> revokePatientConsent(int consentId) async {
+    final token = await _secureStore.readAccessToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const ApiException(
+        message: 'Tu sesión móvil expiró. Vuelve a iniciar sesión.',
+        statusCode: 401,
+      );
+    }
+
+    final response = await _apiClient.postJson(
+      '/api/v1/auth/patient/consents/$consentId/revoke',
+      accessToken: token,
+    );
+
+    return MobilePatientConsent.fromJson(_data(response));
+  }
+
   Future<MobileWorkspaceSnapshot> loadMobileWorkspace(
     AuthenticatedSession session,
   ) async {
