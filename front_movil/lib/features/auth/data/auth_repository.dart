@@ -450,9 +450,9 @@ class AuthRepository implements AuthGateway {
       accessToken: token,
     );
 
-    return _list(response['data'])
-        .map(MobilePatientConsent.fromJson)
-        .toList(growable: false);
+    return _list(
+      response['data'],
+    ).map(MobilePatientConsent.fromJson).toList(growable: false);
   }
 
   @override
