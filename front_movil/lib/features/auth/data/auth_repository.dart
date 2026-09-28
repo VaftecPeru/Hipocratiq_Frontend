@@ -100,6 +100,15 @@ abstract interface class AuthGateway {
   Future<void> clearLocalSession();
 
   Future<void> logout({required bool allDevices});
+
+  Future<List<MobilePatientConsent>> fetchPatientConsents();
+
+  Future<MobilePatientConsent> grantPatientConsent(
+    MobilePatientConsentScope scope, {
+    String policyVersion = '2026-09',
+  });
+
+  Future<MobilePatientConsent> revokePatientConsent(int consentId);
 }
 
 class AuthRepository implements AuthGateway {
