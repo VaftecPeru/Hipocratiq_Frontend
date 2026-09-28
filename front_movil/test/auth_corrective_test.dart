@@ -5,13 +5,13 @@ import 'package:front_movil/core/theme/app_theme.dart';
 import 'package:front_movil/features/auth/data/auth_repository.dart';
 import 'package:front_movil/features/auth/domain/auth_models.dart';
 import 'package:front_movil/features/auth/domain/registration_models.dart';
-import 'package:front_movil/features/workspace/domain/mobile_workspace.dart';
 import 'package:front_movil/features/auth/presentation/auth_controller.dart';
 import 'package:front_movil/features/auth/presentation/login_page.dart';
 import 'package:front_movil/features/auth/presentation/otp_page.dart';
 import 'package:front_movil/features/auth/presentation/patient_registration_page.dart';
 import 'package:front_movil/features/auth/presentation/widgets/otp_countdown.dart';
 import 'package:front_movil/features/auth/presentation/widgets/terms_consent_field.dart';
+import 'package:front_movil/features/workspace/domain/mobile_workspace.dart';
 
 void main() {
   testWidgets(
@@ -357,7 +357,6 @@ class _CorrectiveAuthGateway implements AuthGateway {
 
   @override
   Future<void> logout({required bool allDevices}) async {}
-
 
   @override
   Future<List<MobilePatientConsent>> fetchPatientConsents() => _unsupported();
