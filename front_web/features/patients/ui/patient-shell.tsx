@@ -208,11 +208,11 @@ export function PatientShell({
         className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
         tabIndex={-1}
       >
-        <div className="patient-brand" aria-label="MEDIQ">
+        <div className="patient-brand" aria-label="HIPOCRATIQ">
           <span className="patient-brand__mark">
             <ShieldCheck className="size-5" strokeWidth={2.2} aria-hidden="true" />
           </span>
-          <span className="patient-brand__word">MEDIQ</span>
+          <span className="patient-brand__word">HIPOCRATIQ</span>
         </div>
 
         <div className="patient-user-card">
