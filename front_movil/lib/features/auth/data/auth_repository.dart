@@ -105,7 +105,7 @@ abstract interface class AuthGateway {
 
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
-    String policyVersion = '2026-09',
+    required String policyVersion,
   });
 
   Future<MobilePatientConsent> revokePatientConsent(int consentId);
@@ -467,7 +467,7 @@ class AuthRepository implements AuthGateway {
   @override
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
-    String policyVersion = '2026-09',
+    required String policyVersion,
   }) async {
     final token = await _secureStore.readAccessToken();
     if (token == null || token.trim().isEmpty) {
