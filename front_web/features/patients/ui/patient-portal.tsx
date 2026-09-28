@@ -445,12 +445,180 @@ function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
 }
 
 function HistoryView({ consultations }: { consultations: PatientConsultation[] }) {
+  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures" | "documents">("all");
+  const [year, setYear] = useState<string>("all");
+
+  const years = useMemo(
+    () => Array.from(new Set(
+      consultations
+        .map((consultation) => consultation.createdAt ? new Date(consultation.createdAt).getFullYear() : null)
+        .filter((value): value is number => value !== null && Number.isFinite(value)),
+    )).sort((left, right) => right - left),
+    [consultations],
+  );
+
+  const diagnosisCount = useMemo(
+    () => new Set(
+      consultations.flatMap((consultation) => consultation.codings)
+        .filter((coding) => ["diagnosis", "problem"].includes(coding.category))
+        .map((coding) => coding.system + "|" + coding.code),
+    ).size,
+    [consultations],
+  );
+
+  const specialtyCount = useMemo(
+    () => new Set(
+      consultations.map((consultation) => consultation.doctor?.specialty).filter((value): value is string => Boolean(value)),
+    ).size,
+    [consultations],
+  );
+
+  const filtered = useMemo(() => consultations.filter((consultation) => {
+    if (year !== "all" && consultation.createdAt) {
+      const consultationYear = new Date(consultation.createdAt).getFullYear();
+      if (String(consultationYear) !== year) return false;
+    } else if (year !== "all" && !consultation.createdAt) {
+      return false;
+    }
+
+    if (tab === "diagnoses") {
+      return consultation.codings.some((coding) => ["diagnosis", "problem"].includes(coding.category));
+    }
+    if (tab === "procedures") {
+      return consultation.codings.some((coding) => coding.category === "procedure");
+    }
+    if (tab === "documents") return false;
+    return true;
+  }), [consultations, tab, year]);
+
+  const tabs = [
+    { value: "all" as const, label: "Todo" },
+    { value: "consultations" as const, label: "Consultas" },
+    { value: "diagnoses" as const, label: "Diagnósticos" },
+    { value: "procedures" as const, label: "Procedimientos" },
+    { value: "documents" as const, label: "Documentos" },
+  ];
+
   return (
     <div className="patient-page">
-      <PageIntro title="Historial clínico" description="Solo se muestran consultas finalizadas o firmadas que están vinculadas a tu perfil." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Consultas visibles</h2><span className="text-xs font-bold text-muted">{consultations.length} {consultations.length === 1 ? "consulta" : "consultas"}</span></div>
-        <div className="mt-4 space-y-4">{consultations.length ? consultations.map((consultation) => <article className="rounded-lg border border-line bg-surface-subtle p-4" key={consultation.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3><p className="mt-1 text-xs text-muted">{formatDate(consultation.createdAt, true)} · {consultation.doctor?.name ?? "Profesional no registrado"} · {consultation.clinic?.name ?? "Clínica no registrada"}</p></div><StatusBadge label={consultation.statusLabel} value={consultation.status} /></div>{consultation.objective ? <p className="mt-3 text-sm leading-relaxed text-ink-secondary"><strong>Objetivo:</strong> {consultation.objective}</p> : null}{consultation.codings.length ? <div className="mt-3 flex flex-wrap gap-2" aria-label="Conceptos clínicos codificados">{consultation.codings.map((coding, index) => <span className="rounded-full border border-accent/20 bg-accent-soft px-2.5 py-1 text-[0.65rem] font-bold text-accent" key={coding.system + "-" + coding.code + "-" + index}>{coding.display} · {coding.code}</span>)}</div> : null}{consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? <details className="mt-3 rounded-lg border border-line bg-surface p-3"><summary className="cursor-pointer text-xs font-extrabold text-ink">Detalles registrados</summary><dl className="mt-3 grid gap-2 text-xs text-ink-secondary">{Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => <div className="border-t border-line pt-2" key={key}><dt className="font-extrabold text-ink">{key}</dt><dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd></div>)}</dl></details> : null}</article>) : <EmptyState message="No hay consultas finalizadas o firmadas vinculadas a tu perfil." />}</div>
+      <PageIntro
+        title="Historial clínico"
+        description="Consulta la cronología clínica registrada en HIPOCRATIQ. Solo se muestran atenciones finalizadas o firmadas vinculadas a tu perfil."
+      />
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen del historial clínico">
+        <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
+        <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
+        <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
+        <Metric icon={FileText} label="Documentos clínicos" value="0" />
+      </section>
+
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex max-w-full gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filtrar historial clínico">
+            {tabs.map((item) => (
+              <button
+                key={item.value}
+                className={`relative min-h-9 shrink-0 rounded-lg px-3 text-xs font-extrabold transition-colors focus-visible:outline-3 focus-visible:outline-focus ${tab === item.value ? "bg-accent-soft text-accent" : "text-ink-secondary hover:bg-surface-subtle hover:text-ink"}`}
+                type="button"
+                role="tab"
+                aria-selected={tab === item.value}
+                onClick={() => setTab(item.value)}
+              >
+                {item.label}
+                {tab === item.value ? <span className="absolute inset-x-3 -bottom-3 h-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex shrink-0 items-center gap-2 text-xs font-extrabold text-ink-secondary">
+            <CalendarDays className="size-4 text-accent" aria-hidden="true" />
+            <span className="sr-only">Filtrar historial por año</span>
+            <select
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20"
+              value={year}
+              onChange={(event) => setYear(event.target.value)}
+            >
+              <option value="all">Todas las fechas</option>
+              {years.map((item) => <option value={String(item)} key={item}>{item}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {tab === "documents" ? (
+          <div className="p-6">
+            <EmptyState message="Todavía no hay documentos clínicos publicados en tu expediente. La integración se habilitará cuando exista almacenamiento DocumentReference real." />
+          </div>
+        ) : filtered.length ? (
+          <div className="relative px-4 py-2 sm:px-6">
+            <div className="absolute bottom-8 left-[2.15rem] top-8 hidden w-px bg-line sm:block" aria-hidden="true" />
+            {filtered.map((consultation) => {
+              const relevantCodings = tab === "diagnoses"
+                ? consultation.codings.filter((coding) => ["diagnosis", "problem"].includes(coding.category))
+                : tab === "procedures"
+                  ? consultation.codings.filter((coding) => coding.category === "procedure")
+                  : consultation.codings;
+
+              return (
+                <article className="relative border-b border-line py-5 last:border-0 sm:pl-14" key={consultation.id}>
+                  <span className="absolute left-[0.2rem] top-7 hidden size-4 rounded-full border-4 border-surface bg-accent shadow-[0_0_0_1px_var(--color-border)] sm:block" aria-hidden="true" />
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-accent">
+                        {formatDate(consultation.createdAt, true)}
+                      </p>
+                      <h3 className="mt-1 text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3>
+                      <p className="mt-1 text-xs font-bold text-muted">
+                        {consultation.doctor?.name ?? "Profesional no registrado"}
+                        {consultation.doctor?.specialty ? ` · ${consultation.doctor.specialty}` : ""}
+                        {consultation.clinic?.name ? ` · ${consultation.clinic.name}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge label={consultation.statusLabel} value={consultation.status} />
+                  </div>
+
+                  {consultation.objective ? (
+                    <p className="mt-3 max-w-4xl text-sm leading-relaxed text-ink-secondary">
+                      <strong className="text-ink">Evolución:</strong> {consultation.objective}
+                    </p>
+                  ) : null}
+
+                  {relevantCodings.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2" aria-label="Conceptos clínicos codificados">
+                      {relevantCodings.map((coding, index) => (
+                        <span
+                          className="rounded-full border border-accent/20 bg-accent-soft px-2.5 py-1 text-[0.65rem] font-bold text-accent"
+                          key={coding.system + "-" + coding.code + "-" + index}
+                          title={coding.system}
+                        >
+                          {coding.display} · {coding.code}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? (
+                    <details className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
+                      <summary className="cursor-pointer text-xs font-extrabold text-ink">Ver expediente de esta atención</summary>
+                      <dl className="mt-3 grid gap-2 text-xs text-ink-secondary">
+                        {Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => (
+                          <div className="border-t border-line pt-2" key={key}>
+                            <dt className="font-extrabold text-ink">{key}</dt>
+                            <dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </details>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6">
+            <EmptyState message="No hay registros que coincidan con los filtros seleccionados." />
+          </div>
+        )}
       </Card>
     </div>
   );
