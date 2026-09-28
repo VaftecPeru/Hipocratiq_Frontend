@@ -6,6 +6,7 @@ import 'package:front_movil/core/widgets/loading_button.dart';
 import 'package:front_movil/features/auth/data/auth_repository.dart';
 import 'package:front_movil/features/auth/domain/auth_models.dart';
 import 'package:front_movil/features/auth/domain/registration_models.dart';
+import 'package:front_movil/features/workspace/domain/mobile_workspace.dart';
 import 'package:front_movil/features/auth/presentation/auth_controller.dart';
 import 'package:front_movil/features/auth/presentation/professional_registration_page.dart';
 import 'package:front_movil/features/auth/presentation/password_recovery_views.dart';
@@ -302,6 +303,20 @@ class _AuthTestGateway implements AuthGateway {
 
   @override
   Future<void> logout({required bool allDevices}) async {}
+
+
+  @override
+  Future<List<MobilePatientConsent>> fetchPatientConsents() => _unsupported();
+
+  @override
+  Future<MobilePatientConsent> grantPatientConsent(
+    MobilePatientConsentScope scope, {
+    String policyVersion = '2026-09',
+  }) => _unsupported();
+
+  @override
+  Future<MobilePatientConsent> revokePatientConsent(int consentId) =>
+      _unsupported();
 
   @override
   Future<List<ClinicOption>> fetchPatientClinics() => _unsupported();
