@@ -65,7 +65,7 @@ class _FakeAuthGateway implements AuthGateway {
   Future<void> logout({required bool allDevices}) async {}
 
   @override
-  Future<List<MobilePatientConsent>> fetchPatientConsents() async =>
+  Future<MobilePatientConsentSettings> fetchPatientConsents() async =>
       throw UnimplementedError();
 
   @override
