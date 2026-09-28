@@ -78,6 +78,16 @@ enum MobilePatientConsentScope {
   }
 }
 
+class MobilePatientConsentSettings {
+  const MobilePatientConsentSettings({
+    required this.consents,
+    required this.policyVersion,
+  });
+
+  final List<MobilePatientConsent> consents;
+  final String policyVersion;
+}
+
 class MobilePatientConsent {
   const MobilePatientConsent({
     required this.id,
