@@ -434,14 +434,22 @@ export type DoctorEpidemiology = {
     monitoredPatients: number;
     activeAlerts: number;
     highRiskCases: number;
-    trend: "not_configured" | "stable";
+    trend: "not_configured" | "stable" | "rising" | "falling" | "mixed";
     consultations: number;
     laboratoryOrders: number;
     teleconsultations: number;
     prescriptions: number;
   };
+  analysisCohort: {
+    status: "not_used" | "insufficient" | "eligible";
+    policyVersion: string;
+    consentedPatients: number;
+    monitoredPatients: number;
+    minimumRequired: number;
+  };
   cohorts: Array<{ name: string; level: number; risk: string }>;
   alerts: Array<{ title: string; detail: string; severity: "info" | "warning" | "critical" }>;
+  recommendations: string[];
   sources: Record<string, { status: "available" | "no_data" | "not_configured"; label: string }>;
 };
 
@@ -1191,14 +1199,22 @@ type ApiDoctorEpidemiology = {
     monitored_patients: number;
     active_alerts: number;
     high_risk_cases: number;
-    trend: 'not_configured' | 'stable';
+    trend: 'not_configured' | 'stable' | 'rising' | 'falling' | 'mixed';
     consultations: number;
     laboratory_orders: number;
     teleconsultations: number;
     prescriptions: number;
   };
+  analysis_cohort?: {
+    status: 'not_used' | 'insufficient' | 'eligible';
+    policy_version: string;
+    consented_patients: number;
+    monitored_patients: number;
+    minimum_required: number;
+  };
   cohorts: Array<{ name: string; level: number; risk: string }>;
   alerts: Array<{ title: string; detail: string; severity: 'info' | 'warning' | 'critical' }>;
+  recommendations?: string[];
   sources: Record<string, { status: 'available' | 'no_data' | 'not_configured'; label: string }>;
 };
 
@@ -1220,8 +1236,16 @@ export async function getDoctorEpidemiology(signal?: AbortSignal): Promise<Docto
       teleconsultations: response.data.metrics.teleconsultations,
       prescriptions: response.data.metrics.prescriptions,
     },
+    analysisCohort: {
+      status: response.data.analysis_cohort?.status ?? "not_used",
+      policyVersion: response.data.analysis_cohort?.policy_version ?? "",
+      consentedPatients: response.data.analysis_cohort?.consented_patients ?? 0,
+      monitoredPatients: response.data.analysis_cohort?.monitored_patients ?? 0,
+      minimumRequired: response.data.analysis_cohort?.minimum_required ?? 0,
+    },
     cohorts: response.data.cohorts,
     alerts: response.data.alerts,
+    recommendations: response.data.recommendations ?? [],
     sources: response.data.sources,
   };
 }
