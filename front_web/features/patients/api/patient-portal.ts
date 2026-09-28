@@ -59,6 +59,11 @@ export type PatientConsent = {
   createdAt: string | null;
 };
 
+export type PatientConsentSettings = {
+  consents: PatientConsent[];
+  policyVersion: string;
+};
+
 export type PatientAppointment = {
   id: number;
   scheduledAt: string | null;
@@ -464,9 +469,18 @@ export async function getPatientResults(signal?: AbortSignal): Promise<PatientLa
   return assertArray(response.data, "El servidor devolvió resultados de laboratorio incompletos.").map(mapResult);
 }
 
-export async function getPatientConsents(signal?: AbortSignal): Promise<PatientConsent[]> {
-  const response = await getFromApi<{ data: ApiConsent[] }>("/api/v1/auth/patient/consents", { signal });
-  return assertArray(response.data, "El servidor devolvió consentimientos incompletos.").map(mapConsent);
+export async function getPatientConsents(signal?: AbortSignal): Promise<PatientConsentSettings> {
+  const response = await getFromApi<{ data: ApiConsent[]; meta?: { policy_version?: string } }>(
+    "/api/v1/auth/patient/consents",
+    { signal },
+  );
+  const policyVersion = response.meta?.policy_version?.trim();
+  if (!policyVersion) throw new ApiError("El servidor no devolvió la política clínica vigente.", 502);
+
+  return {
+    consents: assertArray(response.data, "El servidor devolvió consentimientos incompletos.").map(mapConsent),
+    policyVersion,
+  };
 }
 
 export async function grantPatientConsent(
