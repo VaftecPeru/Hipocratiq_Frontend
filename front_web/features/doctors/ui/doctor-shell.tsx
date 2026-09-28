@@ -100,8 +100,8 @@ export function DoctorShell({
 
   return (
     <div className="min-h-svh bg-paper text-ink">
-      <aside className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-[206px] flex-col border-r border-line bg-surface lg:flex`}>
-        <div className="flex h-[60px] items-center border-b border-line px-4">
+      <aside className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-60 flex-col border-r border-line bg-surface lg:flex`}>
+        <div className="flex h-[70px] items-center border-b border-line px-4">
           <Link className="flex min-h-11 min-w-0 items-center focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" href="/doctor/dashboard" onClick={() => setMenuOpen(false)}>
             <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] bg-accent p-1.5 shadow-[0_0.45rem_1rem_rgb(8_98_221/22%)]">
               <Image className="size-full object-contain brightness-0 invert" src="/logo_hipocratiq.webp" width={28} height={28} alt="" priority />
@@ -137,7 +137,7 @@ export function DoctorShell({
 
       {menuOpen ? <div className="fixed inset-0 z-30 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setMenuOpen(false)} /> : null}
 
-      <header className="sticky top-0 z-20 flex h-[60px] items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur-md sm:px-5 lg:ml-[206px] lg:px-6">
+      <header className="sticky top-0 z-20 flex h-[70px] items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur-md sm:px-5 lg:ml-60 lg:px-6">
         <button
           className="grid size-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
@@ -182,7 +182,7 @@ export function DoctorShell({
         </span>
       </header>
 
-      <main className="min-w-0 lg:ml-[206px]">{children}</main>
+      <main className="min-w-0 lg:ml-60">{children}</main>
     </div>
   );
 }
