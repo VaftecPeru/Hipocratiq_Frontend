@@ -101,7 +101,7 @@ abstract interface class AuthGateway {
 
   Future<void> logout({required bool allDevices});
 
-  Future<List<MobilePatientConsent>> fetchPatientConsents();
+  Future<MobilePatientConsentSettings> fetchPatientConsents();
 
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
@@ -436,7 +436,7 @@ class AuthRepository implements AuthGateway {
   }
 
   @override
-  Future<List<MobilePatientConsent>> fetchPatientConsents() async {
+  Future<MobilePatientConsentSettings> fetchPatientConsents() async {
     final token = await _secureStore.readAccessToken();
     if (token == null || token.trim().isEmpty) {
       throw const ApiException(
@@ -450,9 +450,18 @@ class AuthRepository implements AuthGateway {
       accessToken: token,
     );
 
-    return _list(
-      response['data'],
-    ).map(MobilePatientConsent.fromJson).toList(growable: false);
+    final meta = _map(response['meta']);
+    final policyVersion = _text(meta?['policy_version']);
+    if (policyVersion == null) {
+      throw const FormatException('Missing consent policy version.');
+    }
+
+    return MobilePatientConsentSettings(
+      consents: _list(
+        response['data'],
+      ).map(MobilePatientConsent.fromJson).toList(growable: false),
+      policyVersion: policyVersion,
+    );
   }
 
   @override
