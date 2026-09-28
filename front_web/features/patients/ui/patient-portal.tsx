@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Stethoscope,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { AuthenticatedUser } from "@/features/auth/model/auth.types";
@@ -228,36 +229,179 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
     .filter((appointment) => appointment.scheduledAt && new Date(appointment.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(appointment.status))
     .sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime()), [data.appointments, now]);
   const activePrescriptions = data.prescriptions.filter((prescription) => prescription.status === "active");
+  const nextAppointment = upcoming[0] ?? null;
+  const firstName = user.name?.trim().split(/\s+/)[0] || "Paciente";
+
+  const nextDate = nextAppointment?.scheduledAt
+    ? new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long" }).format(new Date(nextAppointment.scheduledAt))
+    : "Sin próxima cita";
+  const nextTime = nextAppointment?.scheduledAt
+    ? new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit" }).format(new Date(nextAppointment.scheduledAt))
+    : "—";
 
   return (
-    <div className="patient-page space-y-4">
-      <PageIntro title={`Información de ${user.name || "tu cuenta"}`} description="Este resumen usa únicamente datos clínicos vinculados a tu perfil autenticado." />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={CalendarDays} label="Citas registradas" value={String(data.appointments.length)} />
-        <Metric icon={Stethoscope} label="Consultas con historia visible" value={String(data.history.length)} />
-        <Metric icon={FlaskConical} label="Estudios registrados" value={String(data.results.length)} />
-        <Metric icon={HeartPulse} label="Recetas activas" value={String(activePrescriptions.length)} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Próxima cita</h2><CalendarDays className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3">{upcoming[0] ? <AppointmentSummary appointment={upcoming[0]} /> : <EmptyState message="No hay una cita futura vinculada a tu perfil." />}</div>
+    <div className="patient-page">
+      <header className="mb-5">
+        <h2 className="text-[clamp(1.25rem,2vw,1.55rem)] font-black tracking-[-0.045em] text-ink">
+          Bienvenido de nuevo, {firstName}
+        </h2>
+        <p className="mt-1 text-sm font-bold text-muted">
+          Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.
+        </p>
+      </header>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.48fr)_minmax(340px,1fr)]">
+        <article className="patient-appointment-hero">
+          <div className="patient-appointment-hero__top">
+            <div className="patient-appointment-hero__eyebrow">
+              <span>PRÓXIMA CITA</span>
+              <CalendarDays aria-hidden="true" />
+            </div>
+            <div className="patient-appointment-hero__time">
+              <strong>{nextTime}</strong>
+              <span>{nextAppointment ? appointmentTypeLabel(nextAppointment.appointmentType) : "Agenda disponible"}</span>
+            </div>
+          </div>
+          <div className="patient-appointment-hero__date">{nextDate}</div>
+          <div className="patient-appointment-hero__location">
+            <span>{nextAppointment?.clinic?.name ?? "Clínica no registrada"}</span>
+            <i aria-hidden="true" />
+            <span>{nextAppointment?.statusLabel ?? "Consulta tu agenda"}</span>
+          </div>
+
+          <div className="patient-appointment-hero__footer">
+            <span className="patient-avatar patient-avatar--small" aria-hidden="true">
+              <span className="patient-avatar__face">
+                {(nextAppointment?.doctor?.name ?? "M").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+              </span>
+            </span>
+            <div className="patient-appointment-hero__doctor">
+              <small>{nextAppointment?.doctor?.specialty ?? "Profesional de salud"}</small>
+              <strong>{nextAppointment?.doctor?.name ?? "Sin profesional asignado"}</strong>
+              <span>{nextAppointment?.notes ?? "Sin indicaciones adicionales"}</span>
+            </div>
+            <div className="patient-appointment-hero__actions">
+              <Link className="patient-action-button patient-action-button--primary" href="/patient/citas">
+                Ver mis citas
+              </Link>
+            </div>
+          </div>
+        </article>
+
+        <aside className="patient-health-status">
+          <div className="patient-health-status__top">
+            <span className="patient-health-status__badge"><HeartPulse className="size-4" aria-hidden="true" />ESTADO DE SALUD</span>
+            <span className="patient-health-status__stable">{data.triage ? "Con registro" : "Sin triaje"}</span>
+          </div>
+          <h2>{data.triage ? "Seguimiento clínico disponible" : "Completa tu información clínica"}</h2>
+          <p>
+            {data.triage
+              ? "Tienes información de triaje registrada. HIPOCRATIQ la conserva para que el profesional pueda revisarla durante tu atención."
+              : "Aún no existe un triaje asociado a tu perfil. Puedes registrar tus datos disponibles antes de la atención."}
+          </p>
+          <strong>Última actualización: {data.triage ? formatDate(data.triage.recordedAt) : "No disponible"}</strong>
+        </aside>
+      </section>
+
+      <section className="patient-dashboard-grid mt-5">
+        <Card className="patient-epidemiology">
+          <div className="patient-section-title">
+            <h2>IA epidemiológica</h2>
+            <Info className="size-4 text-muted" aria-hidden="true" />
+          </div>
+          <div className="patient-risk-callout rounded-xl">
+            <ShieldCheck className="size-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p>Información disponible de forma controlada</p>
+              <span>{data.epidemiology.message}</span>
+            </div>
+          </div>
+          <div className="patient-epidemiology__recommendation">
+            <p>Privacidad primero</p>
+            <strong>Las funciones epidemiológicas deben respetar el consentimiento clínico versionado configurado en tu perfil.</strong>
+          </div>
+          <Link className="patient-card-footer-link" href="/patient/ia">Ver módulo de IA</Link>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Último triaje registrado</h2><ClipboardCheck className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3">{data.triage ? <TriageSummary triage={data.triage} /> : <EmptyState message="No hay registros de triaje asociados a tu perfil." />}</div>
+
+        <Card className="patient-results-preview">
+          <div className="patient-section-title">
+            <h2>Resultados recientes</h2>
+            <Link className="patient-text-link" href="/patient/resultados">Ver todos</Link>
+          </div>
+          <div className="patient-preview-list">
+            {data.results.length ? data.results.slice(0, 3).map((result) => (
+              <div className="patient-preview-row" key={result.id}>
+                <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
+                <div className="patient-preview-row__copy">
+                  <strong>{result.studyName}</strong>
+                  <span>{result.clinic?.name ?? "Clínica no registrada"} · {formatDate(result.orderedAt)}</span>
+                </div>
+                <StatusBadge label={result.statusLabel} value={result.status} />
+              </div>
+            )) : <EmptyState message="No hay estudios recientes." />}
+          </div>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Resultados de laboratorio</h2><FlaskConical className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3 space-y-2">{data.results.length ? data.results.slice(0, 3).map((result) => <ResultRow key={result.id} result={result} />) : <EmptyState message="No hay estudios de laboratorio vinculados a tu perfil." />}</div>
+
+        <Card className="patient-prescriptions">
+          <div className="patient-section-title">
+            <h2>Recetas activas</h2>
+            <Link className="patient-text-link" href="/patient/recetas">Ver todas</Link>
+          </div>
+          <div className="patient-prescriptions__list">
+            {activePrescriptions.length ? activePrescriptions.slice(0, 3).map((prescription) => (
+              <div className="patient-prescription-row" key={prescription.id}>
+                <span className="patient-icon patient-icon--green"><FileText className="size-4" aria-hidden="true" /></span>
+                <div className="patient-prescription-row__copy">
+                  <strong>{prescription.medication}</strong>
+                  <span>{prescription.dosage ?? "Dosis no registrada"} · {prescription.frequency ?? "Frecuencia no registrada"}</span>
+                </div>
+                <div className="patient-prescription-row__next">
+                  <small>{prescription.statusLabel}</small>
+                  <strong>{formatDate(prescription.expiresAt)}</strong>
+                </div>
+              </div>
+            )) : <EmptyState message="No hay recetas activas." />}
+          </div>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Recetas</h2><FileText className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3 space-y-2">{activePrescriptions.length ? activePrescriptions.slice(0, 3).map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />) : <EmptyState message="No hay recetas activas vinculadas a tu perfil." />}</div>
+
+        <Card className="patient-quick-access">
+          <div className="patient-section-title"><h2>Accesos rápidos</h2></div>
+          <div className="patient-quick-grid">
+            <Link className="patient-quick-item" href="/patient/citas">
+              <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
+              <span><strong>Mis citas</strong><small>{data.appointments.length} registradas</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/historial">
+              <span className="patient-icon patient-icon--violet"><Stethoscope className="size-4" aria-hidden="true" /></span>
+              <span><strong>Historial</strong><small>{data.history.length} consultas</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/triaje">
+              <span className="patient-icon patient-icon--green"><ClipboardCheck className="size-4" aria-hidden="true" /></span>
+              <span><strong>Triaje</strong><small>Datos previos</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/perfil">
+              <span className="patient-icon patient-icon--amber"><ShieldCheck className="size-4" aria-hidden="true" /></span>
+              <span><strong>Privacidad</strong><small>Perfil y consentimientos</small></span>
+            </Link>
+          </div>
         </Card>
-        <UnavailableState title="IA epidemiológica" message={data.epidemiology.message} />
-        <UnavailableState title="Membresía" message={data.membership.message} />
-      </div>
+
+        <div className="patient-dashboard-help">
+          <div className="patient-help-strip">
+            <div className="patient-help-strip__copy">
+              <span className="patient-help-strip__icon"><Info className="size-6" aria-hidden="true" /></span>
+              <div>
+                <h2>Tu expediente se construye con cada atención</h2>
+                <p>Citas, consultas, recetas y resultados comparten el mismo contexto clínico.</p>
+              </div>
+            </div>
+            <div className="patient-help-strip__contact">
+              <strong>¿Necesitas revisar tus datos?</strong>
+              <Link className="patient-whatsapp-button" href="/patient/perfil">Ir a mi perfil</Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
