@@ -15,10 +15,7 @@ void main() {
     });
 
     expect(consent.id, 42);
-    expect(
-      consent.scope,
-      MobilePatientConsentScope.aiClinicalAssistance,
-    );
+    expect(consent.scope, MobilePatientConsentScope.aiClinicalAssistance);
     expect(consent.policyVersion, '2026-09');
     expect(consent.isGranted, isTrue);
   });
