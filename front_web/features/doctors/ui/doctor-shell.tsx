@@ -135,7 +135,14 @@ export function DoctorShell({
         </div>
       </aside>
 
-      {menuOpen ? <div className="fixed inset-0 z-30 bg-ink/20 backdrop-blur-sm lg:hidden" aria-hidden="true" onClick={() => setMenuOpen(false)} /> : null}
+      {menuOpen ? (
+        <button
+          className="fixed inset-0 z-30 cursor-default border-0 bg-ink/20 backdrop-blur-sm lg:hidden"
+          type="button"
+          aria-label={t("closeMenu")}
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
 
       <header className="sticky top-0 z-20 flex h-[70px] items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur-md sm:px-5 lg:ml-60 lg:px-6">
         <button
