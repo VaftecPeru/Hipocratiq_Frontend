@@ -309,6 +309,50 @@ export type LaboratoryOrderMeta = {
   critical: number;
 };
 
+export type ImagingStudyStatus = "ordered" | "scheduled" | "available" | "reviewed" | "canceled";
+
+export type ImagingStudy = {
+  id: number;
+  accessionNumber: string;
+  studyInstanceUid: string | null;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patientCode: string; name: string | null };
+  consultationId: number | null;
+  modality: string;
+  studyDescription: string;
+  status: ImagingStudyStatus;
+  statusLabel: string;
+  reportSummary: string | null;
+  notes: string | null;
+  orderedAt: string | null;
+  studyAt: string | null;
+  availableAt: string | null;
+  reviewedAt: string | null;
+  pacs: { linked: boolean; provider: string | null };
+};
+
+export type ImagingStudyPayload = {
+  patient_profile_id: number;
+  consultation_id?: number | null;
+  modality: string;
+  study_description: string;
+  notes?: string | null;
+};
+
+export type ImagingStudyMeta = {
+  total: number;
+  ordered: number;
+  scheduled: number;
+  available: number;
+  reviewed: number;
+  connection: {
+    status: "configured" | "not_configured";
+    provider: string;
+    dicomweb: boolean;
+    viewer: boolean;
+  };
+};
+
 export type TeleconsultationStatus = "scheduled" | "waiting" | "in_progress" | "completed" | "canceled";
 
 export type DoctorTeleconsultation = {
@@ -836,6 +880,26 @@ type ApiLaboratoryOrder = {
   notes: string | null;
 };
 
+type ApiImagingStudy = {
+  id: number;
+  accession_number: string;
+  study_instance_uid: string | null;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patient_code: string; name: string | null };
+  consultation_id: number | null;
+  modality: string;
+  study_description: string;
+  status: ImagingStudyStatus;
+  status_label: string;
+  report_summary: string | null;
+  notes: string | null;
+  ordered_at: string | null;
+  study_at: string | null;
+  available_at: string | null;
+  reviewed_at: string | null;
+  pacs: { linked: boolean; provider: string | null };
+};
+
 type ApiTeleconsultation = {
   id: number;
   clinic: { id: number; name: string } | null;
@@ -905,6 +969,28 @@ function mapLaboratoryOrder(order: ApiLaboratoryOrder): LaboratoryOrder {
     resultAt: order.result_at,
     resultSummary: order.result_summary,
     notes: order.notes,
+  };
+}
+
+function mapImagingStudy(study: ApiImagingStudy): ImagingStudy {
+  return {
+    id: study.id,
+    accessionNumber: study.accession_number,
+    studyInstanceUid: study.study_instance_uid,
+    clinic: study.clinic,
+    patient: mapWorkspacePatient(study.patient),
+    consultationId: study.consultation_id,
+    modality: study.modality,
+    studyDescription: study.study_description,
+    status: study.status,
+    statusLabel: study.status_label,
+    reportSummary: study.report_summary,
+    notes: study.notes,
+    orderedAt: study.ordered_at,
+    studyAt: study.study_at,
+    availableAt: study.available_at,
+    reviewedAt: study.reviewed_at,
+    pacs: study.pacs,
   };
 }
 
@@ -984,6 +1070,31 @@ export async function updateDoctorLaboratoryStatus(orderId: number, status: Labo
   });
   if (!response.data) throw new ApiError('El servidor no devolvió el resultado actualizado.', 502);
   return mapLaboratoryOrder(response.data);
+}
+
+export async function getDoctorImaging(signal?: AbortSignal): Promise<{ items: ImagingStudy[]; meta: ImagingStudyMeta }> {
+  const response = await getFromApi<{ data: ApiImagingStudy[]; meta: ImagingStudyMeta }>('/api/v1/auth/doctor/imaging', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió imagenología incompleta.', 502);
+  return { items: response.data.map(mapImagingStudy), meta: response.meta };
+}
+
+export async function createDoctorImagingStudy(payload: ImagingStudyPayload): Promise<ImagingStudy> {
+  const response = await postToApi<{ data: ApiImagingStudy }>('/api/v1/auth/doctor/imaging', payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió el estudio de imagen creado.', 502);
+  return mapImagingStudy(response.data);
+}
+
+export async function updateDoctorImagingStatus(
+  studyId: number,
+  status: ImagingStudyStatus,
+  reportSummary?: string,
+): Promise<ImagingStudy> {
+  const response = await patchToApi<{ data: ApiImagingStudy }>(`/api/v1/auth/doctor/imaging/${studyId}/status`, {
+    status,
+    ...(reportSummary === undefined ? {} : { report_summary: reportSummary }),
+  });
+  if (!response.data) throw new ApiError('El servidor no devolvió el estudio de imagen actualizado.', 502);
+  return mapImagingStudy(response.data);
 }
 
 export async function getDoctorTeleconsultations(signal?: AbortSignal): Promise<{ items: DoctorTeleconsultation[]; meta: DoctorTeleconsultationMeta }> {
