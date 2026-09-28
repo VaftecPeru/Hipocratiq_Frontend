@@ -835,8 +835,6 @@ function ProfileField({ id, label, value, onChange, type = "text", required = fa
   return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id}>{label}{required ? <span className="text-danger">*</span> : null}<input id={id} className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={error} /></label>;
 }
 
-const CURRENT_CONSENT_POLICY_VERSION = "2026-09";
-
 const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; description: string }> = [
   { scope: "clinical_care", title: "Atención clínica", description: "Autoriza registrar y utilizar tus datos en el proceso asistencial." },
   { scope: "data_processing", title: "Tratamiento de datos", description: "Registra tu consentimiento explícito para el tratamiento de información dentro de HIPOCRATIQ." },
@@ -847,6 +845,7 @@ const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; descri
 
 function ConsentPreferencesCard() {
   const [consents, setConsents] = useState<PatientConsent[]>([]);
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [changing, setChanging] = useState<PatientConsentScope | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -854,7 +853,10 @@ function ConsentPreferencesCard() {
   useEffect(() => {
     const controller = new AbortController();
     getPatientConsents(controller.signal)
-      .then(setConsents)
+      .then((settings) => {
+        setConsents(settings.consents);
+        setPolicyVersion(settings.policyVersion);
+      })
       .catch((caught: unknown) => {
         if (!controller.signal.aborted) setConsentError(errorMessage(caught));
       })
@@ -867,20 +869,20 @@ function ConsentPreferencesCard() {
   function activeConsent(scope: PatientConsentScope): PatientConsent | undefined {
     return consents.find((consent) =>
       consent.scope === scope
-      && consent.policyVersion === CURRENT_CONSENT_POLICY_VERSION
+      && consent.policyVersion === policyVersion
       && consent.status === "granted"
     );
   }
 
   async function toggle(scope: PatientConsentScope): Promise<void> {
-    if (changing) return;
+    if (changing || !policyVersion) return;
     setChanging(scope);
     setConsentError(null);
     try {
       const active = activeConsent(scope);
       const updated = active
         ? await revokePatientConsent(active.id)
-        : await grantPatientConsent(scope, CURRENT_CONSENT_POLICY_VERSION);
+        : await grantPatientConsent(scope, policyVersion);
       setConsents((current) => {
         const withoutUpdated = current.filter((consent) => consent.id !== updated.id);
         return [updated, ...withoutUpdated];
@@ -899,7 +901,7 @@ function ConsentPreferencesCard() {
         <div>
           <h2 className="text-sm font-extrabold text-ink">Consentimientos clínicos</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Política {CURRENT_CONSENT_POLICY_VERSION}. Cada autorización se registra por separado, puede revocarse
+            Política {policyVersion ?? "vigente"}. Cada autorización se registra por separado, puede revocarse
             y mantiene trazabilidad.
           </p>
         </div>
