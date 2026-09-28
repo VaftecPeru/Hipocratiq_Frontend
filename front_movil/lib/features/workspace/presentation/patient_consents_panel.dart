@@ -14,9 +14,8 @@ class PatientConsentsPanel extends StatefulWidget {
 }
 
 class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
-  static const String _policyVersion = '2026-09';
-
   List<MobilePatientConsent> _consents = const <MobilePatientConsent>[];
+  String? _policyVersion;
   MobilePatientConsentScope? _changing;
   String? _error;
   bool _loading = true;
@@ -33,10 +32,11 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
       _error = null;
     });
     try {
-      final consents = await widget.authGateway.fetchPatientConsents();
+      final settings = await widget.authGateway.fetchPatientConsents();
       if (!mounted) return;
       setState(() {
-        _consents = consents;
+        _consents = settings.consents;
+        _policyVersion = settings.policyVersion;
         _loading = false;
       });
     } on Object catch (error) {
@@ -60,7 +60,8 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
   }
 
   Future<void> _toggle(MobilePatientConsentScope scope) async {
-    if (_changing != null) return;
+    final policyVersion = _policyVersion;
+    if (_changing != null || policyVersion == null) return;
 
     setState(() {
       _changing = scope;
@@ -72,7 +73,7 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
       final updated = active == null
           ? await widget.authGateway.grantPatientConsent(
               scope,
-              policyVersion: _policyVersion,
+              policyVersion: policyVersion,
             )
           : await widget.authGateway.revokePatientConsent(active.id);
 
