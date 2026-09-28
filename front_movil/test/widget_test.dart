@@ -71,7 +71,7 @@ class _FakeAuthGateway implements AuthGateway {
   @override
   Future<MobilePatientConsent> grantPatientConsent(
     MobilePatientConsentScope scope, {
-    String policyVersion = '2026-09',
+    required String policyVersion,
   }) async => throw UnimplementedError();
 
   @override
