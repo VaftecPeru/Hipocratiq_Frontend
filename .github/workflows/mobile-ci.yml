@@ -5,13 +5,13 @@ on:
     branches:
       - main
       - develop
-      - develop
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
