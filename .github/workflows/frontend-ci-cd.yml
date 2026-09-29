@@ -50,7 +50,7 @@ jobs:
 
       - name: Test authentication and clinical flow regressions
         working-directory: front_web
-        run: node --test tests/*.test.mjs
+        run: npm test
 
       - name: Lint frontend
         working-directory: front_web
