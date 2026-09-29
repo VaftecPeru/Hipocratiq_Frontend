@@ -1,6 +1,7 @@
 import http from "node:http";
 
 const port = Number(process.env.PORT ?? 8000);
+const host = process.env.HOST ?? "0.0.0.0";
 
 function cookies(request) {
   return Object.fromEntries(
@@ -139,6 +140,6 @@ const server = http.createServer((request, response) => {
   response.end(JSON.stringify({ success: true, data: {} }));
 });
 
-server.listen(port, "127.0.0.1", () => {
-  process.stdout.write(`HIPOCRATIQ E2E fake backend listening on ${port}\n`);
+server.listen(port, host, () => {
+  process.stdout.write(`HIPOCRATIQ E2E fake backend listening on ${host}:${port}\n`);
 });
