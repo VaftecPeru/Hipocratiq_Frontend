@@ -1,10 +1,10 @@
 name: Frontend CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - develop
       - develop
     paths:
       - front_web/**
@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
