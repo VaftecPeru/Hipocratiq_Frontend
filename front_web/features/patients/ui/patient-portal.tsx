@@ -796,7 +796,6 @@ type ProfileForm = {
   address: string;
   emergencyContact: string;
   insurance: string;
-  whatsappConsent: boolean;
 };
 
 const PROFILE_FIELD_ERROR_KEYS = {
@@ -811,7 +810,6 @@ const PROFILE_FIELD_ERROR_KEYS = {
   address: ["address"],
   emergencyContact: ["emergency_contact"],
   insurance: ["insurance"],
-  whatsappConsent: ["whatsapp_consent"],
 } as const;
 
 function profileFormFromData(profile: PatientProfile): ProfileForm {
@@ -827,7 +825,6 @@ function profileFormFromData(profile: PatientProfile): ProfileForm {
     address: profile.address ?? "",
     emergencyContact: profile.emergencyContact ?? "",
     insurance: profile.insurance ?? "",
-    whatsappConsent: profile.whatsappConsent,
   };
 }
 
@@ -838,6 +835,7 @@ function ProfileField({ id, label, value, onChange, type = "text", required = fa
 const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; description: string }> = [
   { scope: "clinical_care", title: "Atención clínica", description: "Autoriza registrar y utilizar tus datos en el proceso asistencial." },
   { scope: "data_processing", title: "Tratamiento de datos", description: "Registra tu consentimiento explícito para el tratamiento de información dentro de HIPOCRATIQ." },
+  { scope: "whatsapp_notifications", title: "Notificaciones por WhatsApp", description: "Autoriza recordatorios operativos por WhatsApp. Puedes revocar esta autorización en cualquier momento." },
   { scope: "telemedicine", title: "Telemedicina", description: "Autoriza el uso de tus datos durante atenciones remotas cuando el servicio esté habilitado." },
   { scope: "ai_clinical_assistance", title: "Asistencia clínica con IA", description: "Autoriza funciones de apoyo clínico con IA; las decisiones continúan a cargo del profesional." },
   { scope: "epidemiology_anonymized", title: "Analítica epidemiológica anonimizada", description: "Autoriza el uso de datos anonimizados o agregados para análisis epidemiológico." },
@@ -992,7 +990,6 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
       address: form.address.trim() || null,
       emergency_contact: form.emergencyContact.trim() || null,
       insurance: form.insurance.trim() || null,
-      whatsapp_consent: form.whatsappConsent,
     };
 
     try {
@@ -1029,7 +1026,6 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
             <ProfileField id="profile-emergency" label="Contacto de emergencia" value={form.emergencyContact} onChange={(value) => setField("emergencyContact", value)} error={fieldErrors.emergencyContact} />
             <ProfileField id="profile-insurance" label="Seguro o cobertura registrada" value={form.insurance} onChange={(value) => setField("insurance", value)} error={fieldErrors.insurance} />
           </div>
-          <label className="mt-4 flex items-start gap-2 text-xs font-bold text-ink-secondary" htmlFor="profile-whatsapp"><input id="profile-whatsapp" className="mt-0.5 size-4 accent-accent" type="checkbox" checked={form.whatsappConsent} onChange={(event) => setField("whatsappConsent", event.target.checked)} disabled={saving} aria-invalid={fieldErrors.whatsappConsent ? true : undefined} aria-describedby={fieldErrors.whatsappConsent ? "profile-whatsapp-error" : undefined} />Acepto recibir comunicaciones por WhatsApp.<FieldError id="profile-whatsapp-error" message={fieldErrors.whatsappConsent} /></label>
           {error ? <p className="mt-4 rounded-lg bg-danger-soft p-3 text-sm font-bold text-danger" id="profile-form-error" role="alert">{error}</p> : null}
           {message ? <p className="mt-4 rounded-lg bg-success-soft p-3 text-sm font-bold text-success" id="profile-form-message" role="status">{message}</p> : null}
           <button className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-extrabold text-paper transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={saving}>{saving ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}{saving ? "Guardando…" : "Guardar cambios"}</button>
