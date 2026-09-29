@@ -75,7 +75,7 @@ export function MetricCard({
           </div>
         </div>
       </div>
-      {href ? <Link className="mt-3 inline-flex text-[0.65rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" href={href}>Ver detalle</Link> : <button className="mt-3 text-[0.65rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button">Ver detalle</button>}
+      {href ? <Link className="mt-3 inline-flex text-[0.65rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" href={href}>Ver detalle</Link> : null}
     </DoctorCard>
   );
 }
@@ -84,13 +84,18 @@ export function SectionHeading({
   title,
   action,
   actionHref,
-}: Readonly<{ title: string; action?: string; actionHref?: string }>) {
+  onAction,
+}: Readonly<{ title: string; action?: string; actionHref?: string; onAction?: () => void }>) {
   return (
     <div className="flex items-center justify-between gap-3">
       <h2 className="text-[0.86rem] font-extrabold tracking-[-0.02em] text-ink">{title}</h2>
-      {action ? (
-        actionHref ? <Link className="inline-flex shrink-0 items-center gap-1 text-[0.62rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" href={actionHref}>{action}<ChevronRight className="size-3" strokeWidth={2.2} aria-hidden="true" /></Link> :
-        <button className="inline-flex shrink-0 items-center gap-1 text-[0.62rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button">
+      {action && actionHref ? (
+        <Link className="inline-flex shrink-0 items-center gap-1 text-[0.62rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" href={actionHref}>
+          {action}
+          <ChevronRight className="size-3" strokeWidth={2.2} aria-hidden="true" />
+        </Link>
+      ) : action && onAction ? (
+        <button className="inline-flex shrink-0 items-center gap-1 text-[0.62rem] font-extrabold text-accent hover:text-accent-hover focus-visible:outline-3 focus-visible:outline-focus" type="button" onClick={onAction}>
           {action}
           <ChevronRight className="size-3" strokeWidth={2.2} aria-hidden="true" />
         </button>
