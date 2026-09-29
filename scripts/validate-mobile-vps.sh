@@ -43,7 +43,12 @@ fi
 
 echo "[1/7] Identidad visual Web/Mobile"
 if ! cmp -s front_web/public/logo_hipogratiq_1.png front_movil/assets/branding/logo-login-web.png; then
-  echo "ERROR: el logo de la app no coincide exactamente con el logo del login web." >&2
+  echo "ERROR: el logo visible en autenticación Mobile no coincide con el login Web." >&2
+  exit 1
+fi
+
+if ! cmp -s front_web/public/logo_hipocratiq.webp front_movil/assets/branding/logo-app-web.webp; then
+  echo "ERROR: el isotipo del launcher Mobile no coincide con el asset oficial Web." >&2
   exit 1
 fi
 
