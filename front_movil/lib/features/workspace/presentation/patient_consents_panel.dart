@@ -154,12 +154,7 @@ class _PatientConsentsPanelState extends State<PatientConsentsPanel> {
               ),
             )
           else
-            ...MobilePatientConsentScope.values
-                .where(
-                  (scope) =>
-                      scope != MobilePatientConsentScope.whatsappNotifications,
-                )
-                .map(_consentRow),
+            ...MobilePatientConsentScope.values.map(_consentRow),
           if (_message != null) ...[
             const SizedBox(height: 10),
             Semantics(
