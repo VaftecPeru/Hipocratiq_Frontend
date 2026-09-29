@@ -60,10 +60,12 @@ jobs:
         run: flutter test
 
       - name: Generate HIPOCRATIQ launcher icons
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         working-directory: front_movil
         run: dart run flutter_launcher_icons
 
       - name: Build Android APK
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         working-directory: front_movil
         run: >-
           flutter build apk --debug
@@ -71,6 +73,7 @@ jobs:
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Build Android AAB
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         working-directory: front_movil
         run: >-
           flutter build appbundle --debug
@@ -78,6 +81,7 @@ jobs:
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Upload Android validation builds
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: hipocratiq-android-validation
