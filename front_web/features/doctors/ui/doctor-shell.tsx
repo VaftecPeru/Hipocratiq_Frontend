@@ -24,7 +24,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/features/auth/ui/logout-button";
 import { ClinicalNotificationBell } from "@/features/platform/ui/clinical-notification-bell";
 import { PreferenceControls } from "@/shared/ui/preference-controls";
@@ -96,13 +96,57 @@ export function DoctorShell({
   const t = useTranslations("doctor");
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavigationRef = useRef<HTMLElement>(null);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const drawer = mobileNavigationRef.current;
+    if (!drawer) return undefined;
+
+    const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(selector));
+    (focusable[0] ?? drawer).focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+        return;
+      }
+
+      if (event.key !== "Tab" || focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeMenu, menuOpen]);
   const initials = userName.split(/\s+/).map((name) => name[0]).join("").slice(0, 2).toUpperCase() || "DR";
 
   return (
     <div className="min-h-svh bg-paper text-ink">
-      <aside className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-60 flex-col border-r border-line bg-surface lg:flex`}>
+      <aside
+        ref={mobileNavigationRef}
+        id="doctor-mobile-navigation"
+        tabIndex={-1}
+        className={`${menuOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-60 flex-col border-r border-line bg-surface lg:flex`}
+      >
         <div className="flex h-[70px] items-center border-b border-line px-4">
-          <Link className="flex min-h-11 min-w-0 items-center focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" href="/doctor/dashboard" onClick={() => setMenuOpen(false)}>
+          <Link className="flex min-h-11 min-w-0 items-center focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus" href="/doctor/dashboard" onClick={closeMenu}>
             <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] bg-accent p-1.5 shadow-[0_0.45rem_1rem_rgb(8_98_221/22%)]">
               <Image className="size-full object-contain brightness-0 invert" src="/logo_hipocratiq.webp" width={28} height={28} alt="" priority />
             </span>
@@ -114,7 +158,7 @@ export function DoctorShell({
           <ul className="grid gap-1">
             {navigation.map((item) => (
               <li key={item.href}>
-                <SidebarLink item={item} pathname={pathname} closeMenu={() => setMenuOpen(false)} />
+                <SidebarLink item={item} pathname={pathname} closeMenu={closeMenu} />
               </li>
             ))}
           </ul>
@@ -140,16 +184,18 @@ export function DoctorShell({
           className="fixed inset-0 z-30 cursor-default border-0 bg-ink/20 backdrop-blur-sm lg:hidden"
           type="button"
           aria-label={t("closeMenu")}
-          onClick={() => setMenuOpen(false)}
+          onClick={closeMenu}
         />
       ) : null}
 
       <header className="sticky top-0 z-20 flex h-[70px] items-center gap-3 border-b border-line bg-surface/95 px-3 backdrop-blur-md sm:px-5 lg:ml-60 lg:px-6">
         <button
+          ref={menuButtonRef}
           className="grid size-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus lg:hidden"
           type="button"
            aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
           aria-expanded={menuOpen}
+          aria-controls="doctor-mobile-navigation"
           onClick={() => setMenuOpen((open) => !open)}
         >
           {menuOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
@@ -169,21 +215,21 @@ export function DoctorShell({
              <Link className="relative grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" href="/doctor/mensajes" aria-label={t("viewMessages")}>
              <Mail className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
            </Link>
-           <button className="grid size-8 place-items-center rounded-lg text-ink-secondary hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={t("help")}>
+           <span className="grid size-8 place-items-center rounded-lg text-muted" aria-label={t("help")} aria-disabled="true" title={t("navigation.soon")}>
             <span className="grid size-4 place-items-center rounded-full border border-current text-[0.65rem] font-extrabold">?</span>
-          </button>
+          </span>
          </div>
 
           <PreferenceControls idPrefix="doctor-header" />
           <ClinicalNotificationBell />
-          <button className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" type="button" aria-label={t("profile")}>
+          <Link className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 text-left hover:border-line-strong focus-visible:outline-3 focus-visible:outline-focus" href="/doctor/configuracion" aria-label={t("profile")}>
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-[0.6rem] font-extrabold text-white ring-2 ring-accent-soft">{initials}</span>
           <span className="hidden min-w-0 sm:block">
             <span className="block max-w-28 truncate text-[0.68rem] font-extrabold">{userName}</span>
             <span className="block max-w-28 truncate text-[0.55rem] font-bold text-ink-secondary">{subtitle.split("·")[0].trim()}</span>
           </span>
           <span className="hidden text-muted sm:block" aria-hidden="true">⌄</span>
-        </button>
+        </Link>
          <span className="hidden items-center gap-1.5 rounded-full bg-success-soft px-2 py-1 text-[0.56rem] font-extrabold text-success md:inline-flex">
            <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />{t("online")}
         </span>
