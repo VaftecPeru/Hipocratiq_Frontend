@@ -128,7 +128,7 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      disabled={disabled}
+      disabled={disabled || !onChange}
       onClick={() => onChange?.(!checked)}
     >
       <span className={`absolute top-0.5 size-3 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-3.5" : "translate-x-0.5"}`} />
