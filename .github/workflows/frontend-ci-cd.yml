@@ -63,6 +63,10 @@ jobs:
       - name: Build frontend Docker image
         run: docker build --file front_web/Dockerfile --tag hipocratiq-frontend:ci front_web
 
+      - name: Cleanup frontend CI image
+        if: always()
+        run: docker image rm --force hipocratiq-frontend:ci 2>/dev/null || true
+
 
   e2e:
     name: Frontend E2E role routing
