@@ -227,7 +227,7 @@ function PatientDetailModal({
               <ModalDetailRow label="Emergencia">{prof?.emergencyContact ?? "—"}</ModalDetailRow>
               <ModalDetailRow label="Seguro / convenio">{prof?.insurance ?? "—"}</ModalDetailRow>
               <ModalDetailRow label="Paciente recurrente">{prof?.isReturningPatient ? "Sí" : "No"}</ModalDetailRow>
-              <ModalDetailRow label="Mensajes por WhatsApp">{prof?.whatsappConsent ? "Autorizados" : "No autorizados"}</ModalDetailRow>
+              <ModalDetailRow label="Consentimientos">Administrados por el paciente desde su portal</ModalDetailRow>
             </dl>
           </section>
           {intake ? (
@@ -288,7 +288,6 @@ function PatientEditModal({
   const [form, setForm] = useState<PatientEditForm>(EMPTY_PATIENT_EDIT_FORM);
   const [touchedFields, setTouchedFields] = useState<Partial<Record<PatientEditField, boolean>>>({});
   const [isReturningPatient, setIsReturningPatient] = useState(false);
-  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -306,7 +305,6 @@ function PatientEditModal({
         setDetail(nextDetail);
         setForm(formFromPatientDetail(nextDetail));
         setIsReturningPatient(nextDetail.profile.isReturningPatient);
-        setWhatsappConsent(nextDetail.profile.whatsappConsent);
       })
       .catch((requestError: unknown) => {
         if (controller.signal.aborted || isAbortError(requestError)) return;
@@ -353,7 +351,6 @@ function PatientEditModal({
       emergencyContact: normalizeOptionalEditValue(form.emergencyContact, detail.profile.emergencyContact, touchedFields.emergencyContact === true),
       insurance: normalizeOptionalEditValue(form.insurance, detail.profile.insurance, touchedFields.insurance === true),
       isReturningPatient,
-      whatsappConsent,
     };
     setSaving(true);
     setError(null);
@@ -369,7 +366,7 @@ function PatientEditModal({
     } finally {
       setSaving(false);
     }
-  }, [detail, detailError, form, isReturningPatient, loadingDetail, patient, saving, touchedFields, whatsappConsent, onSaved]);
+  }, [detail, detailError, form, isReturningPatient, loadingDetail, patient, saving, touchedFields, onSaved]);
 
   if (!isOpen || !patient) return null;
 
@@ -422,9 +419,11 @@ function PatientEditModal({
           <ModalField id="edit-address" label="Dirección" value={form.address} onChange={(event) => updateField("address", event.target.value)} error={fieldError("address")} />
           <ModalField id="edit-emergency" label="Contacto de emergencia" value={form.emergencyContact} onChange={(event) => updateField("emergencyContact", event.target.value)} error={fieldError("emergencyContact")} />
           <ModalField id="edit-insurance" label="Seguro / convenio" value={form.insurance} onChange={(event) => updateField("insurance", event.target.value)} error={fieldError("insurance")} />
-          <div className="flex flex-wrap gap-4 text-xs font-semibold text-ink-secondary">
-            <label className="flex items-center gap-2"><input className="size-4 accent-accent" type="checkbox" checked={isReturningPatient} onChange={(event) => setIsReturningPatient(event.target.checked)} />Paciente recurrente</label>
-            <label className="flex items-center gap-2"><input className="size-4 accent-accent" type="checkbox" checked={whatsappConsent} onChange={(event) => setWhatsappConsent(event.target.checked)} />Autoriza mensajes por WhatsApp</label>
+          <div className="grid gap-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><input className="size-4 accent-accent" type="checkbox" checked={isReturningPatient} onChange={(event) => setIsReturningPatient(event.target.checked)} />Paciente recurrente</label>
+            <p className="rounded-lg border border-line bg-surface-subtle p-3 text-xs font-semibold leading-relaxed text-ink-secondary">
+              Los consentimientos de WhatsApp, telemedicina e IA son versionados y los administra el paciente desde su portal. El personal de clínica no puede otorgarlos en su nombre.
+            </p>
           </div>
         </form>
       ) : null}
