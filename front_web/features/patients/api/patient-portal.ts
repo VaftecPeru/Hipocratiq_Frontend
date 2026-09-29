@@ -161,7 +161,6 @@ export type PatientProfileUpdatePayload = {
   address?: string | null;
   emergency_contact?: string | null;
   insurance?: string | null;
-  whatsapp_consent?: boolean;
 };
 
 export type PatientTriagePayload = {
