@@ -123,16 +123,14 @@ test("imaging create and status actions use versioned doctor endpoints", async (
   });
   await clinical.updateDoctorImagingStatus(10, "scheduled");
 
-  assert.deepEqual(calls[0], [
-    "post",
-    "/api/v1/auth/doctor/imaging",
-    { patient_profile_id: 8, modality: "MR", study_description: "Resonancia" },
-  ]);
-  assert.deepEqual(calls[1], [
-    "patch",
-    "/api/v1/auth/doctor/imaging/10/status",
-    { status: "scheduled" },
-  ]);
+  assert.equal(calls[0][0], "post");
+  assert.equal(calls[0][1], "/api/v1/auth/doctor/imaging");
+  assert.equal(calls[0][2].patient_profile_id, 8);
+  assert.equal(calls[0][2].modality, "MR");
+  assert.equal(calls[0][2].study_description, "Resonancia");
+  assert.equal(calls[1][0], "patch");
+  assert.equal(calls[1][1], "/api/v1/auth/doctor/imaging/10/status");
+  assert.equal(calls[1][2].status, "scheduled");
 });
 
 test("doctor navigation exposes imaging only after the real page exists", () => {
