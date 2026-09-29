@@ -21,7 +21,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for command in git docker; do
+for command in git docker cmp; do
   command -v "$command" >/dev/null 2>&1 || {
     echo "ERROR: falta el comando requerido: $command" >&2
     exit 1
@@ -41,19 +41,25 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-echo "[1/6] Build toolchain Flutter/Android"
+echo "[1/7] Identidad visual Web/Mobile"
+if ! cmp -s front_web/public/logo_hipogratiq_1.png front_movil/assets/branding/logo-login-web.png; then
+  echo "ERROR: el logo de la app no coincide exactamente con el logo del login web." >&2
+  exit 1
+fi
+
+echo "[2/7] Build toolchain Flutter/Android"
 docker build --pull -f front_movil/Dockerfile.android-ci -t "$IMAGE" front_movil
 
-echo "[2/6] Dart format"
+echo "[3/7] Dart format"
 docker run --rm "$IMAGE" dart format --output=none --set-exit-if-changed lib test
 
-echo "[3/6] Flutter analyze"
+echo "[4/7] Flutter analyze"
 docker run --rm "$IMAGE" flutter analyze
 
-echo "[4/6] Flutter tests"
+echo "[5/7] Flutter tests"
 docker run --rm "$IMAGE" flutter test
 
-echo "[5/6] Build APK + AAB de validación"
+echo "[6/7] Build APK + AAB de validación"
 docker create --name "$BUILD_CONTAINER" "$IMAGE" bash -lc '
   set -Eeuo pipefail
   dart run flutter_launcher_icons
@@ -73,7 +79,7 @@ docker cp "$BUILD_CONTAINER:/workspace/build/app/outputs/bundle/debug/app-debug.
 test -s "$ARTIFACT_DIR/HIPOCRATIQ-validation.apk"
 test -s "$ARTIFACT_DIR/HIPOCRATIQ-validation.aab"
 
-echo "[6/6] Checksums"
+echo "[7/7] Checksums"
 sha256sum "$ARTIFACT_DIR/HIPOCRATIQ-validation.apk" "$ARTIFACT_DIR/HIPOCRATIQ-validation.aab"
 
 echo "ANDROID VPS VALIDATION OK"
