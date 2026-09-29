@@ -15,6 +15,13 @@ on:
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - front_movil/**
+      - .github/workflows/mobile-ci.yml
 
 permissions:
   contents: read
@@ -26,7 +33,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    runs-on: [self-hosted, linux, x64, hipocratiq-vps]
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Check out repository
