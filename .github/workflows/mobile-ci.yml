@@ -2,14 +2,13 @@ name: Mobile CI
 
 on:
   workflow_dispatch:
+    inputs:
+      run_ios:
+        description: "Ejecutar validación iOS en runner macOS"
+        required: false
+        default: false
+        type: boolean
   push:
-    branches:
-      - main
-      - develop
-    paths:
-      - front_movil/**
-      - .github/workflows/mobile-ci.yml
-  pull_request:
     branches:
       - main
       - develop
@@ -92,7 +91,7 @@ jobs:
 
   ios:
     name: Flutter iOS CI
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ios
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
