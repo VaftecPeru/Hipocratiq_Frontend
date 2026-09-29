@@ -27,7 +27,7 @@ concurrency:
 jobs:
   ci:
     name: Frontend CI
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, hipocratiq-vps]
     timeout-minutes: 20
     steps:
       - name: Check out repository
@@ -74,7 +74,7 @@ jobs:
   e2e:
     name: Frontend E2E role routing
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, hipocratiq-vps]
     timeout-minutes: 25
     steps:
       - name: Check out repository
