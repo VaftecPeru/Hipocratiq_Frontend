@@ -77,6 +77,13 @@ fi
 echo "Construyendo y actualizando Frontend..."
 compose up -d --build --no-deps frontend
 
+container_id="$(compose ps -q frontend)"
+if [[ -z "$container_id" ]] || [[ "$(docker inspect --format '{{.State.Running}}' "$container_id")" != "true" ]]; then
+  echo "ERROR: el servicio Frontend no quedó en ejecución." >&2
+  compose ps
+  exit 1
+fi
+
 echo "Esperando healthcheck local..."
 READY=0
 for attempt in {1..45}; do
