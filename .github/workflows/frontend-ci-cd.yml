@@ -9,13 +9,6 @@ on:
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - front_web/**
-      - .github/workflows/frontend-ci-cd.yml
 
 permissions:
   contents: read
@@ -73,7 +66,7 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, hipocratiq-vps]
     timeout-minutes: 25
     steps:
