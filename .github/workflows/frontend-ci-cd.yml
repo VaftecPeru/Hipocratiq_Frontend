@@ -9,6 +9,13 @@ on:
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - front_web/**
+      - .github/workflows/frontend-ci-cd.yml
 
 permissions:
   contents: read
@@ -20,7 +27,7 @@ concurrency:
 jobs:
   ci:
     name: Frontend CI
-    runs-on: [self-hosted, linux, x64, hipocratiq-vps]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check out repository
@@ -73,8 +80,8 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, hipocratiq-vps]
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - name: Check out repository
