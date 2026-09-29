@@ -43,7 +43,7 @@ const navigation: NavigationItem[] = [
   { labelKey: "consultations", href: "/doctor/consultas", icon: ClipboardList, available: true },
   { labelKey: "prescriptions", href: "/doctor/recetas", icon: FileText, available: true },
   { labelKey: "laboratory", href: "/doctor/laboratorio", icon: FlaskConical, available: true },
-  { labelKey: "imaging", href: "/doctor/imagenologia", icon: ImageIcon },
+  { labelKey: "imaging", href: "/doctor/imagenologia", icon: ImageIcon, available: true },
   { labelKey: "telemedicine", href: "/doctor/telemedicina", icon: Video, available: true },
   { labelKey: "messages", href: "/doctor/mensajes", icon: MessageSquare, available: true },
   { labelKey: "reports", href: "/doctor/reportes", icon: BarChart3, available: true },
