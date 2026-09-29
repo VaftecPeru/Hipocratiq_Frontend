@@ -1,10 +1,10 @@
 name: Frontend CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - develop
       - develop
     paths:
       - front_web/**
@@ -12,12 +12,17 @@ on:
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -68,6 +73,7 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
