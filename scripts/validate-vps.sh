@@ -58,7 +58,7 @@ run_web npm audit --omit=dev --audit-level=high
 
 echo "[3/9] TypeScript + regresiones + ESLint"
 run_web npm run typecheck
-run_web node --test tests/*.test.mjs
+docker run --rm "$CI_IMAGE" sh -lc 'node --test tests/*.test.mjs'
 run_web npm run lint
 
 echo "[4/9] Next build"
@@ -82,7 +82,7 @@ docker run --rm "$E2E_IMAGE" bash -lc '
   }
   trap cleanup EXIT
   for attempt in {1..60}; do
-    if curl --fail --silent http://127.0.0.1:3000/ >/dev/null; then
+    if node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
       break
     fi
     if [[ "$attempt" -eq 60 ]]; then
