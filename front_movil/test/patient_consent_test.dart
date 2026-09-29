@@ -20,6 +20,22 @@ void main() {
     expect(consent.isGranted, isTrue);
   });
 
+  test('WhatsApp notifications use the versioned consent scope', () {
+    final consent = MobilePatientConsent.fromJson(<String, dynamic>{
+      'id': 44,
+      'scope': 'whatsapp_notifications',
+      'policy_version': '2026-09',
+      'status': 'granted',
+      'source': 'digital',
+      'effective_from': '2026-09-29T10:00:00Z',
+      'effective_until': null,
+      'revoked_at': null,
+    });
+
+    expect(consent.scope, MobilePatientConsentScope.whatsappNotifications);
+    expect(consent.isGranted, isTrue);
+  });
+
   test('revoked consent is not treated as active', () {
     final consent = MobilePatientConsent.fromJson(<String, dynamic>{
       'id': 43,
