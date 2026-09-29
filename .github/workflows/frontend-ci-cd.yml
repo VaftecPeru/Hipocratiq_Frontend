@@ -104,7 +104,7 @@ jobs:
 
       - name: Install Chromium
         working-directory: front_web
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Build frontend
         working-directory: front_web
