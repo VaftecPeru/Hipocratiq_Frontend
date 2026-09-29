@@ -61,6 +61,7 @@ flutter:
   assets:
     - assets/branding/hipocratiq-mark.webp
     - assets/branding/hipocratiq-wordmark.webp
+    - assets/branding/logo-login-web.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -96,10 +97,10 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/branding/hipocratiq-mark.webp"
+  image_path: "assets/branding/logo-login-web.png"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/branding/hipocratiq-mark.webp"
-  adaptive_icon_foreground_inset: 18
+  adaptive_icon_foreground: "assets/branding/logo-login-web.png"
+  adaptive_icon_foreground_inset: 8
   remove_alpha_ios: true
   background_color_ios: "#FFFFFF"
