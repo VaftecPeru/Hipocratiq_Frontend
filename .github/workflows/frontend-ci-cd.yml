@@ -60,6 +60,9 @@ jobs:
           APP_URL: http://127.0.0.1:3000
         run: npm run build
 
+      - name: Validate production deploy script
+        run: bash -n scripts/deploy-production.sh
+
       - name: Build frontend Docker image
         run: docker build --file front_web/Dockerfile --tag hipocratiq-frontend:ci front_web
 
@@ -94,7 +97,7 @@ jobs:
 
       - name: Install Chromium
         working-directory: front_web
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Build frontend
         working-directory: front_web
