@@ -5,10 +5,11 @@ USER root
 ARG FLUTTER_VERSION=3.44.4
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl git xz-utils \
+    && apt-get install -y --no-install-recommends curl git libglu1-mesa unzip xz-utils zip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN yes | sdkmanager --licenses >/dev/null \
+RUN java -version \
+    && yes | sdkmanager --licenses >/dev/null \
     && sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
 
 ENV FLUTTER_HOME=/opt/flutter
