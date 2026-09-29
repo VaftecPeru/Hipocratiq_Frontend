@@ -13,7 +13,7 @@ Aplicación Flutter de HIPOCRATIQ para Android e iOS. La versión móvil prioriz
   - Administrador de clínica: resumen móvil; configuración avanzada continúa en web.
 - Navegación móvil Inicio / Actividad / Cuenta.
 - Cierre de sesión por dispositivo o global.
-- Launcher icon Android/iOS generado desde `assets/branding/hipocratiq-mark.webp`.
+- Branding de autenticación y launcher derivados del mismo logo oficial usado en el login Web: `assets/branding/logo-login-web.png`.
 - Identificadores:
   - Android: `com.vaftec.hipocratiq`
   - iOS: `com.vaftec.hipocratiq`
@@ -48,4 +48,13 @@ flutter build ios --release --no-codesign \
   --dart-define=BACKEND_URL=https://hipocratiq.com/backend
 ```
 
-El workflow `.github/workflows/mobile-ci.yml` ejecuta estas validaciones y publica artefactos temporales de CI para Android e iOS. La firma de producción y publicación en Google Play/App Store requieren las credenciales de las cuentas de tienda y se gestionan en la fase de release.
+El workflow `.github/workflows/mobile-ci.yml` ejecuta estas validaciones y publica artefactos temporales de CI para Android e iOS.
+
+Para generar APK/AAB release firmados en el VPS se utiliza `bash scripts/build-android-release.sh` desde la raíz del repositorio. Requiere:
+
+- `ANDROID_KEYSTORE_PATH`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+La keystore y sus secretos permanecen fuera de Git. La publicación en Google Play/App Store requiere las credenciales de las cuentas de tienda.
