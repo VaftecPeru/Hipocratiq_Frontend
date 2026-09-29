@@ -977,7 +977,6 @@ export type CreateClinicPatientPayload = {
   emergencyContact: string | null;
   insurance: string | null;
   isReturningPatient: boolean;
-  whatsappConsent: boolean;
   requestedDoctorUserId: number | null;
   specialtyId: number | null;
   subspecialtyId: number | null;
@@ -1008,7 +1007,6 @@ export async function createClinicPatient(payload: CreateClinicPatientPayload): 
     emergency_contact: payload.emergencyContact,
     insurance: payload.insurance,
     is_returning_patient: payload.isReturningPatient,
-    whatsapp_consent: payload.whatsappConsent,
     requested_doctor_user_id: payload.requestedDoctorUserId,
     specialty_id: payload.specialtyId,
     subspecialty_id: payload.subspecialtyId,
@@ -1166,7 +1164,6 @@ export type UpdateClinicPatientPayload = {
   emergencyContact?: string | null;
   insurance?: string | null;
   isReturningPatient?: boolean;
-  whatsappConsent?: boolean;
 };
 
 export async function updateClinicPatient(
@@ -1186,7 +1183,6 @@ export async function updateClinicPatient(
   if (payload.emergencyContact !== undefined) body.emergency_contact = payload.emergencyContact;
   if (payload.insurance !== undefined) body.insurance = payload.insurance;
   if (payload.isReturningPatient !== undefined) body.is_returning_patient = payload.isReturningPatient;
-  if (payload.whatsappConsent !== undefined) body.whatsapp_consent = payload.whatsappConsent;
 
   const response = await patchToApi<{ data: ApiPatient }>(`/api/v1/auth/clinic/patients/${patientId}`, body);
   if (!response.data) throw new ApiError("El servidor no devolvió el paciente actualizado.", 502);
