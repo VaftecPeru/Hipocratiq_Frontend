@@ -94,6 +94,21 @@ docker create --name "$CONTAINER" \
       --build-number="$BUILD_NUMBER" \
       --dart-define=BACKEND_URL="$BACKEND_URL" \
       --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
+
+    APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+    AAB_PATH="build/app/outputs/bundle/release/app-release.aab"
+
+    test -s "$APK_PATH"
+    test -s "$AAB_PATH"
+
+    APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+    [[ -n "$APKSIGNER" ]] || {
+      echo "ERROR: apksigner no disponible en el toolchain Android." >&2
+      exit 1
+    }
+
+    "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
+    jarsigner -verify -strict "$AAB_PATH" >/dev/null
   ' >/dev/null
 
 docker start -a "$CONTAINER"
