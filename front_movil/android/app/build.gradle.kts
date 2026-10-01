@@ -16,7 +16,7 @@ val releaseSigningConfigured = listOf(
 
 android {
     namespace = "com.vaftec.hipocratiq"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
