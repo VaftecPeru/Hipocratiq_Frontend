@@ -82,7 +82,7 @@ docker run --rm "$E2E_IMAGE" bash -lc '
   }
   trap cleanup EXIT
   for attempt in {1..60}; do
-    if node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+    if node -e "fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" http://127.0.0.1:3000/; then
       break
     fi
     if [[ "$attempt" -eq 60 ]]; then
