@@ -13,6 +13,9 @@ ENV NODE_ENV=production \
     APP_URL=http://127.0.0.1:3000 \
     NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN npm run build \
+    && mkdir -p .next/standalone/.next \
+    && cp -R .next/static .next/standalone/.next/static \
+    && if [ -d public ]; then cp -R public .next/standalone/public; fi
 
 CMD ["npx", "playwright", "test"]
