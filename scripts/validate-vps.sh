@@ -75,7 +75,7 @@ docker run --rm "$E2E_IMAGE" bash -lc '
   set -Eeuo pipefail
   node e2e/fake-backend.mjs >/tmp/fake-backend.log 2>&1 &
   BACK_PID=$!
-  npm run start >/tmp/frontend.log 2>&1 &
+  HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js >/tmp/frontend.log 2>&1 &
   FRONT_PID=$!
   cleanup() {
     kill "$BACK_PID" "$FRONT_PID" 2>/dev/null || true
