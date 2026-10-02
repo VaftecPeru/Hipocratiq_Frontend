@@ -75,14 +75,17 @@ docker run --rm "$E2E_IMAGE" bash -lc '
   set -Eeuo pipefail
   node e2e/fake-backend.mjs >/tmp/fake-backend.log 2>&1 &
   BACK_PID=$!
-  npm run start >/tmp/frontend.log 2>&1 &
+  (
+    cd .next/standalone
+    HOSTNAME=127.0.0.1 PORT=3000 node server.js
+  ) >/tmp/frontend.log 2>&1 &
   FRONT_PID=$!
   cleanup() {
     kill "$BACK_PID" "$FRONT_PID" 2>/dev/null || true
   }
   trap cleanup EXIT
   for attempt in {1..60}; do
-    if node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+    if node -e "fetch(\"http://127.0.0.1:3000/\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
       break
     fi
     if [[ "$attempt" -eq 60 ]]; then
