@@ -32,4 +32,9 @@ RUN flutter pub get
 
 COPY . .
 
+# Re-resolve after copying the full workspace so the final image cannot retain
+# a stale lockfile when pubspec constraints change between validation fixes.
+RUN flutter pub get \
+    && flutter pub deps --style=compact | grep -E 'flutter_secure_storage( |$)'
+
 CMD ["flutter", "--version"]
