@@ -2,10 +2,12 @@
 set -Eeuo pipefail
 
 PRODUCTION_DIR="${PRODUCTION_DIR:-/srv/hipocratiq/frontend}"
-COMPOSE_PROJECT="${COMPOSE_PROJECT:-hipocratiq-front-web}"
 HEALTH_URL="${HEALTH_URL:-https://hipocratiq.com/}"
 LOCK_FILE="${LOCK_FILE:-/tmp/hipocratiq-frontend-deploy.lock}"
 TARGET_BRANCH="main"
+
+FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-front-web-app}"
+COMPOSE_PROJECT="${COMPOSE_PROJECT:-}"
 
 for command in git docker curl flock; do
   command -v "$command" >/dev/null 2>&1 || {
@@ -36,8 +38,50 @@ fi
 OLD_SHA="$(git rev-parse HEAD)"
 UPDATED=0
 
+container_label() {
+  local container="$1"
+  local label="$2"
+  docker inspect --format "{{ index .Config.Labels \"$label\" }}" "$container" 2>/dev/null || true
+}
+
+detect_compose_project() {
+  if [[ -n "$COMPOSE_PROJECT" ]]; then
+    return
+  fi
+
+  if ! docker inspect "$FRONTEND_CONTAINER" >/dev/null 2>&1; then
+    echo "ERROR: no existe el contenedor productivo esperado: $FRONTEND_CONTAINER" >&2
+    exit 1
+  fi
+
+  COMPOSE_PROJECT="$(container_label "$FRONTEND_CONTAINER" "com.docker.compose.project")"
+
+  if [[ -z "$COMPOSE_PROJECT" ]]; then
+    echo "ERROR: no se pudo detectar el proyecto Docker Compose desde $FRONTEND_CONTAINER." >&2
+    echo "Define COMPOSE_PROJECT explícitamente antes de desplegar." >&2
+    exit 1
+  fi
+}
+
 compose() {
   docker compose -p "$COMPOSE_PROJECT" -f front_web/compose.yaml "$@"
+}
+
+validate_running_frontend() {
+  local project service running
+
+  project="$(container_label "$FRONTEND_CONTAINER" "com.docker.compose.project")"
+  service="$(container_label "$FRONTEND_CONTAINER" "com.docker.compose.service")"
+  running="$(docker inspect --format '{{.State.Running}}' "$FRONTEND_CONTAINER" 2>/dev/null || true)"
+
+  if [[ "$project" != "$COMPOSE_PROJECT" || "$service" != "frontend" || "$running" != "true" ]]; then
+    echo "ERROR: el contenedor Frontend no coincide con el proyecto Compose detectado." >&2
+    echo "Proyecto esperado: $COMPOSE_PROJECT" >&2
+    echo "Proyecto detectado: ${project:-<vacío>}" >&2
+    echo "Servicio detectado: ${service:-<vacío>}" >&2
+    echo "Running: ${running:-<desconocido>}" >&2
+    exit 1
+  fi
 }
 
 rollback_code() {
@@ -59,6 +103,11 @@ trap 'on_error "$LINENO"' ERR
 echo "== HIPOCRATIQ Frontend deploy =="
 echo "Origen: $OLD_SHA"
 
+detect_compose_project
+validate_running_frontend
+
+echo "Proyecto Compose detectado: $COMPOSE_PROJECT"
+
 git fetch --prune origin "$TARGET_BRANCH"
 TARGET_SHA="$(git rev-parse "origin/$TARGET_BRANCH")"
 
@@ -72,6 +121,14 @@ echo "Destino: $TARGET_SHA"
 if [[ "$OLD_SHA" != "$TARGET_SHA" ]]; then
   git merge --ff-only "origin/$TARGET_BRANCH"
   UPDATED=1
+fi
+
+echo "Validando definición Docker Compose..."
+compose config --quiet
+
+if ! compose config --services | grep -qx frontend; then
+  echo "ERROR: el servicio frontend no existe en front_web/compose.yaml." >&2
+  exit 1
 fi
 
 echo "Construyendo y actualizando Frontend..."
@@ -106,3 +163,4 @@ fi
 trap - ERR
 echo "DEPLOY FRONTEND OK"
 echo "SHA: $(git rev-parse HEAD)"
+echo "Proyecto Compose: $COMPOSE_PROJECT"
