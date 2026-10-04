@@ -65,7 +65,16 @@ echo "[5/7] Flutter tests"
 docker run --rm "$IMAGE" flutter test
 
 echo "[6/7] Build APK + AAB de validación"
-docker create --name "$BUILD_CONTAINER" "$IMAGE" bash -lc '
+echo "Preflight Maven/Gradle desde red del host"
+docker run --rm --network host "$IMAGE" bash -lc '
+  set -Eeuo pipefail
+  for url in     "https://dl.google.com/dl/android/maven2/com/android/application/com.android.application.gradle.plugin/9.0.1/com.android.application.gradle.plugin-9.0.1.pom"     "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.0.1/gradle-9.0.1.pom"     "https://plugins.gradle.org/m2/org/jetbrains/kotlin/android/org.jetbrains.kotlin.android.gradle.plugin/2.3.20/org.jetbrains.kotlin.android.gradle.plugin-2.3.20.pom"; do
+    echo "HEAD $url"
+    curl --fail --silent --show-error --location --head --retry 4 --retry-all-errors "$url" >/dev/null
+  done
+'
+
+docker create --network host --name "$BUILD_CONTAINER" "$IMAGE" bash -lc '
   set -Eeuo pipefail
   dart run flutter_launcher_icons
   flutter build apk --debug \

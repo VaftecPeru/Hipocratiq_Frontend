@@ -10,7 +10,7 @@ RUN apt-get update \
 
 RUN java -version \
     && yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses >/dev/null \
-    && sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+    && sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
 ENV FLUTTER_HOME=/opt/flutter
 ENV PATH="${FLUTTER_HOME}/bin:${FLUTTER_HOME}/bin/cache/dart-sdk/bin:${PATH}"
@@ -31,5 +31,10 @@ COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
 COPY . .
+
+# Re-resolve after copying the full workspace so the final image cannot retain
+# a stale lockfile when pubspec constraints change between validation fixes.
+RUN flutter pub get \
+    && flutter pub deps --style=compact | grep -E 'flutter_secure_storage( |$)'
 
 CMD ["flutter", "--version"]
