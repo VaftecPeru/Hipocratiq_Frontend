@@ -3,15 +3,17 @@
 import { FileText, Save, X } from "lucide-react";
 import { useState } from "react";
 import { DoctorCard } from "@/features/doctors/ui/doctor-primitives";
-import type { DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
+import type { ClinicalCoding, DoctorConsultationStatus } from "@/features/doctors/api/doctor-clinical";
 import { Spinner } from "@/shared/ui/spinner";
 import { CLINICAL_SECTIONS, emptyClinicalValues, type ClinicalInput } from "@/features/doctors/ui/clinical-sections";
+import { ClinicalCodingsEditor } from "@/features/doctors/ui/clinical-codings-editor";
 
 export type ConsultationFormValues = {
   chiefComplaint: string;
   objective: string;
   status: DoctorConsultationStatus;
   sections: Record<string, Record<string, string>>;
+  codings: ClinicalCoding[];
 };
 
 type ConsultationFormProps = {
@@ -108,8 +110,18 @@ export function ConsultationForm({
   const [sections, setSections] = useState<Record<string, Record<string, string>>>(
     initialValues.sections ?? emptyClinicalValues(),
   );
+  const [codings, setCodings] = useState<ClinicalCoding[]>(initialValues.codings ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const canSign = mode === "edit" && initialValues.status === "completed";
+  const readOnly = initialValues.status === "signed" || initialValues.status === "canceled";
+  const allowedStatuses: DoctorConsultationStatus[] = mode === "create" || initialValues.status === "draft"
+    ? ["in_progress", "draft", "completed", "canceled"]
+    : initialValues.status === "completed" ? ["completed", "signed"]
+    : readOnly ? [initialValues.status as DoctorConsultationStatus]
+    : ["in_progress", "completed", "canceled"];
+  const statusLabels: Record<DoctorConsultationStatus, string> = {
+    draft: "Borrador", in_progress: "En curso", completed: "Completada",
+    signed: readOnly ? "Firmada" : "Firmar consulta", canceled: "Cancelada",
+  };
 
   function setSectionValue(sectionKey: string, inputKey: string, value: string): void {
     setSections((current) => ({
@@ -123,19 +135,34 @@ export function ConsultationForm({
     if (chiefComplaint.trim().length < 5) {
       nextErrors.chiefComplaint = "El motivo de consulta es obligatorio.";
     }
+    if (codings.some((coding) => !coding.system.trim() || !coding.code.trim() || !coding.display.trim())) {
+      nextErrors.codings = "Completa sistema, código y descripción en cada concepto clínico.";
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (!validate()) return;
-    void onSubmit({ chiefComplaint: chiefComplaint.trim(), objective: objective.trim(), status, sections });
+    if (pending || readOnly || !validate()) return;
+    void onSubmit({
+      chiefComplaint: chiefComplaint.trim(),
+      objective: objective.trim(),
+      status,
+      sections,
+      codings: codings.map((coding) => ({
+        ...coding,
+        system: coding.system.trim(),
+        code: coding.code.trim(),
+        display: coding.display.trim(),
+        status: coding.status?.trim() || null,
+      })),
+    });
   }
 
   return (
     <form onSubmit={handleSubmit} aria-busy={pending}>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <fieldset disabled={pending || readOnly} className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <DoctorCard className="min-w-0 p-4">
           <div className="flex items-center gap-2 border-b border-line pb-3">
             <span className="grid size-7 place-items-center rounded-lg bg-accent-soft text-accent" aria-hidden="true">
@@ -202,6 +229,13 @@ export function ConsultationForm({
               </fieldset>
             ))}
           </div>
+          <div className="mt-3">
+            <ClinicalCodingsEditor value={codings} onChange={setCodings} disabled={readOnly || pending} />
+            {errors.codings ? (
+              <p className="mt-2 text-[0.55rem] font-bold text-danger" role="alert">{errors.codings}</p>
+            ) : null}
+          </div>
+
           <div className="mt-3 rounded-lg border border-accent/20 bg-accent-soft p-3">
             <p className="text-[0.62rem] font-extrabold text-accent">Identificación del clínico</p>
             <p className="mt-1 text-[0.56rem] font-bold leading-4 text-ink-secondary">
@@ -221,22 +255,20 @@ export function ConsultationForm({
                 onChange={(event) => setStatus(event.target.value as DoctorConsultationStatus)}
                 aria-label="Estado de la consulta"
               >
-                <option value="in_progress">En curso</option>
-                 <option value="completed">Completada</option>
-                 {canSign || status === "signed" ? <option value="signed">Firmar consulta</option> : null}
-                 <option value="draft">Borrador</option>
+                {allowedStatuses.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}
               </select>
             </label>
             <p className="mt-3 text-[0.56rem] font-bold leading-4 text-ink-secondary">
+              {readOnly ? "Registro de solo lectura. " : "Antes de completar, revisa motivo, antecedentes, exploración, diagnóstico, tratamiento y seguimiento. La firma cierra la edición. "}
               Los valores de los 15 apartados se guardan como historia clínica vinculada a esta consulta. Si no escribes
                un objetivo, se conserva el de la admisión clínica del paciente cuando existe.
             </p>
           </DoctorCard>
 
-          {serverError || errors.chiefComplaint || errors.objective ? (
+          {serverError || errors.chiefComplaint || errors.objective || errors.codings ? (
             <DoctorCard className="border-danger/30 p-4">
               <p className="text-xs font-bold text-danger" role="alert" aria-live="polite">
-                {serverError ?? (errors.chiefComplaint || errors.objective)}
+                {serverError ?? (errors.chiefComplaint || errors.objective || errors.codings)}
               </p>
             </DoctorCard>
           ) : null}
@@ -245,7 +277,7 @@ export function ConsultationForm({
             <button
               className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-[0.65rem] font-extrabold text-white hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-focus disabled:opacity-60"
               type="submit"
-              disabled={pending}
+              disabled={pending || readOnly}
             >
               {pending ? <Spinner className="size-3.5" /> : <Save className="size-3.5" aria-hidden="true" />}
               {mode === "create" ? "Crear consulta" : "Guardar cambios"}
@@ -254,14 +286,14 @@ export function ConsultationForm({
               className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line px-4 text-[0.65rem] font-extrabold hover:bg-surface-subtle focus-visible:outline-3 focus-visible:outline-focus"
               type="button"
               onClick={onCancel}
-              disabled={pending}
+              disabled={pending || readOnly}
             >
               <X className="size-3.5" aria-hidden="true" />
               Cancelar
             </button>
           </div>
         </aside>
-      </div>
+      </fieldset>
     </form>
   );
 }

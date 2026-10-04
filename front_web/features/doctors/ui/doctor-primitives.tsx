@@ -19,8 +19,9 @@ const toneStyles: Record<Tone, string> = {
 export function DoctorCard({
   children,
   className = "",
-}: Readonly<{ children: React.ReactNode; className?: string }>) {
-  return <article className={`${doctorCard} ${className}`}>{children}</article>;
+  id,
+}: Readonly<{ children: React.ReactNode; className?: string; id?: string }>) {
+  return <article className={`${doctorCard} ${className}`} id={id}>{children}</article>;
 }
 
 export function DoctorAvatar({

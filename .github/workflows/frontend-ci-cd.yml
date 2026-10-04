@@ -1,15 +1,18 @@
 name: Frontend CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - develop
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
@@ -17,9 +20,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     name: Frontend CI
+    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -37,9 +45,17 @@ jobs:
         working-directory: front_web
         run: npm ci --no-audit --no-fund
 
+      - name: Audit production dependencies
+        working-directory: front_web
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck frontend
         working-directory: front_web
         run: npm run typecheck
+
+      - name: Test authentication and clinical flow regressions
+        working-directory: front_web
+        run: node --test tests/*.test.mjs
 
       - name: Lint frontend
         working-directory: front_web
@@ -52,5 +68,95 @@ jobs:
           APP_URL: http://127.0.0.1:3000
         run: npm run build
 
+      - name: Validate production deploy script
+        run: bash -n scripts/deploy-production.sh
+
       - name: Build frontend Docker image
         run: docker build --file front_web/Dockerfile --tag hipocratiq-frontend:ci front_web
+
+      - name: Cleanup frontend CI image
+        if: always()
+        run: docker image rm --force hipocratiq-frontend:ci 2>/dev/null || true
+
+
+  e2e:
+    name: Frontend E2E role routing
+    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: front_web
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright runner
+        working-directory: front_web
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+
+      - name: Install Chromium
+        working-directory: front_web
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        working-directory: front_web
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        run: npm run build
+
+      - name: Start fake backend
+        working-directory: front_web
+        run: |
+          node e2e/fake-backend.mjs > /tmp/hipocratiq-e2e-backend.log 2>&1 &
+          echo $! > /tmp/hipocratiq-e2e-backend.pid
+
+      - name: Start frontend
+        working-directory: front_web
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        run: |
+          npm run start > /tmp/hipocratiq-e2e-frontend.log 2>&1 &
+          echo $! > /tmp/hipocratiq-e2e-frontend.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hipocratiq-e2e-frontend.log
+          exit 1
+
+      - name: Run Playwright E2E
+        working-directory: front_web
+        run: npx playwright test
+
+      - name: Stop E2E services
+        if: always()
+        shell: bash
+        run: |
+          for pid_file in /tmp/hipocratiq-e2e-backend.pid /tmp/hipocratiq-e2e-frontend.pid; do
+            if [[ -f "$pid_file" ]]; then
+              pid="$(cat "$pid_file")"
+              kill "$pid" 2>/dev/null || true
+              rm -f "$pid_file"
+            fi
+          done
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hipocratiq-playwright-report
+          if-no-files-found: ignore
+          path: front_web/playwright-report

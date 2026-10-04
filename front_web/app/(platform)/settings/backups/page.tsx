@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AlertTriangle, Archive, CheckCircle2, Database, Download, History, RotateCcw, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getAdminInfrastructure } from "@/features/platform/api/server-infrastructure";
+import { BackupOperations } from "@/features/platform/ui/backup-operations";
 import { SettingsCard, SettingsPageHeader } from "@/features/platform/ui/settings-primitives";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,6 +26,10 @@ export default async function BackupsPage() {
          {configured ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" /> : <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />}
         <div><h2 className="text-sm font-extrabold">{configured ? "Proveedor declarado" : "Servicio no configurado"}</h2><p className="mt-1 text-xs leading-5 text-muted">{backup.message}</p></div>
       </section>
+      <BackupOperations
+        configured={configured}
+        latestUnverifiedBackupId={backup.history.find((item) => !item.verifiedAt)?.id ?? null}
+      />
       <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]">
         <SettingsCard title="Capacidades verificadas" description="Sólo se habilitan operaciones respaldadas por un proveedor y manifiestos reales." icon={Database} titleId="backup-capabilities">
           <ul className="mt-4 grid gap-2 sm:grid-cols-2">

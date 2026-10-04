@@ -1,0 +1,40 @@
+FROM mobiledevops/android-sdk-image:36.1.0
+
+USER root
+
+ARG FLUTTER_VERSION=3.44.4
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl git libglu1-mesa unzip xz-utils zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN java -version \
+    && yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses >/dev/null \
+    && sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+ENV FLUTTER_HOME=/opt/flutter
+ENV PATH="${FLUTTER_HOME}/bin:${FLUTTER_HOME}/bin/cache/dart-sdk/bin:${PATH}"
+
+RUN mkdir -p "${FLUTTER_HOME}" \
+    && curl --fail --location --retry 5 \
+      "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" \
+      -o /tmp/flutter.tar.xz \
+    && tar -xJf /tmp/flutter.tar.xz -C "${FLUTTER_HOME}" --strip-components=1 \
+    && rm /tmp/flutter.tar.xz \
+    && git config --global --add safe.directory "${FLUTTER_HOME}" \
+    && flutter config --no-analytics \
+    && flutter precache --android
+
+WORKDIR /workspace
+
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter pub get
+
+COPY . .
+
+# Re-resolve after copying the full workspace so the final image cannot retain
+# a stale lockfile when pubspec constraints change between validation fixes.
+RUN flutter pub get \
+    && flutter pub deps --style=compact | grep -E 'flutter_secure_storage( |$)'
+
+CMD ["flutter", "--version"]

@@ -15,17 +15,23 @@ import {
   ShieldCheck,
   Stethoscope,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { AuthenticatedUser } from "@/features/auth/model/auth.types";
 import {
+  getPatientConsents,
   getPatientPortalData,
+  grantPatientConsent,
+  revokePatientConsent,
   savePatientTriage,
   updatePatientProfile,
   type PatientAppointment,
   type PatientDashboardData,
   type PatientLaboratoryResult,
   type PatientConsultation,
+  type PatientConsent,
+  type PatientConsentScope,
   type PatientPortalData,
   type PatientPortalView,
   type PatientPrescription,
@@ -223,36 +229,179 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
     .filter((appointment) => appointment.scheduledAt && new Date(appointment.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(appointment.status))
     .sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime()), [data.appointments, now]);
   const activePrescriptions = data.prescriptions.filter((prescription) => prescription.status === "active");
+  const nextAppointment = upcoming[0] ?? null;
+  const firstName = user.name?.trim().split(/\s+/)[0] || "Paciente";
+
+  const nextDate = nextAppointment?.scheduledAt
+    ? new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long" }).format(new Date(nextAppointment.scheduledAt))
+    : "Sin próxima cita";
+  const nextTime = nextAppointment?.scheduledAt
+    ? new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit" }).format(new Date(nextAppointment.scheduledAt))
+    : "—";
 
   return (
-    <div className="patient-page space-y-4">
-      <PageIntro title={`Información de ${user.name || "tu cuenta"}`} description="Este resumen usa únicamente datos clínicos vinculados a tu perfil autenticado." />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={CalendarDays} label="Citas registradas" value={String(data.appointments.length)} />
-        <Metric icon={Stethoscope} label="Consultas con historia visible" value={String(data.history.length)} />
-        <Metric icon={FlaskConical} label="Estudios registrados" value={String(data.results.length)} />
-        <Metric icon={HeartPulse} label="Recetas activas" value={String(activePrescriptions.length)} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Próxima cita</h2><CalendarDays className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3">{upcoming[0] ? <AppointmentSummary appointment={upcoming[0]} /> : <EmptyState message="No hay una cita futura vinculada a tu perfil." />}</div>
+    <div className="patient-page">
+      <header className="mb-5">
+        <h2 className="text-[clamp(1.25rem,2vw,1.55rem)] font-black tracking-[-0.045em] text-ink">
+          Bienvenido de nuevo, {firstName}
+        </h2>
+        <p className="mt-1 text-sm font-bold text-muted">
+          Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.
+        </p>
+      </header>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.48fr)_minmax(340px,1fr)]">
+        <article className="patient-appointment-hero">
+          <div className="patient-appointment-hero__top">
+            <div className="patient-appointment-hero__eyebrow">
+              <span>PRÓXIMA CITA</span>
+              <CalendarDays aria-hidden="true" />
+            </div>
+            <div className="patient-appointment-hero__time">
+              <strong>{nextTime}</strong>
+              <span>{nextAppointment ? appointmentTypeLabel(nextAppointment.appointmentType) : "Agenda disponible"}</span>
+            </div>
+          </div>
+          <div className="patient-appointment-hero__date">{nextDate}</div>
+          <div className="patient-appointment-hero__location">
+            <span>{nextAppointment?.clinic?.name ?? "Clínica no registrada"}</span>
+            <i aria-hidden="true" />
+            <span>{nextAppointment?.statusLabel ?? "Consulta tu agenda"}</span>
+          </div>
+
+          <div className="patient-appointment-hero__footer">
+            <span className="patient-avatar patient-avatar--small" aria-hidden="true">
+              <span className="patient-avatar__face">
+                {(nextAppointment?.doctor?.name ?? "M").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+              </span>
+            </span>
+            <div className="patient-appointment-hero__doctor">
+              <small>{nextAppointment?.doctor?.specialty ?? "Profesional de salud"}</small>
+              <strong>{nextAppointment?.doctor?.name ?? "Sin profesional asignado"}</strong>
+              <span>{nextAppointment?.notes ?? "Sin indicaciones adicionales"}</span>
+            </div>
+            <div className="patient-appointment-hero__actions">
+              <Link className="patient-action-button patient-action-button--primary" href="/patient/citas">
+                Ver mis citas
+              </Link>
+            </div>
+          </div>
+        </article>
+
+        <aside className="patient-health-status">
+          <div className="patient-health-status__top">
+            <span className="patient-health-status__badge"><HeartPulse className="size-4" aria-hidden="true" />ESTADO DE SALUD</span>
+            <span className="patient-health-status__stable">{data.triage ? "Con registro" : "Sin triaje"}</span>
+          </div>
+          <h2>{data.triage ? "Seguimiento clínico disponible" : "Completa tu información clínica"}</h2>
+          <p>
+            {data.triage
+              ? "Tienes información de triaje registrada. HIPOCRATIQ la conserva para que el profesional pueda revisarla durante tu atención."
+              : "Aún no existe un triaje asociado a tu perfil. Puedes registrar tus datos disponibles antes de la atención."}
+          </p>
+          <strong>Última actualización: {data.triage ? formatDate(data.triage.recordedAt) : "No disponible"}</strong>
+        </aside>
+      </section>
+
+      <section className="patient-dashboard-grid mt-5">
+        <Card className="patient-epidemiology">
+          <div className="patient-section-title">
+            <h2>IA epidemiológica</h2>
+            <Info className="size-4 text-muted" aria-hidden="true" />
+          </div>
+          <div className="patient-risk-callout rounded-xl">
+            <ShieldCheck className="size-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p>Información disponible de forma controlada</p>
+              <span>{data.epidemiology.message}</span>
+            </div>
+          </div>
+          <div className="patient-epidemiology__recommendation">
+            <p>Privacidad primero</p>
+            <strong>Las funciones epidemiológicas deben respetar el consentimiento clínico versionado configurado en tu perfil.</strong>
+          </div>
+          <Link className="patient-card-footer-link" href="/patient/ia">Ver módulo de IA</Link>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Último triaje registrado</h2><ClipboardCheck className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3">{data.triage ? <TriageSummary triage={data.triage} /> : <EmptyState message="No hay registros de triaje asociados a tu perfil." />}</div>
+
+        <Card className="patient-results-preview">
+          <div className="patient-section-title">
+            <h2>Resultados recientes</h2>
+            <Link className="patient-text-link" href="/patient/resultados">Ver todos</Link>
+          </div>
+          <div className="patient-preview-list">
+            {data.results.length ? data.results.slice(0, 3).map((result) => (
+              <div className="patient-preview-row" key={result.id}>
+                <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
+                <div className="patient-preview-row__copy">
+                  <strong>{result.studyName}</strong>
+                  <span>{result.clinic?.name ?? "Clínica no registrada"} · {formatDate(result.orderedAt)}</span>
+                </div>
+                <StatusBadge label={result.statusLabel} value={result.status} />
+              </div>
+            )) : <EmptyState message="No hay estudios recientes." />}
+          </div>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Resultados de laboratorio</h2><FlaskConical className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3 space-y-2">{data.results.length ? data.results.slice(0, 3).map((result) => <ResultRow key={result.id} result={result} />) : <EmptyState message="No hay estudios de laboratorio vinculados a tu perfil." />}</div>
+
+        <Card className="patient-prescriptions">
+          <div className="patient-section-title">
+            <h2>Recetas activas</h2>
+            <Link className="patient-text-link" href="/patient/recetas">Ver todas</Link>
+          </div>
+          <div className="patient-prescriptions__list">
+            {activePrescriptions.length ? activePrescriptions.slice(0, 3).map((prescription) => (
+              <div className="patient-prescription-row" key={prescription.id}>
+                <span className="patient-icon patient-icon--green"><FileText className="size-4" aria-hidden="true" /></span>
+                <div className="patient-prescription-row__copy">
+                  <strong>{prescription.medication}</strong>
+                  <span>{prescription.dosage ?? "Dosis no registrada"} · {prescription.frequency ?? "Frecuencia no registrada"}</span>
+                </div>
+                <div className="patient-prescription-row__next">
+                  <small>{prescription.statusLabel}</small>
+                  <strong>{formatDate(prescription.expiresAt)}</strong>
+                </div>
+              </div>
+            )) : <EmptyState message="No hay recetas activas." />}
+          </div>
         </Card>
-        <Card>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Recetas</h2><FileText className="size-4 text-muted" aria-hidden="true" /></div>
-          <div className="mt-3 space-y-2">{activePrescriptions.length ? activePrescriptions.slice(0, 3).map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />) : <EmptyState message="No hay recetas activas vinculadas a tu perfil." />}</div>
+
+        <Card className="patient-quick-access">
+          <div className="patient-section-title"><h2>Accesos rápidos</h2></div>
+          <div className="patient-quick-grid">
+            <Link className="patient-quick-item" href="/patient/citas">
+              <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
+              <span><strong>Mis citas</strong><small>{data.appointments.length} registradas</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/historial">
+              <span className="patient-icon patient-icon--violet"><Stethoscope className="size-4" aria-hidden="true" /></span>
+              <span><strong>Historial</strong><small>{data.history.length} consultas</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/triaje">
+              <span className="patient-icon patient-icon--green"><ClipboardCheck className="size-4" aria-hidden="true" /></span>
+              <span><strong>Triaje</strong><small>Datos previos</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/perfil">
+              <span className="patient-icon patient-icon--amber"><ShieldCheck className="size-4" aria-hidden="true" /></span>
+              <span><strong>Privacidad</strong><small>Perfil y consentimientos</small></span>
+            </Link>
+          </div>
         </Card>
-        <UnavailableState title="IA epidemiológica" message={data.epidemiology.message} />
-        <UnavailableState title="Membresía" message={data.membership.message} />
-      </div>
+
+        <div className="patient-dashboard-help">
+          <div className="patient-help-strip">
+            <div className="patient-help-strip__copy">
+              <span className="patient-help-strip__icon"><Info className="size-6" aria-hidden="true" /></span>
+              <div>
+                <h2>Tu expediente se construye con cada atención</h2>
+                <p>Citas, consultas, recetas y resultados comparten el mismo contexto clínico.</p>
+              </div>
+            </div>
+            <div className="patient-help-strip__contact">
+              <strong>¿Necesitas revisar tus datos?</strong>
+              <Link className="patient-whatsapp-button" href="/patient/perfil">Ir a mi perfil</Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -269,7 +418,7 @@ function AppointmentsView({ appointments }: { appointments: PatientAppointment[]
       <Card className="mt-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-extrabold text-ink">Agenda registrada</h2><span className="text-xs font-bold text-muted">{appointments.length} {appointments.length === 1 ? "cita" : "citas"}</span></div>
         <div className="mt-4 space-y-3">{appointments.length ? appointments.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />) : <EmptyState message="No hay citas vinculadas a tu perfil." />}</div>
-        <p className="mt-4 text-xs text-muted">La creación, reprogramación y cancelación de citas no están disponibles desde este portal.</p>
+        <p className="mt-4 text-xs text-muted">Para agendar, reprogramar o cancelar, contacta a recepción de tu clínica o a tu médico. Ellos registran la cita y su confirmación; aquí puedes consultar su estado. Al llegar, recepción registra tu ingreso y el médico continúa tu atención e historial clínico.</p>
       </Card>
     </div>
   );
@@ -440,12 +589,180 @@ function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
 }
 
 function HistoryView({ consultations }: { consultations: PatientConsultation[] }) {
+  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures" | "documents">("all");
+  const [year, setYear] = useState<string>("all");
+
+  const years = useMemo(
+    () => Array.from(new Set(
+      consultations
+        .map((consultation) => consultation.createdAt ? new Date(consultation.createdAt).getFullYear() : null)
+        .filter((value): value is number => value !== null && Number.isFinite(value)),
+    )).sort((left, right) => right - left),
+    [consultations],
+  );
+
+  const diagnosisCount = useMemo(
+    () => new Set(
+      consultations.flatMap((consultation) => consultation.codings)
+        .filter((coding) => ["diagnosis", "problem"].includes(coding.category))
+        .map((coding) => coding.system + "|" + coding.code),
+    ).size,
+    [consultations],
+  );
+
+  const specialtyCount = useMemo(
+    () => new Set(
+      consultations.map((consultation) => consultation.doctor?.specialty).filter((value): value is string => Boolean(value)),
+    ).size,
+    [consultations],
+  );
+
+  const filtered = useMemo(() => consultations.filter((consultation) => {
+    if (year !== "all" && consultation.createdAt) {
+      const consultationYear = new Date(consultation.createdAt).getFullYear();
+      if (String(consultationYear) !== year) return false;
+    } else if (year !== "all" && !consultation.createdAt) {
+      return false;
+    }
+
+    if (tab === "diagnoses") {
+      return consultation.codings.some((coding) => ["diagnosis", "problem"].includes(coding.category));
+    }
+    if (tab === "procedures") {
+      return consultation.codings.some((coding) => coding.category === "procedure");
+    }
+    if (tab === "documents") return false;
+    return true;
+  }), [consultations, tab, year]);
+
+  const tabs = [
+    { value: "all" as const, label: "Todo" },
+    { value: "consultations" as const, label: "Consultas" },
+    { value: "diagnoses" as const, label: "Diagnósticos" },
+    { value: "procedures" as const, label: "Procedimientos" },
+    { value: "documents" as const, label: "Documentos" },
+  ];
+
   return (
     <div className="patient-page">
-      <PageIntro title="Historial clínico" description="Solo se muestran consultas finalizadas o firmadas que están vinculadas a tu perfil." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Consultas visibles</h2><span className="text-xs font-bold text-muted">{consultations.length} {consultations.length === 1 ? "consulta" : "consultas"}</span></div>
-        <div className="mt-4 space-y-4">{consultations.length ? consultations.map((consultation) => <article className="rounded-lg border border-line bg-surface-subtle p-4" key={consultation.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3><p className="mt-1 text-xs text-muted">{formatDate(consultation.createdAt, true)} · {consultation.doctor?.name ?? "Profesional no registrado"} · {consultation.clinic?.name ?? "Clínica no registrada"}</p></div><StatusBadge label={consultation.statusLabel} value={consultation.status} /></div>{consultation.objective ? <p className="mt-3 text-sm leading-relaxed text-ink-secondary"><strong>Objetivo:</strong> {consultation.objective}</p> : null}{consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? <details className="mt-3 rounded-lg border border-line bg-surface p-3"><summary className="cursor-pointer text-xs font-extrabold text-ink">Detalles registrados</summary><dl className="mt-3 grid gap-2 text-xs text-ink-secondary">{Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => <div className="border-t border-line pt-2" key={key}><dt className="font-extrabold text-ink">{key}</dt><dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd></div>)}</dl></details> : null}</article>) : <EmptyState message="No hay consultas finalizadas o firmadas vinculadas a tu perfil." />}</div>
+      <PageIntro
+        title="Historial clínico"
+        description="Consulta la cronología clínica registrada en HIPOCRATIQ. Solo se muestran atenciones finalizadas o firmadas vinculadas a tu perfil."
+      />
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen del historial clínico">
+        <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
+        <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
+        <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
+        <Metric icon={FileText} label="Documentos clínicos" value="0" />
+      </section>
+
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex max-w-full gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filtrar historial clínico">
+            {tabs.map((item) => (
+              <button
+                key={item.value}
+                className={`relative min-h-9 shrink-0 rounded-lg px-3 text-xs font-extrabold transition-colors focus-visible:outline-3 focus-visible:outline-focus ${tab === item.value ? "bg-accent-soft text-accent" : "text-ink-secondary hover:bg-surface-subtle hover:text-ink"}`}
+                type="button"
+                role="tab"
+                aria-selected={tab === item.value}
+                onClick={() => setTab(item.value)}
+              >
+                {item.label}
+                {tab === item.value ? <span className="absolute inset-x-3 -bottom-3 h-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex shrink-0 items-center gap-2 text-xs font-extrabold text-ink-secondary">
+            <CalendarDays className="size-4 text-accent" aria-hidden="true" />
+            <span className="sr-only">Filtrar historial por año</span>
+            <select
+              className="h-9 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20"
+              value={year}
+              onChange={(event) => setYear(event.target.value)}
+            >
+              <option value="all">Todas las fechas</option>
+              {years.map((item) => <option value={String(item)} key={item}>{item}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {tab === "documents" ? (
+          <div className="p-6">
+            <EmptyState message="Todavía no hay documentos clínicos publicados en tu expediente. La integración se habilitará cuando exista almacenamiento DocumentReference real." />
+          </div>
+        ) : filtered.length ? (
+          <div className="relative px-4 py-2 sm:px-6">
+            <div className="absolute bottom-8 left-[2.15rem] top-8 hidden w-px bg-line sm:block" aria-hidden="true" />
+            {filtered.map((consultation) => {
+              const relevantCodings = tab === "diagnoses"
+                ? consultation.codings.filter((coding) => ["diagnosis", "problem"].includes(coding.category))
+                : tab === "procedures"
+                  ? consultation.codings.filter((coding) => coding.category === "procedure")
+                  : consultation.codings;
+
+              return (
+                <article className="relative border-b border-line py-5 last:border-0 sm:pl-14" key={consultation.id}>
+                  <span className="absolute left-[0.2rem] top-7 hidden size-4 rounded-full border-4 border-surface bg-accent shadow-[0_0_0_1px_var(--color-border)] sm:block" aria-hidden="true" />
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-accent">
+                        {formatDate(consultation.createdAt, true)}
+                      </p>
+                      <h3 className="mt-1 text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3>
+                      <p className="mt-1 text-xs font-bold text-muted">
+                        {consultation.doctor?.name ?? "Profesional no registrado"}
+                        {consultation.doctor?.specialty ? ` · ${consultation.doctor.specialty}` : ""}
+                        {consultation.clinic?.name ? ` · ${consultation.clinic.name}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge label={consultation.statusLabel} value={consultation.status} />
+                  </div>
+
+                  {consultation.objective ? (
+                    <p className="mt-3 max-w-4xl text-sm leading-relaxed text-ink-secondary">
+                      <strong className="text-ink">Evolución:</strong> {consultation.objective}
+                    </p>
+                  ) : null}
+
+                  {relevantCodings.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2" aria-label="Conceptos clínicos codificados">
+                      {relevantCodings.map((coding, index) => (
+                        <span
+                          className="rounded-full border border-accent/20 bg-accent-soft px-2.5 py-1 text-[0.65rem] font-bold text-accent"
+                          key={coding.system + "-" + coding.code + "-" + index}
+                          title={coding.system}
+                        >
+                          {coding.display} · {coding.code}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? (
+                    <details className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
+                      <summary className="cursor-pointer text-xs font-extrabold text-ink">Ver expediente de esta atención</summary>
+                      <dl className="mt-3 grid gap-2 text-xs text-ink-secondary">
+                        {Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => (
+                          <div className="border-t border-line pt-2" key={key}>
+                            <dt className="font-extrabold text-ink">{key}</dt>
+                            <dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </details>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6">
+            <EmptyState message="No hay registros que coincidan con los filtros seleccionados." />
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -516,6 +833,126 @@ function profileFormFromData(profile: PatientProfile): ProfileForm {
 
 function ProfileField({ id, label, value, onChange, type = "text", required = false, error }: { id: string; label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; error?: string }) {
   return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id}>{label}{required ? <span className="text-danger">*</span> : null}<input id={id} className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={error} /></label>;
+}
+
+const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; description: string }> = [
+  { scope: "clinical_care", title: "Atención clínica", description: "Autoriza registrar y utilizar tus datos en el proceso asistencial." },
+  { scope: "data_processing", title: "Tratamiento de datos", description: "Registra tu consentimiento explícito para el tratamiento de información dentro de HIPOCRATIQ." },
+  { scope: "telemedicine", title: "Telemedicina", description: "Autoriza el uso de tus datos durante atenciones remotas cuando el servicio esté habilitado." },
+  { scope: "ai_clinical_assistance", title: "Asistencia clínica con IA", description: "Autoriza funciones de apoyo clínico con IA; las decisiones continúan a cargo del profesional." },
+  { scope: "epidemiology_anonymized", title: "Analítica epidemiológica anonimizada", description: "Autoriza el uso de datos anonimizados o agregados para análisis epidemiológico." },
+];
+
+function ConsentPreferencesCard() {
+  const [consents, setConsents] = useState<PatientConsent[]>([]);
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [changing, setChanging] = useState<PatientConsentScope | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [consentMessage, setConsentMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPatientConsents(controller.signal)
+      .then((settings) => {
+        setConsents(settings.consents);
+        setPolicyVersion(settings.policyVersion);
+      })
+      .catch((caught: unknown) => {
+        if (!controller.signal.aborted) setConsentError(errorMessage(caught));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  function activeConsent(scope: PatientConsentScope): PatientConsent | undefined {
+    return consents.find((consent) =>
+      consent.scope === scope
+      && consent.policyVersion === policyVersion
+      && consent.status === "granted"
+    );
+  }
+
+  async function toggle(scope: PatientConsentScope): Promise<void> {
+    if (changing || !policyVersion) return;
+    setChanging(scope);
+    setConsentError(null);
+    setConsentMessage(null);
+    try {
+      const active = activeConsent(scope);
+      const updated = active
+        ? await revokePatientConsent(active.id)
+        : await grantPatientConsent(scope, policyVersion);
+      setConsents((current) => {
+        const withoutUpdated = current.filter((consent) => consent.id !== updated.id);
+        return [updated, ...withoutUpdated];
+      });
+      const option = CONSENT_OPTIONS.find((item) => item.scope === scope);
+      setConsentMessage(
+        updated.status === "granted"
+          ? `${option?.title ?? "Consentimiento"} autorizado correctamente.`
+          : `${option?.title ?? "Consentimiento"} revocado correctamente.`,
+      );
+    } catch (caught) {
+      setConsentError(errorMessage(caught));
+    } finally {
+      setChanging(null);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+        <div>
+          <h2 className="text-sm font-extrabold text-ink">Consentimientos clínicos</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            Política {policyVersion ?? "vigente"}. Cada autorización se registra por separado, puede revocarse
+            y mantiene trazabilidad.
+          </p>
+        </div>
+      </div>
+      {loading ? (
+        <p className="mt-4 flex items-center gap-2 text-xs font-bold text-muted"><LoaderCircle className="size-4 animate-spin" />Cargando consentimientos…</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {CONSENT_OPTIONS.map((option) => {
+            const active = activeConsent(option.scope);
+            return (
+              <div className="rounded-lg border border-line bg-surface-subtle p-3" key={option.scope}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-ink">{option.title}</h3>
+                    <p className="mt-1 text-[0.7rem] leading-relaxed text-muted">{option.description}</p>
+                  </div>
+                  <button
+                    className={active
+                      ? "min-h-11 rounded-lg border border-danger/25 px-3 text-[0.65rem] font-extrabold text-danger hover:bg-danger-soft focus-visible:outline-3 focus-visible:outline-focus"
+                      : "min-h-11 rounded-lg border border-success/25 px-3 text-[0.65rem] font-extrabold text-success hover:bg-success-soft focus-visible:outline-3 focus-visible:outline-focus"}
+                    type="button"
+                    aria-pressed={Boolean(active)}
+                    aria-busy={changing === option.scope}
+                    disabled={changing !== null || !policyVersion}
+                    onClick={() => void toggle(option.scope)}
+                  >
+                    {changing === option.scope ? "Procesando…" : active ? "Revocar" : "Autorizar"}
+                  </button>
+                </div>
+                <p className="mt-2 text-[0.65rem] font-bold text-muted">{active ? "Activo" : "No autorizado en esta versión"}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {consentMessage}
+      </div>
+      {consentMessage ? <p className="mt-3 rounded-lg bg-success-soft p-3 text-xs font-bold text-success" role="status">{consentMessage}</p> : null}
+      {consentError ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-bold text-danger" role="alert">{consentError}</p> : null}
+    </Card>
+  );
 }
 
 function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
@@ -600,6 +1037,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
         <aside className="space-y-4">
           <Card><h2 className="text-sm font-extrabold text-ink">Identificación de cuenta</h2><dl className="mt-3 space-y-3 text-sm"><div><dt className="text-xs font-bold text-muted">Código de paciente</dt><dd className="font-extrabold text-ink">{profile.patientCode}</dd></div><div><dt className="text-xs font-bold text-muted">Estado</dt><dd><StatusBadge label={profile.status ?? "No registrado"} value={profile.status ?? "unknown"} /></dd></div><div><dt className="text-xs font-bold text-muted">Clínica vinculada</dt><dd className="font-extrabold text-ink">{profile.clinic?.name ?? "No hay clínica vinculada"}</dd></div></dl></Card>
           <Card><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 size-5 text-success" aria-hidden="true" /><p className="text-xs leading-relaxed text-muted">Tus datos se cargan desde el perfil asociado a la sesión actual. No puedes seleccionar otro paciente desde este portal.</p></div></Card>
+          <ConsentPreferencesCard />
         </aside>
       </form>
     </div>

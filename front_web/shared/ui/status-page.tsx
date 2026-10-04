@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { ArrowUpRight, House, ShieldX } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -8,8 +9,10 @@ type StatusPageProps = {
   code: "403" | "404";
   status: "notFound" | "unauthorized";
   icon: LucideIcon;
-  primaryHref: string;
+  primaryHref?: string;
   secondaryHref?: string;
+  detail?: string;
+  recoveryAction?: ReactNode;
 };
 
 export function StatusPage({
@@ -18,6 +21,8 @@ export function StatusPage({
   icon: Icon,
   primaryHref,
   secondaryHref,
+  detail,
+  recoveryAction,
 }: StatusPageProps) {
   const t = useTranslations(`status.${status}`);
   const statusT = useTranslations("status");
@@ -34,7 +39,7 @@ export function StatusPage({
         <header>
           <Link
             className="inline-flex items-center gap-2.5 rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-focus"
-            href="/"
+            href={primaryHref ?? "/unauthorized"}
             aria-label={t("homeAria")}
           >
             <BrandLogo className="h-9 w-10" priority />
@@ -56,16 +61,16 @@ export function StatusPage({
           <p className="mt-6 max-w-lg text-pretty text-sm leading-6 text-ink-secondary sm:text-base sm:leading-7">
             {t("description")}
           </p>
-          <p className="mt-3 max-w-lg text-xs leading-5 text-muted">{t("detail")}</p>
+          <p className="mt-3 max-w-lg text-xs leading-5 text-muted">{detail ?? t("detail")}</p>
 
           <nav className="mt-9 flex flex-col gap-2 sm:flex-row" aria-label={statusT("recoveryActions")}>
-            <Link
+            {primaryHref ? <Link
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-xs font-extrabold text-white shadow-[0_0.75rem_1.75rem_rgb(8_98_221/18%)] transition-[background-color,transform,box-shadow] hover:-translate-y-px hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus"
               href={primaryHref}
             >
               <House className="size-4" strokeWidth={1.8} aria-hidden="true" />
               {t("primary")}
-            </Link>
+            </Link> : null}
             {secondaryHref ? (
               <Link
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-5 text-xs font-extrabold text-ink transition-colors hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus"
@@ -75,6 +80,7 @@ export function StatusPage({
                 <ArrowUpRight className="size-4" strokeWidth={1.8} aria-hidden="true" />
               </Link>
             ) : null}
+            {recoveryAction}
           </nav>
         </div>
 

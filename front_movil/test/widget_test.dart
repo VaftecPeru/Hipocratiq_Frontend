@@ -6,6 +6,7 @@ import 'package:front_movil/features/auth/data/auth_repository.dart';
 import 'package:front_movil/features/auth/domain/auth_models.dart';
 import 'package:front_movil/features/auth/domain/registration_models.dart';
 import 'package:front_movil/features/auth/presentation/auth_controller.dart';
+import 'package:front_movil/features/workspace/domain/mobile_workspace.dart';
 
 void main() {
   testWidgets('shows the mobile authentication entry point', (tester) async {
@@ -62,6 +63,20 @@ class _FakeAuthGateway implements AuthGateway {
 
   @override
   Future<void> logout({required bool allDevices}) async {}
+
+  @override
+  Future<MobilePatientConsentSettings> fetchPatientConsents() async =>
+      throw UnimplementedError();
+
+  @override
+  Future<MobilePatientConsent> grantPatientConsent(
+    MobilePatientConsentScope scope, {
+    required String policyVersion,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<MobilePatientConsent> revokePatientConsent(int consentId) async =>
+      throw UnimplementedError();
 
   @override
   Future<OtpChallenge> requestLogin({

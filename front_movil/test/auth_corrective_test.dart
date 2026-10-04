@@ -11,6 +11,7 @@ import 'package:front_movil/features/auth/presentation/otp_page.dart';
 import 'package:front_movil/features/auth/presentation/patient_registration_page.dart';
 import 'package:front_movil/features/auth/presentation/widgets/otp_countdown.dart';
 import 'package:front_movil/features/auth/presentation/widgets/terms_consent_field.dart';
+import 'package:front_movil/features/workspace/domain/mobile_workspace.dart';
 
 void main() {
   testWidgets(
@@ -356,6 +357,19 @@ class _CorrectiveAuthGateway implements AuthGateway {
 
   @override
   Future<void> logout({required bool allDevices}) async {}
+
+  @override
+  Future<MobilePatientConsentSettings> fetchPatientConsents() => _unsupported();
+
+  @override
+  Future<MobilePatientConsent> grantPatientConsent(
+    MobilePatientConsentScope scope, {
+    required String policyVersion,
+  }) => _unsupported();
+
+  @override
+  Future<MobilePatientConsent> revokePatientConsent(int consentId) =>
+      _unsupported();
 
   @override
   Future<OtpChallenge> requestLogin({

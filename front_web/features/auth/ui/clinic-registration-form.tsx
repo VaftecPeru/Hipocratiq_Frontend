@@ -37,6 +37,10 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
   const updatePhone = (key: "contact_phone" | "admin_phone_number", value: string) => {
     updateText(key, value.replace(/\D/g, "").slice(0, countryOption.nationalLength));
   };
+  const updateTaxId = (value: string) => {
+    const normalized = value.toUpperCase().replace(/\s+/g, "");
+    updateText("tax_id", country === "MX" ? normalized.slice(0, 13) : normalized.slice(0, 80));
+  };
   const updateCountry = (value: CountryCode) => {
     setDraft({ ...draft, country_code: value, contact_phone: "", admin_phone_number: "" });
     onClearError("contact_phone");
@@ -53,7 +57,7 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
         <FormGroup label="Datos de la institución">
           <div className="grid gap-5 sm:grid-cols-2">
             <RegistrationField label="Nombre de la clínica" name="clinic_name" value={draft.clinic_name} error={errors.clinic_name} placeholder="Ej. Clínica Santa Elena" onChange={(value) => updateText("clinic_name", value)} autoComplete="organization" />
-            <RegistrationField label={countryOption.taxIdLabel} name="tax_id" value={draft.tax_id} error={errors.tax_id} placeholder={countryOption.taxIdPlaceholder} onChange={(value) => updateText("tax_id", value)} autoComplete="off" maxLength={80} />
+            <RegistrationField label={countryOption.taxIdLabel} name="tax_id" value={draft.tax_id} error={errors.tax_id} placeholder={countryOption.taxIdPlaceholder} onChange={updateTaxId} autoComplete="off" maxLength={country === "MX" ? 13 : 80} />
             <div className="grid gap-2">
               <label className="text-2xs font-bold text-ink" htmlFor="country_code">País / Región</label>
               <CountrySelect id="country_code" name="country_code" mode="country" value={country} onChange={updateCountry} />
@@ -69,7 +73,7 @@ export function ClinicRegistrationForm({ draft, setDraft, errors, pending, globa
           <div className="grid gap-5 sm:grid-cols-2">
             <RegistrationField label="Nombre del administrador" name="admin_name" value={draft.admin_name} error={errors.admin_name} placeholder="Responsable legal" onChange={(value) => updateText("admin_name", value)} autoComplete="name" />
             <RegistrationField label="Correo institucional" name="admin_email" value={draft.admin_email} error={errors.admin_email} placeholder="admin@clinica.com" onChange={(value) => updateText("admin_email", value)} type="email" inputMode="email" autoComplete="email" />
-            <RegistrationField label={countryOption.accessPhoneLabel} name="admin_phone_number" value={draft.admin_phone_number} error={errors.admin_phone_number} hint="Aquí recibirás los códigos de seguridad por SMS." placeholder={countryOption.placeholder} onChange={(value) => updatePhone("admin_phone_number", value)} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />
+            <RegistrationField label={countryOption.accessPhoneLabel} name="admin_phone_number" value={draft.admin_phone_number} error={errors.admin_phone_number} hint="El código OTP de registro se enviará al correo institucional del administrador." placeholder={countryOption.placeholder} onChange={(value) => updatePhone("admin_phone_number", value)} type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={countryOption.nationalLength} />
           </div>
         </FormGroup>
 

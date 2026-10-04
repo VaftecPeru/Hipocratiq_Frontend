@@ -109,6 +109,24 @@ export type ConsultationSections = Record<string, Record<string, string>>;
 
 export type DoctorConsultationStatus = "draft" | "in_progress" | "completed" | "signed" | "canceled";
 
+export type ClinicalCodingCategory =
+  | "diagnosis"
+  | "problem"
+  | "symptom"
+  | "allergy"
+  | "observation"
+  | "procedure"
+  | "medication";
+
+export type ClinicalCoding = {
+  category: ClinicalCodingCategory;
+  system: string;
+  code: string;
+  display: string;
+  status: string | null;
+};
+
+
 export type DoctorWeekday = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
 export type DoctorWorkingHours = Record<DoctorWeekday, { enabled: boolean; start: string; end: string }>;
@@ -206,6 +224,7 @@ export type Consultation = {
   createdAt: string | null;
   updatedAt: string | null;
   clinicalHistory: { id: number; source: string; objective: string | null; sections: ConsultationSections } | null;
+  codings: ClinicalCoding[];
 };
 
 export type ConsultationPayload = {
@@ -214,6 +233,7 @@ export type ConsultationPayload = {
   objective?: string | null;
   status?: DoctorConsultationStatus;
   sections?: ConsultationSections;
+  codings?: ClinicalCoding[];
 };
 
 export type DoctorPrescriptionStatus = "draft" | "active" | "renewal_due" | "completed" | "canceled";
@@ -287,6 +307,50 @@ export type LaboratoryOrderMeta = {
   ready: number;
   reviewed: number;
   critical: number;
+};
+
+export type ImagingStudyStatus = "ordered" | "scheduled" | "available" | "reviewed" | "canceled";
+
+export type ImagingStudy = {
+  id: number;
+  accessionNumber: string;
+  studyInstanceUid: string | null;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patientCode: string; name: string | null };
+  consultationId: number | null;
+  modality: string;
+  studyDescription: string;
+  status: ImagingStudyStatus;
+  statusLabel: string;
+  reportSummary: string | null;
+  notes: string | null;
+  orderedAt: string | null;
+  studyAt: string | null;
+  availableAt: string | null;
+  reviewedAt: string | null;
+  pacs: { linked: boolean; provider: string | null };
+};
+
+export type ImagingStudyPayload = {
+  patient_profile_id: number;
+  consultation_id?: number | null;
+  modality: string;
+  study_description: string;
+  notes?: string | null;
+};
+
+export type ImagingStudyMeta = {
+  total: number;
+  ordered: number;
+  scheduled: number;
+  available: number;
+  reviewed: number;
+  connection: {
+    status: "configured" | "not_configured";
+    provider: string;
+    dicomweb: boolean;
+    viewer: boolean;
+  };
 };
 
 export type TeleconsultationStatus = "scheduled" | "waiting" | "in_progress" | "completed" | "canceled";
@@ -370,14 +434,22 @@ export type DoctorEpidemiology = {
     monitoredPatients: number;
     activeAlerts: number;
     highRiskCases: number;
-    trend: "not_configured" | "stable";
+    trend: "not_configured" | "stable" | "rising" | "falling" | "mixed";
     consultations: number;
     laboratoryOrders: number;
     teleconsultations: number;
     prescriptions: number;
   };
+  analysisCohort: {
+    status: "not_used" | "insufficient" | "eligible";
+    policyVersion: string;
+    consentedPatients: number;
+    monitoredPatients: number;
+    minimumRequired: number;
+  };
   cohorts: Array<{ name: string; level: number; risk: string }>;
   alerts: Array<{ title: string; detail: string; severity: "info" | "warning" | "critical" }>;
+  recommendations: string[];
   sources: Record<string, { status: "available" | "no_data" | "not_configured"; label: string }>;
 };
 
@@ -449,6 +521,13 @@ type ApiConsultation = {
   created_at: string | null;
   updated_at: string | null;
   clinical_history: { id: number; source: string; objective: string | null; sections: ConsultationSections } | null;
+  codings?: Array<{
+    category: ClinicalCodingCategory;
+    system: string;
+    code: string;
+    display: string;
+    status: string | null;
+  }>;
 };
 
 function mapPatient(patient: ApiPatient): DoctorPatient {
@@ -539,6 +618,7 @@ function mapConsultation(consultation: ApiConsultation): Consultation {
     createdAt: consultation.created_at,
     updatedAt: consultation.updated_at,
     clinicalHistory: consultation.clinical_history,
+    codings: consultation.codings ?? [],
   };
 }
 
@@ -772,6 +852,7 @@ export function consultationToPayload(consultation: Consultation): ConsultationP
     objective: consultation.objective,
     status: consultation.status,
     sections: consultation.clinicalHistory?.sections ?? {},
+    codings: consultation.codings,
   };
 }
 
@@ -805,6 +886,26 @@ type ApiLaboratoryOrder = {
   result_at: string | null;
   result_summary: string | null;
   notes: string | null;
+};
+
+type ApiImagingStudy = {
+  id: number;
+  accession_number: string;
+  study_instance_uid: string | null;
+  clinic: { id: number; name: string } | null;
+  patient: { id: number; patient_code: string; name: string | null };
+  consultation_id: number | null;
+  modality: string;
+  study_description: string;
+  status: ImagingStudyStatus;
+  status_label: string;
+  report_summary: string | null;
+  notes: string | null;
+  ordered_at: string | null;
+  study_at: string | null;
+  available_at: string | null;
+  reviewed_at: string | null;
+  pacs: { linked: boolean; provider: string | null };
 };
 
 type ApiTeleconsultation = {
@@ -876,6 +977,28 @@ function mapLaboratoryOrder(order: ApiLaboratoryOrder): LaboratoryOrder {
     resultAt: order.result_at,
     resultSummary: order.result_summary,
     notes: order.notes,
+  };
+}
+
+function mapImagingStudy(study: ApiImagingStudy): ImagingStudy {
+  return {
+    id: study.id,
+    accessionNumber: study.accession_number,
+    studyInstanceUid: study.study_instance_uid,
+    clinic: study.clinic,
+    patient: mapWorkspacePatient(study.patient),
+    consultationId: study.consultation_id,
+    modality: study.modality,
+    studyDescription: study.study_description,
+    status: study.status,
+    statusLabel: study.status_label,
+    reportSummary: study.report_summary,
+    notes: study.notes,
+    orderedAt: study.ordered_at,
+    studyAt: study.study_at,
+    availableAt: study.available_at,
+    reviewedAt: study.reviewed_at,
+    pacs: study.pacs,
   };
 }
 
@@ -955,6 +1078,31 @@ export async function updateDoctorLaboratoryStatus(orderId: number, status: Labo
   });
   if (!response.data) throw new ApiError('El servidor no devolvió el resultado actualizado.', 502);
   return mapLaboratoryOrder(response.data);
+}
+
+export async function getDoctorImaging(signal?: AbortSignal): Promise<{ items: ImagingStudy[]; meta: ImagingStudyMeta }> {
+  const response = await getFromApi<{ data: ApiImagingStudy[]; meta: ImagingStudyMeta }>('/api/v1/auth/doctor/imaging', { signal });
+  if (!Array.isArray(response.data) || !response.meta) throw new ApiError('El servidor devolvió imagenología incompleta.', 502);
+  return { items: response.data.map(mapImagingStudy), meta: response.meta };
+}
+
+export async function createDoctorImagingStudy(payload: ImagingStudyPayload): Promise<ImagingStudy> {
+  const response = await postToApi<{ data: ApiImagingStudy }>('/api/v1/auth/doctor/imaging', payload);
+  if (!response.data) throw new ApiError('El servidor no devolvió el estudio de imagen creado.', 502);
+  return mapImagingStudy(response.data);
+}
+
+export async function updateDoctorImagingStatus(
+  studyId: number,
+  status: ImagingStudyStatus,
+  reportSummary?: string,
+): Promise<ImagingStudy> {
+  const response = await patchToApi<{ data: ApiImagingStudy }>(`/api/v1/auth/doctor/imaging/${studyId}/status`, {
+    status,
+    ...(reportSummary === undefined ? {} : { report_summary: reportSummary }),
+  });
+  if (!response.data) throw new ApiError('El servidor no devolvió el estudio de imagen actualizado.', 502);
+  return mapImagingStudy(response.data);
 }
 
 export async function getDoctorTeleconsultations(signal?: AbortSignal): Promise<{ items: DoctorTeleconsultation[]; meta: DoctorTeleconsultationMeta }> {
@@ -1051,14 +1199,22 @@ type ApiDoctorEpidemiology = {
     monitored_patients: number;
     active_alerts: number;
     high_risk_cases: number;
-    trend: 'not_configured' | 'stable';
+    trend: 'not_configured' | 'stable' | 'rising' | 'falling' | 'mixed';
     consultations: number;
     laboratory_orders: number;
     teleconsultations: number;
     prescriptions: number;
   };
+  analysis_cohort?: {
+    status: 'not_used' | 'insufficient' | 'eligible';
+    policy_version: string;
+    consented_patients: number;
+    monitored_patients: number;
+    minimum_required: number;
+  };
   cohorts: Array<{ name: string; level: number; risk: string }>;
   alerts: Array<{ title: string; detail: string; severity: 'info' | 'warning' | 'critical' }>;
+  recommendations?: string[];
   sources: Record<string, { status: 'available' | 'no_data' | 'not_configured'; label: string }>;
 };
 
@@ -1080,8 +1236,16 @@ export async function getDoctorEpidemiology(signal?: AbortSignal): Promise<Docto
       teleconsultations: response.data.metrics.teleconsultations,
       prescriptions: response.data.metrics.prescriptions,
     },
+    analysisCohort: {
+      status: response.data.analysis_cohort?.status ?? "not_used",
+      policyVersion: response.data.analysis_cohort?.policy_version ?? "",
+      consentedPatients: response.data.analysis_cohort?.consented_patients ?? 0,
+      monitoredPatients: response.data.analysis_cohort?.monitored_patients ?? 0,
+      minimumRequired: response.data.analysis_cohort?.minimum_required ?? 0,
+    },
     cohorts: response.data.cohorts,
     alerts: response.data.alerts,
+    recommendations: response.data.recommendations ?? [],
     sources: response.data.sources,
   };
 }
