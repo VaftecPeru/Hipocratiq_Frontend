@@ -3110,3 +3110,116 @@ input {
     transform: none !important;
   }
 }
+
+
+/* Patient premium profile — 2026-10-05 */
+.patient-profile-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d6e2f1;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 92% 12%, rgb(8 98 221 / 11%), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+  padding: 1.05rem 1.15rem;
+  box-shadow: 0 0.75rem 2rem rgb(28 65 116 / 6%);
+}
+
+.patient-profile-hero__avatar {
+  display: grid;
+  width: 3.2rem;
+  height: 3.2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #0b6ff0, #0757d7);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 950;
+  box-shadow: 0 0.65rem 1.4rem rgb(7 87 215 / 20%);
+}
+
+.patient-profile-hero__copy > span {
+  color: var(--patient-blue);
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.patient-profile-hero__copy h2 {
+  margin-top: 0.1rem;
+  color: var(--patient-navy);
+  font-size: 1.1rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.patient-profile-hero__copy p {
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.patient-profile-hero__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #c6e7db;
+  border-radius: 999px;
+  background: #eefaf6;
+  padding: 0.48rem 0.7rem;
+  color: #09835f;
+  font-size: 0.58rem;
+  font-weight: 900;
+}
+
+.patient-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.patient-profile-main-card {
+  min-width: 0;
+}
+
+.patient-profile-layout aside {
+  position: sticky;
+  top: 5.8rem;
+  align-self: start;
+}
+
+.patient-profile-layout aside > .patient-premium-surface:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1100px) {
+  .patient-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-profile-layout aside {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-profile-hero {
+    grid-template-columns: auto minmax(0,1fr);
+  }
+
+  .patient-profile-hero__status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .patient-profile-layout aside {
+    grid-template-columns: 1fr;
+  }
+}
