@@ -128,6 +128,9 @@ export type PatientLaboratoryResult = {
   clinic: { id: number; name: string } | null;
 };
 
+export type PatientTriageLevel = "I" | "II" | "III" | "IV" | "V";
+export type PatientTriageStatus = "draft" | "submitted";
+
 export type PatientTriage = {
   id: number;
   reason: string;
@@ -138,15 +141,76 @@ export type PatientTriage = {
   respiratoryRate: number | null;
   oxygenSaturation: number | null;
   triagePriority: "routine" | "urgent" | "emergency" | null;
+  triageLevel: PatientTriageLevel | null;
+  triageStatus: PatientTriageStatus;
+  submittedAt: string | null;
   triageNotes: string | null;
   recordedAt: string | null;
   clinic: { id: number; name: string } | null;
   recordedBy: { id: number; name: string } | null;
 };
 
-export type PatientUnavailableData = {
-  available: false;
+export type PatientMembershipData =
+  | {
+      available: false;
+      source: "clinic";
+      message: string;
+    }
+  | {
+      available: true;
+      source: "clinic";
+      clinic: { id: number; name: string } | null;
+      plan: {
+        id: number;
+        key: string;
+        name: string;
+        description: string | null;
+        currency: string;
+        monthlyPriceCents: number;
+        annualPriceCents: number;
+        features: string[];
+      };
+      subscription: {
+        status: string;
+        billingCycle: string;
+        autoRenew: boolean;
+        startsAt: string | null;
+        endsAt: string | null;
+      };
+      latestPayment: {
+        amountCents: number;
+        currency: string;
+        paidAt: string | null;
+      } | null;
+      message: string;
+    };
+
+export type PatientEpidemiologyData = {
+  available: true;
+  generatedAt: string;
+  period: { from: string; to: string; days: number };
+  participation: {
+    consentActive: boolean;
+    policyVersion: string | null;
+    scope: "epidemiology_anonymized";
+  };
+  metrics: {
+    appointments: number;
+    consultations: number;
+    laboratoryOrders: number;
+    availableResults: number;
+    prescriptions: number;
+    activePrescriptions: number;
+  };
+  trend: Array<{
+    month: string;
+    label: string;
+    appointments: number;
+    consultations: number;
+    laboratoryOrders: number;
+  }>;
   message: string;
+  disclaimer: string;
 };
 
 export type PatientProfileUpdatePayload = {
@@ -172,7 +236,9 @@ export type PatientTriagePayload = {
   heart_rate: number | null;
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
-  triage_priority: PatientTriage["triagePriority"];
+  triage_priority?: PatientTriage["triagePriority"];
+  triage_level: PatientTriageLevel;
+  triage_status: PatientTriageStatus;
   triage_notes: string | null;
 };
 
@@ -183,8 +249,8 @@ export type PatientDashboardData = {
   triage: PatientTriage | null;
   results: PatientLaboratoryResult[];
   prescriptions: PatientPrescription[];
-  membership: PatientUnavailableData;
-  epidemiology: PatientUnavailableData;
+  membership: PatientMembershipData;
+  epidemiology: PatientEpidemiologyData;
 };
 
 type ApiProfile = {
@@ -281,6 +347,9 @@ type ApiTriage = {
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
   triage_priority: PatientTriage["triagePriority"];
+  triage_level: PatientTriageLevel | null;
+  triage_status: PatientTriageStatus;
+  submitted_at: string | null;
   triage_notes: string | null;
   recorded_at: string | null;
   clinic: { id: number; name: string } | null;
@@ -313,9 +382,59 @@ function mapConsent(consent: ApiConsent): PatientConsent {
   };
 }
 
-type ApiUnavailableResponse = {
-  data: null;
-  meta?: { available?: boolean; message?: string };
+type ApiMembership =
+  | { available: false; source: "clinic"; message: string }
+  | {
+      available: true;
+      source: "clinic";
+      clinic: { id: number; name: string } | null;
+      plan: {
+        id: number;
+        key: string;
+        name: string;
+        description: string | null;
+        currency: string;
+        monthly_price_cents: number;
+        annual_price_cents: number;
+        features: string[];
+      };
+      subscription: {
+        status: string;
+        billing_cycle: string;
+        auto_renew: boolean;
+        starts_at: string | null;
+        ends_at: string | null;
+      };
+      latest_payment: { amount_cents: number; currency: string; paid_at: string | null } | null;
+      message: string;
+    };
+
+type ApiEpidemiology = {
+  available: true;
+  generated_at: string;
+  period: { from: string; to: string; days: number };
+  participation: {
+    consent_active: boolean;
+    policy_version: string | null;
+    scope: "epidemiology_anonymized";
+  };
+  metrics: {
+    appointments: number;
+    consultations: number;
+    laboratory_orders: number;
+    available_results: number;
+    prescriptions: number;
+    active_prescriptions: number;
+  };
+  trend: Array<{
+    month: string;
+    label: string;
+    appointments: number;
+    consultations: number;
+    laboratory_orders: number;
+  }>;
+  message: string;
+  disclaimer: string;
 };
 
 function mapProfile(profile: ApiProfile): PatientProfile {
@@ -425,10 +544,78 @@ function mapTriage(triage: ApiTriage): PatientTriage {
     respiratoryRate: triage.respiratory_rate,
     oxygenSaturation: triage.oxygen_saturation,
     triagePriority: triage.triage_priority,
+    triageLevel: triage.triage_level,
+    triageStatus: triage.triage_status,
+    submittedAt: triage.submitted_at,
     triageNotes: triage.triage_notes,
     recordedAt: triage.recorded_at,
     clinic: triage.clinic,
     recordedBy: triage.recorded_by,
+  };
+}
+
+function mapMembership(data: ApiMembership): PatientMembershipData {
+  if (!data.available) return data;
+
+  return {
+    available: true,
+    source: data.source,
+    clinic: data.clinic,
+    plan: {
+      id: data.plan.id,
+      key: data.plan.key,
+      name: data.plan.name,
+      description: data.plan.description,
+      currency: data.plan.currency,
+      monthlyPriceCents: data.plan.monthly_price_cents,
+      annualPriceCents: data.plan.annual_price_cents,
+      features: Array.isArray(data.plan.features) ? data.plan.features : [],
+    },
+    subscription: {
+      status: data.subscription.status,
+      billingCycle: data.subscription.billing_cycle,
+      autoRenew: data.subscription.auto_renew,
+      startsAt: data.subscription.starts_at,
+      endsAt: data.subscription.ends_at,
+    },
+    latestPayment: data.latest_payment
+      ? {
+          amountCents: data.latest_payment.amount_cents,
+          currency: data.latest_payment.currency,
+          paidAt: data.latest_payment.paid_at,
+        }
+      : null,
+    message: data.message,
+  };
+}
+
+function mapEpidemiology(data: ApiEpidemiology): PatientEpidemiologyData {
+  return {
+    available: true,
+    generatedAt: data.generated_at,
+    period: data.period,
+    participation: {
+      consentActive: data.participation.consent_active,
+      policyVersion: data.participation.policy_version,
+      scope: data.participation.scope,
+    },
+    metrics: {
+      appointments: data.metrics.appointments,
+      consultations: data.metrics.consultations,
+      laboratoryOrders: data.metrics.laboratory_orders,
+      availableResults: data.metrics.available_results,
+      prescriptions: data.metrics.prescriptions,
+      activePrescriptions: data.metrics.active_prescriptions,
+    },
+    trend: data.trend.map((point) => ({
+      month: point.month,
+      label: point.label,
+      appointments: point.appointments,
+      consultations: point.consultations,
+      laboratoryOrders: point.laboratory_orders,
+    })),
+    message: data.message,
+    disclaimer: data.disclaimer,
   };
 }
 
@@ -514,23 +701,20 @@ export async function savePatientTriage(payload: PatientTriagePayload): Promise<
   return mapTriage(response.data);
 }
 
-async function getUnavailableData(path: string, signal?: AbortSignal): Promise<PatientUnavailableData> {
-  const response = await getFromApi<ApiUnavailableResponse>(path, { signal });
-  if (response.data !== null || response.meta?.available !== false) {
-    throw new ApiError("El servidor devolvió una fuente de paciente inesperada.", 502);
+export async function getPatientMembership(signal?: AbortSignal): Promise<PatientMembershipData> {
+  const response = await getFromApi<{ data: ApiMembership }>("/api/v1/auth/patient/membership", { signal });
+  if (!response.data || typeof response.data.available !== "boolean") {
+    throw new ApiError("El servidor devolvió una membresía de paciente incompleta.", 502);
   }
-  return {
-    available: false,
-    message: response.meta?.message ?? "Esta información no está disponible.",
-  };
+  return mapMembership(response.data);
 }
 
-export function getPatientMembership(signal?: AbortSignal): Promise<PatientUnavailableData> {
-  return getUnavailableData("/api/v1/auth/patient/membership", signal);
-}
-
-export function getPatientEpidemiology(signal?: AbortSignal): Promise<PatientUnavailableData> {
-  return getUnavailableData("/api/v1/auth/patient/epidemiology", signal);
+export async function getPatientEpidemiology(signal?: AbortSignal): Promise<PatientEpidemiologyData> {
+  const response = await getFromApi<{ data: ApiEpidemiology }>("/api/v1/auth/patient/epidemiology", { signal });
+  if (!response.data?.available || !Array.isArray(response.data.trend)) {
+    throw new ApiError("El servidor devolvió un resumen epidemiológico incompleto.", 502);
+  }
+  return mapEpidemiology(response.data);
 }
 
 export async function getPatientDashboard(signal?: AbortSignal): Promise<PatientDashboardData> {
@@ -555,8 +739,8 @@ export type PatientPortalData =
   | { view: "results"; data: PatientLaboratoryResult[] }
   | { view: "history"; data: PatientConsultation[] }
   | { view: "prescriptions"; data: PatientPrescription[] }
-  | { view: "epidemiology"; data: PatientUnavailableData }
-  | { view: "membership"; data: PatientUnavailableData }
+  | { view: "epidemiology"; data: PatientEpidemiologyData }
+  | { view: "membership"; data: PatientMembershipData }
   | { view: "profile"; data: PatientProfile };
 
 export async function getPatientPortalData(view: PatientPortalView, signal?: AbortSignal): Promise<PatientPortalData> {
@@ -574,9 +758,9 @@ export async function getPatientPortalData(view: PatientPortalView, signal?: Abo
     case "prescriptions":
       return { view, data: await getPatientPrescriptions(signal) };
     case "epidemiology":
-      return { view, data: await getPatientEpidemiology() };
+      return { view, data: await getPatientEpidemiology(signal) };
     case "membership":
-      return { view, data: await getPatientMembership() };
+      return { view, data: await getPatientMembership(signal) };
     case "profile":
       return { view, data: await getPatientProfile(signal) };
     default: {
