@@ -262,7 +262,9 @@ const server = http.createServer(async (request, response) => {
         heart_rate: payload.heart_rate ?? null,
         respiratory_rate: payload.respiratory_rate ?? null,
         oxygen_saturation: payload.oxygen_saturation ?? null,
-        triage_priority: ["I", "II"].includes(payload.triage_level) ? "emergency" : payload.triage_level === "III" ? "urgent" : "routine",
+        triage_priority: payload.triage_status === "submitted"
+          ? (["I", "II"].includes(payload.triage_level) ? "emergency" : payload.triage_level === "III" ? "urgent" : "routine")
+          : null,
         triage_level: payload.triage_level,
         triage_status: payload.triage_status,
         submitted_at: payload.triage_status === "submitted" ? "2026-10-05T06:10:00Z" : null,
