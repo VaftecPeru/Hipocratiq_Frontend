@@ -373,13 +373,13 @@ function DashboardView({ data }: { data: PatientDashboardData }) {
             <div className="patient-help-strip__copy">
               <span className="patient-help-strip__icon"><Info className="size-6" aria-hidden="true" /></span>
               <div>
-                <h2>¿Necesitas ayuda con tu atención?</h2>
-                <p>Revisa tu perfil, consentimientos y datos de contacto antes de tu próxima cita.</p>
+                <h2>Prepara tu próxima atención</h2>
+                <p>Completa tu ingreso clínico para que tu equipo tenga el contexto necesario antes de la consulta.</p>
               </div>
             </div>
             <div className="patient-help-strip__contact">
-              <strong>Tu información, siempre disponible</strong>
-              <Link className="patient-whatsapp-button" href="/patient/perfil">Revisar mi perfil</Link>
+              <strong>Información previa a la consulta</strong>
+              <Link className="patient-whatsapp-button" href="/patient/historia-clinica">Completar ingreso clínico</Link>
             </div>
           </div>
         </div>
