@@ -32,7 +32,7 @@ test("patient membership renders real clinic coverage", async ({ page }) => {
   await setPatientSession(page);
   await page.goto("/patient/membresia", { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("heading", { name: "Tu membresía HIPOCRATIQ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tu cobertura HIPOCRATIQ" })).toBeVisible();
   await expect(page.getByText("Professional", { exact: true })).toBeVisible();
   await expect(page.getByText("Clínica UAT", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Agenda", { exact: true })).toBeVisible();
