@@ -141,20 +141,6 @@ function EmptyState({ message }: { message: string }) {
   return <p className="rounded-lg border border-dashed border-line-strong bg-surface-subtle p-4 text-sm text-muted">{message}</p>;
 }
 
-function UnavailableState({ title, message }: { title: string; message: string }) {
-  return (
-    <Card>
-      <div className="flex items-start gap-3">
-        <Info className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" />
-        <div>
-          <h2 className="text-sm font-extrabold text-ink">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">{message}</p>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 function PortalLoading() {
   return (
     <div className="patient-page space-y-4" role="status" aria-live="polite" aria-busy="true">
