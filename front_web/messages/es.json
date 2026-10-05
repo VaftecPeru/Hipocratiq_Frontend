@@ -227,13 +227,13 @@
     "openMenu": "Abrir menú",
     "page": {
       "appointments": { "title": "Mis citas", "subtitle": "Consulta las citas registradas y sus datos de atención." },
-      "triage": { "title": "Dashboard paciente · Triaje", "subtitle": "Completa tus signos vitales y motivo de consulta antes de la atención." },
+      "triage": { "title": "Triaje", "subtitle": "Guarda un borrador o envía tu preconsulta con un nivel orientativo I–V." },
       "intake": { "title": "Ingreso clínico", "subtitle": "Completa tu formulario virtual y compártelo con tu equipo clínico." },
       "results": { "title": "Resultados", "subtitle": "Consulta los estudios de laboratorio vinculados a tu perfil." },
       "history": { "title": "Historial clínico", "subtitle": "Revisa las consultas finalizadas o firmadas disponibles." },
       "prescriptions": { "title": "Recetas", "subtitle": "Consulta las recetas registradas por tus profesionales." },
-      "epidemiology": { "title": "IA epidemiológica", "subtitle": "Consulta si existe una fuente epidemiológica vinculada a tu cuenta." },
-      "membership": { "title": "Membresía", "subtitle": "Consulta si existe una membresía individual persistida para tu cuenta." },
+      "epidemiology": { "title": "IA epidemiológica", "subtitle": "Revisa tu actividad clínica y administra tu participación anonimizada con control de privacidad." },
+      "membership": { "title": "Membresía", "subtitle": "Consulta la cobertura HIPOCRATIQ activa asociada a tu clínica." },
       "profile": { "title": "Mi perfil", "subtitle": "Gestiona tu información personal, datos de contacto y preferencias." },
       "default": { "title": "Bienvenida de nuevo, {name}", "subtitle": "Aquí puedes revisar tus citas, resultados y recetas en un solo lugar." }
     }

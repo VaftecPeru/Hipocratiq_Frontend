@@ -10,11 +10,11 @@ import {
   HeartPulse,
   LayoutDashboard,
   Menu,
-  ShieldCheck,
   SlidersHorizontal,
   UserRound,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -208,11 +208,15 @@ export function PatientShell({
         className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
         tabIndex={-1}
       >
-        <div className="patient-brand" aria-label="HIPOCRATIQ">
-          <span className="patient-brand__mark">
-            <ShieldCheck className="size-5" strokeWidth={2.2} aria-hidden="true" />
-          </span>
-          <span className="patient-brand__word">HIPOCRATIQ</span>
+        <div className="patient-brand">
+          <Image
+            className="patient-brand__logo"
+            src="/logo_hipocratiq.webp"
+            alt="HIPOCRATIQ"
+            width={154}
+            height={42}
+            priority
+          />
         </div>
 
         <div className="patient-user-card">

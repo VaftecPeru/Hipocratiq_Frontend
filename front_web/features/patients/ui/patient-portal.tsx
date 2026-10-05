@@ -30,6 +30,8 @@ import {
   type PatientDashboardData,
   type PatientLaboratoryResult,
   type PatientConsultation,
+  type PatientEpidemiologyData,
+  type PatientMembershipData,
   type PatientConsent,
   type PatientConsentScope,
   type PatientPortalData,
@@ -38,7 +40,9 @@ import {
   type PatientProfile,
   type PatientProfileUpdatePayload,
   type PatientTriage,
+  type PatientTriageLevel,
   type PatientTriagePayload,
+  type PatientTriageStatus,
 } from "@/features/patients/api/patient-portal";
 import { ApiError } from "@/shared/api/http-client";
 
@@ -135,20 +139,6 @@ function Card({ children, className = "" }: { children: ReactNode; className?: s
 
 function EmptyState({ message }: { message: string }) {
   return <p className="rounded-lg border border-dashed border-line-strong bg-surface-subtle p-4 text-sm text-muted">{message}</p>;
-}
-
-function UnavailableState({ title, message }: { title: string; message: string }) {
-  return (
-    <Card>
-      <div className="flex items-start gap-3">
-        <Info className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" />
-        <div>
-          <h2 className="text-sm font-extrabold text-ink">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">{message}</p>
-        </div>
-      </div>
-    </Card>
-  );
 }
 
 function PortalLoading() {
@@ -424,13 +414,49 @@ function AppointmentsView({ appointments }: { appointments: PatientAppointment[]
   );
 }
 
+const TRIAGE_LEVELS: Array<{
+  value: PatientTriageLevel;
+  title: string;
+  helper: string;
+  tone: string;
+}> = [
+  { value: "I", title: "Atención inmediata", helper: "Síntomas que percibes como críticos o súbitos.", tone: "patient-triage-level--critical" },
+  { value: "II", title: "Muy urgente", helper: "Malestar intenso o deterioro rápido.", tone: "patient-triage-level--high" },
+  { value: "III", title: "Urgente", helper: "Necesitas valoración prioritaria, sin describir una emergencia.", tone: "patient-triage-level--medium" },
+  { value: "IV", title: "Menor urgencia", helper: "Síntomas estables que requieren revisión.", tone: "patient-triage-level--low" },
+  { value: "V", title: "No urgente", helper: "Consulta preventiva o molestia leve y estable.", tone: "patient-triage-level--minimal" },
+];
+
 function TriageSummary({ triage }: { triage: PatientTriage }) {
+  const level = TRIAGE_LEVELS.find((item) => item.value === triage.triageLevel);
+
   return (
-    <div className="grid gap-2 text-sm sm:grid-cols-2">
-      <div><span className="text-xs font-bold text-muted">Registrado</span><strong className="block text-ink">{formatDate(triage.recordedAt, true)}</strong></div>
-      <div><span className="text-xs font-bold text-muted">Prioridad informada</span><strong className="block text-ink">{triage.triagePriority ?? "No registrada"}</strong></div>
-      <div><span className="text-xs font-bold text-muted">Temperatura</span><strong className="block text-ink">{formatNumber(triage.temperatureC, " °C")}</strong></div>
-      <div><span className="text-xs font-bold text-muted">Saturación</span><strong className="block text-ink">{formatNumber(triage.oxygenSaturation, "%")}</strong></div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-muted">Estado del formulario</span>
+          <strong className="mt-1 block text-sm text-ink">
+            {triage.triageStatus === "submitted" ? "Enviado al equipo clínico" : "Borrador guardado"}
+          </strong>
+        </div>
+        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${triage.triageStatus === "submitted" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>
+          {triage.triageStatus === "submitted" ? "Enviado" : "Borrador"}
+        </span>
+      </div>
+
+      {level ? (
+        <div className={`patient-triage-summary-level ${level.tone}`}>
+          <span>Nivel {level.value}</span>
+          <div><strong>{level.title}</strong><small>{level.helper}</small></div>
+        </div>
+      ) : null}
+
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <div><dt className="text-xs font-bold text-muted">Actualizado</dt><dd className="font-bold text-ink">{formatDate(triage.submittedAt ?? triage.recordedAt, true)}</dd></div>
+        <div><dt className="text-xs font-bold text-muted">Prioridad clínica</dt><dd className="font-bold text-ink">{triage.triagePriority ?? "Pendiente de valoración clínica"}</dd></div>
+        <div><dt className="text-xs font-bold text-muted">Temperatura</dt><dd className="font-bold text-ink">{formatNumber(triage.temperatureC, " °C")}</dd></div>
+        <div><dt className="text-xs font-bold text-muted">Saturación</dt><dd className="font-bold text-ink">{formatNumber(triage.oxygenSaturation, "%")}</dd></div>
+      </dl>
     </div>
   );
 }
@@ -443,7 +469,7 @@ type TriageForm = {
   heartRate: string;
   respiratoryRate: string;
   oxygenSaturation: string;
-  triagePriority: "" | "routine" | "urgent" | "emergency";
+  triageLevel: PatientTriageLevel;
   triageNotes: string;
 };
 
@@ -455,7 +481,7 @@ const TRIAGE_FIELD_ERROR_KEYS = {
   heartRate: ["heart_rate"],
   respiratoryRate: ["respiratory_rate"],
   oxygenSaturation: ["oxygen_saturation"],
-  triagePriority: ["triage_priority"],
+  triageLevel: ["triage_level"],
   triageNotes: ["triage_notes"],
 } as const;
 
@@ -468,7 +494,7 @@ function triageFormFromData(triage: PatientTriage | null): TriageForm {
     heartRate: triage?.heartRate?.toString() ?? "",
     respiratoryRate: triage?.respiratoryRate?.toString() ?? "",
     oxygenSaturation: triage?.oxygenSaturation?.toString() ?? "",
-    triagePriority: triage?.triagePriority ?? "",
+    triageLevel: triage?.triageLevel ?? "III",
     triageNotes: triage?.triageNotes ?? "",
   };
 }
@@ -482,7 +508,7 @@ function nullableNumber(value: string): number | null {
 function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) {
   const [triage, setTriage] = useState(initialTriage);
   const [form, setForm] = useState<TriageForm>(() => triageFormFromData(initialTriage));
-  const [saving, setSaving] = useState(false);
+  const [savingAs, setSavingAs] = useState<PatientTriageStatus | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -498,9 +524,8 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
+  async function persist(status: PatientTriageStatus) {
+    setSavingAs(status);
     setMessage(null);
     setError(null);
     setFieldErrors({});
@@ -513,7 +538,8 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
       heart_rate: nullableNumber(form.heartRate),
       respiratory_rate: nullableNumber(form.respiratoryRate),
       oxygen_saturation: nullableNumber(form.oxygenSaturation),
-      triage_priority: form.triagePriority || null,
+      triage_level: form.triageLevel,
+      triage_status: status,
       triage_notes: form.triageNotes.trim() || null,
     };
 
@@ -521,13 +547,20 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
       const saved = await savePatientTriage(payload);
       setTriage(saved);
       setForm(triageFormFromData(saved));
-      setMessage("Triaje guardado correctamente.");
+      setMessage(status === "submitted"
+        ? "Triaje enviado correctamente. El equipo clínico ya puede consultarlo."
+        : "Borrador guardado. Puedes volver y completarlo antes de enviarlo.");
     } catch (submitError) {
       setError(errorMessage(submitError));
       setFieldErrors(fieldErrorsFrom(submitError, TRIAGE_FIELD_ERROR_KEYS));
     } finally {
-      setSaving(false);
+      setSavingAs(null);
     }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void persist("submitted");
   }
 
   const fields = [
@@ -539,38 +572,98 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
     { id: "oxygenSaturation", label: "Saturación de oxígeno (%)", inputMode: "numeric" as const },
   ] as const;
 
+  const isSaving = savingAs !== null;
+
   return (
     <div className="patient-page">
-      <PageIntro title="Triaje" description="Registra información que tengas disponible. La prioridad no se calcula en el navegador ni reemplaza una evaluación profesional." />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <Card>
-          <div className="flex items-start gap-3"><ClipboardCheck className="mt-0.5 size-5 text-accent" aria-hidden="true" /><div><h2 className="text-sm font-extrabold text-ink">Nuevo registro</h2><p className="mt-1 text-xs text-muted">Los datos se guardan asociados a tu perfil autenticado.</p></div></div>
-          <form className="mt-5 space-y-4" aria-describedby={error ? "triage-form-error" : message ? "triage-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-reason">Motivo de consulta<span className="text-danger">*</span><textarea id="triage-reason" className="min-h-24 rounded-lg border border-line bg-surface-input px-3 py-2 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" required minLength={10} maxLength={2000} value={form.reason} onChange={(event) => setField("reason", event.target.value)} disabled={saving} aria-invalid={fieldErrors.reason ? true : undefined} aria-describedby={fieldErrors.reason ? "triage-reason-error" : undefined} /><FieldError id="triage-reason-error" message={fieldErrors.reason} /></label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {fields.map((field) => {
-                const id = `triage-${field.id}`;
-                const fieldError = fieldErrors[field.id];
+      <div className="patient-premium-intro">
+        <div>
+          <span className="patient-premium-intro__eyebrow">PRECONSULTA SEGURA</span>
+          <h2>Triaje del paciente</h2>
+          <p>Completa lo que conoces antes de tu cita. Puedes guardar un borrador y enviarlo cuando esté listo.</p>
+        </div>
+        <div className="patient-premium-intro__trust"><ShieldCheck className="size-5" aria-hidden="true" /><span>Datos vinculados únicamente a tu perfil</span></div>
+      </div>
 
-                return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id} key={field.id}>{field.label}<input id={id} className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" inputMode={field.inputMode} value={form[field.id]} onChange={(event) => setField(field.id, event.target.value)} disabled={saving} aria-invalid={fieldError ? true : undefined} aria-describedby={fieldError ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={fieldError} /></label>;
-              })}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card className="patient-premium-card">
+          <div className="flex items-start gap-3">
+            <ClipboardCheck className="mt-0.5 size-5 text-accent" aria-hidden="true" />
+            <div><h3 className="text-sm font-extrabold text-ink">¿Cómo percibes tu necesidad de atención?</h3><p className="mt-1 text-xs leading-relaxed text-muted">Selecciona un nivel orientativo. El sistema lo utiliza para ordenar el flujo, pero no diagnostica ni reemplaza la evaluación de un profesional.</p></div>
+          </div>
+
+          <form className="mt-5 space-y-5" aria-describedby={error ? "triage-form-error" : message ? "triage-form-message" : undefined} aria-busy={isSaving} onSubmit={submit}>
+            <fieldset disabled={isSaving}>
+              <legend className="sr-only">Nivel orientativo de triaje</legend>
+              <div className="patient-triage-level-grid">
+                {TRIAGE_LEVELS.map((level) => {
+                  const selected = form.triageLevel === level.value;
+                  return (
+                    <button
+                      key={level.value}
+                      className={`patient-triage-level ${level.tone} ${selected ? "patient-triage-level--selected" : ""}`}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setField("triageLevel", level.value)}
+                    >
+                      <span className="patient-triage-level__roman">{level.value}</span>
+                      <span className="patient-triage-level__copy"><strong>{level.title}</strong><small>{level.helper}</small></span>
+                    </button>
+                  );
+                })}
+              </div>
+              <FieldError id="triage-level-error" message={fieldErrors.triageLevel} />
+            </fieldset>
+
+            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-reason">
+              Motivo de consulta<span className="text-danger">*</span>
+              <textarea id="triage-reason" className="min-h-28 rounded-xl border border-line bg-surface-input px-3.5 py-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" required minLength={10} maxLength={2000} value={form.reason} onChange={(event) => setField("reason", event.target.value)} disabled={isSaving} aria-invalid={fieldErrors.reason ? true : undefined} aria-describedby={fieldErrors.reason ? "triage-reason-error" : undefined} placeholder="Cuéntanos qué sientes, desde cuándo y qué cambió hoy." />
+              <FieldError id="triage-reason-error" message={fieldErrors.reason} />
+            </label>
+
+            <div>
+              <div className="mb-2 flex items-end justify-between gap-3"><div><h3 className="text-xs font-extrabold text-ink">Signos vitales</h3><p className="mt-0.5 text-[0.68rem] text-muted">Completa solo las mediciones que tengas disponibles.</p></div><span className="rounded-full bg-surface-subtle px-2.5 py-1 text-[0.62rem] font-bold text-muted">Opcionales</span></div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {fields.map((field) => {
+                  const id = `triage-${field.id}`;
+                  const fieldError = fieldErrors[field.id];
+                  return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id} key={field.id}>{field.label}<input id={id} className="h-11 rounded-xl border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" inputMode={field.inputMode} value={form[field.id]} onChange={(event) => setField(field.id, event.target.value)} disabled={isSaving} aria-invalid={fieldError ? true : undefined} aria-describedby={fieldError ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={fieldError} /></label>;
+                })}
+              </div>
             </div>
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-priority">Prioridad informada<select id="triage-priority" className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.triagePriority} onChange={(event) => setField("triagePriority", event.target.value)} disabled={saving} aria-invalid={fieldErrors.triagePriority ? true : undefined} aria-describedby={fieldErrors.triagePriority ? "triage-priority-error" : undefined}><option value="">No informar</option><option value="routine">Rutina</option><option value="urgent">Urgente</option><option value="emergency">Emergencia</option></select><FieldError id="triage-priority-error" message={fieldErrors.triagePriority} /></label>
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-notes">Notas adicionales<textarea id="triage-notes" className="min-h-20 rounded-lg border border-line bg-surface-input px-3 py-2 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.triageNotes} onChange={(event) => setField("triageNotes", event.target.value)} disabled={saving} aria-invalid={fieldErrors.triageNotes ? true : undefined} aria-describedby={fieldErrors.triageNotes ? "triage-notes-error" : undefined} /><FieldError id="triage-notes-error" message={fieldErrors.triageNotes} /></label>
-            {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-bold text-danger" id="triage-form-error" role="alert">{error}</p> : null}
-            {message ? <p className="rounded-lg bg-success-soft p-3 text-sm font-bold text-success" id="triage-form-message" role="status">{message}</p> : null}
-            <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-extrabold text-paper transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={saving}>{saving ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}{saving ? "Guardando…" : "Guardar triaje"}</button>
+
+            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-notes">Notas adicionales<textarea id="triage-notes" className="min-h-24 rounded-xl border border-line bg-surface-input px-3.5 py-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.triageNotes} onChange={(event) => setField("triageNotes", event.target.value)} disabled={isSaving} placeholder="Medicamentos tomados, alergias conocidas u otra información que consideres útil." aria-invalid={fieldErrors.triageNotes ? true : undefined} aria-describedby={fieldErrors.triageNotes ? "triage-notes-error" : undefined} /><FieldError id="triage-notes-error" message={fieldErrors.triageNotes} /></label>
+
+            {error ? <p className="rounded-xl bg-danger-soft p-3 text-sm font-bold text-danger" id="triage-form-error" role="alert">{error}</p> : null}
+            {message ? <p className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success" id="triage-form-message" role="status">{message}</p> : null}
+
+            <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
+              <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-4 text-xs font-extrabold text-ink transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled={isSaving} onClick={() => void persist("draft")}>
+                {savingAs === "draft" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                {savingAs === "draft" ? "Guardando…" : "Guardar borrador"}
+              </button>
+              <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-xs font-extrabold text-paper shadow-[0_10px_24px_rgb(8_98_221_/_20%)] transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isSaving}>
+                {savingAs === "submitted" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4" aria-hidden="true" />}
+                {savingAs === "submitted" ? "Enviando…" : "Enviar triaje"}
+              </button>
+            </div>
           </form>
         </Card>
-        <Card>
-          <h2 className="text-sm font-extrabold text-ink">Registro más reciente</h2>
-          <div className="mt-3">{triage ? <TriageSummary triage={triage} /> : <EmptyState message="Todavía no tienes un registro de triaje." />}</div>
-          <p className="mt-4 text-xs leading-relaxed text-muted">Este módulo almacena los valores informados. No muestra una clasificación clínica automática.</p>
-        </Card>
+
+        <div className="space-y-4">
+          <Card className="patient-premium-card">
+            <h2 className="text-sm font-extrabold text-ink">Registro más reciente</h2>
+            <div className="mt-4">{triage ? <TriageSummary triage={triage} /> : <EmptyState message="Todavía no tienes un registro de triaje. Puedes comenzar y guardarlo como borrador." />}</div>
+          </Card>
+          <Card className="border-accent/20 bg-accent-soft/50">
+            <div className="flex items-start gap-3"><Info className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" /><div><h3 className="text-xs font-extrabold text-ink">¿Tienes síntomas graves o súbitos?</h3><p className="mt-1 text-xs leading-relaxed text-muted">Este formulario no es un servicio de emergencias. Busca atención inmediata por los canales locales de emergencia cuando corresponda.</p></div></div>
+          </Card>
+        </div>
       </div>
     </div>
   );
 }
+
 
 function ResultRow({ result }: { result: PatientLaboratoryResult }) {
   return <div className="flex items-start gap-3 rounded-lg border border-line bg-surface-subtle p-3"><FlaskConical className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><div className="min-w-0 flex-1"><strong className="block truncate text-sm text-ink">{result.studyName}</strong><span className="text-xs text-muted">{formatDate(result.orderedAt, true)} · {result.clinic?.name ?? "Clínica no registrada"}</span></div><StatusBadge label={result.statusLabel} value={result.status} /></div>;
@@ -589,7 +682,7 @@ function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
 }
 
 function HistoryView({ consultations }: { consultations: PatientConsultation[] }) {
-  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures" | "documents">("all");
+  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures">("all");
   const [year, setYear] = useState<string>("all");
 
   const years = useMemo(
@@ -617,6 +710,14 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     [consultations],
   );
 
+  const codingCount = useMemo(
+    () => new Set(
+      consultations.flatMap((consultation) => consultation.codings)
+        .map((coding) => coding.system + "|" + coding.code),
+    ).size,
+    [consultations],
+  );
+
   const filtered = useMemo(() => consultations.filter((consultation) => {
     if (year !== "all" && consultation.createdAt) {
       const consultationYear = new Date(consultation.createdAt).getFullYear();
@@ -631,7 +732,6 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     if (tab === "procedures") {
       return consultation.codings.some((coding) => coding.category === "procedure");
     }
-    if (tab === "documents") return false;
     return true;
   }), [consultations, tab, year]);
 
@@ -640,7 +740,6 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     { value: "consultations" as const, label: "Consultas" },
     { value: "diagnoses" as const, label: "Diagnósticos" },
     { value: "procedures" as const, label: "Procedimientos" },
-    { value: "documents" as const, label: "Documentos" },
   ];
 
   return (
@@ -654,7 +753,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
         <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
         <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
         <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
-        <Metric icon={FileText} label="Documentos clínicos" value="0" />
+        <Metric icon={FileText} label="Conceptos codificados" value={String(codingCount)} />
       </section>
 
       <Card className="mt-4 overflow-hidden p-0">
@@ -689,11 +788,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
           </label>
         </div>
 
-        {tab === "documents" ? (
-          <div className="p-6">
-            <EmptyState message="Todavía no hay documentos clínicos publicados en tu expediente. La integración se habilitará cuando exista almacenamiento DocumentReference real." />
-          </div>
-        ) : filtered.length ? (
+        {filtered.length ? (
           <div className="relative px-4 py-2 sm:px-6">
             <div className="absolute bottom-8 left-[2.15rem] top-8 hidden w-px bg-line sm:block" aria-hidden="true" />
             {filtered.map((consultation) => {
@@ -780,6 +875,112 @@ function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescripti
         <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Recetas registradas</h2><span className="text-xs font-bold text-muted">{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</span></div>
         <div className="mt-4 space-y-3">{prescriptions.length ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />) : <EmptyState message="No hay recetas vinculadas a tu perfil." />}</div>
       </Card>
+    </div>
+  );
+}
+
+function MembershipView({ membership }: { membership: PatientMembershipData }) {
+  if (!membership.available) {
+    return (
+      <div className="patient-page">
+        <div className="patient-premium-intro">
+          <div><span className="patient-premium-intro__eyebrow">COBERTURA</span><h2>Membresía</h2><p>Consulta la cobertura HIPOCRATIQ asociada a la clínica donde recibes atención.</p></div>
+          <ShieldCheck className="size-8 text-accent" aria-hidden="true" />
+        </div>
+        <Card className="patient-premium-card">
+          <div className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-warning-soft text-warning"><Info className="size-5" aria-hidden="true" /></span>
+            <div><h3 className="text-sm font-extrabold text-ink">Cobertura no disponible</h3><p className="mt-1 text-sm leading-relaxed text-muted">{membership.message}</p></div>
+            <Link className="inline-flex min-h-10 items-center justify-center rounded-xl border border-line-strong px-4 text-xs font-extrabold text-ink hover:bg-surface-hover" href="/patient/perfil">Revisar mi perfil</Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="patient-page">
+      <div className="patient-premium-intro">
+        <div><span className="patient-premium-intro__eyebrow">COBERTURA ACTIVA</span><h2>Tu cobertura HIPOCRATIQ</h2><p>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"}. Los datos comerciales y de facturación de la institución permanecen privados.</p></div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-black text-success"><CheckCircle2 className="size-4" aria-hidden="true" />Activa</span>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(19rem,.8fr)]">
+        <Card className="patient-membership-hero">
+          <div className="relative z-10">
+            <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-accent">PLAN {membership.plan.key.toUpperCase()}</span>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-ink">{membership.plan.name}</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{membership.plan.description ?? membership.message}</p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-extrabold text-success"><ShieldCheck className="size-4" aria-hidden="true" />Cobertura institucional activa</div>
+
+            <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              {membership.plan.features.length ? membership.plan.features.map((feature) => (
+                <div className="flex items-start gap-2 rounded-xl border border-line bg-surface/80 px-3 py-2.5 text-xs font-bold text-ink-secondary" key={feature}><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{feature}</div>
+              )) : <p className="text-xs text-muted">Las funciones del plan se administran desde la clínica.</p>}
+            </div>
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="patient-premium-card">
+            <h3 className="text-sm font-extrabold text-ink">Estado de cobertura</h3>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="text-right font-extrabold text-ink">{membership.clinic?.name ?? "No registrada"}</dd></div>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Estado</dt><dd className="font-extrabold text-success">Activa</dd></div>
+              <div className="flex items-center justify-between gap-3"><dt className="text-xs font-bold text-muted">Vigencia de cobertura</dt><dd className="text-right font-extrabold text-ink">{membership.coverage.endsAt ? formatDate(membership.coverage.endsAt) : "Sin fecha de término"}</dd></div>
+            </dl>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EpidemiologyView({ epidemiology }: { epidemiology: PatientEpidemiologyData }) {
+  const maximum = Math.max(1, ...epidemiology.trend.map((point) => point.appointments + point.consultations + point.laboratoryOrders));
+
+  return (
+    <div className="patient-page">
+      <div className="patient-premium-intro">
+        <div><span className="patient-premium-intro__eyebrow">SALUD Y DATOS</span><h2>IA epidemiológica</h2><p>Resumen privado de tu actividad clínica y de tu participación voluntaria en análisis anonimizados.</p></div>
+        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ${epidemiology.participation.consentActive ? "bg-success-soft text-success" : "bg-surface-subtle text-muted"}`}><ShieldCheck className="size-4" aria-hidden="true" />{epidemiology.participation.consentActive ? "Consentimiento activo" : "Participación desactivada"}</span>
+      </div>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Actividad clínica de los últimos 90 días">
+        <Metric icon={CalendarDays} label="Citas" value={String(epidemiology.metrics.appointments)} />
+        <Metric icon={Stethoscope} label="Consultas" value={String(epidemiology.metrics.consultations)} />
+        <Metric icon={FlaskConical} label="Resultados disponibles" value={String(epidemiology.metrics.availableResults)} />
+        <Metric icon={HeartPulse} label="Recetas activas" value={String(epidemiology.metrics.activePrescriptions)} />
+      </section>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,.85fr)]">
+        <Card className="patient-premium-card">
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">Actividad registrada</h3><p className="mt-1 text-xs text-muted">Últimos {epidemiology.period.days} días · sin inferencias clínicas individuales.</p></div><span className="text-[0.65rem] font-bold text-muted">{formatDate(epidemiology.generatedAt, true)}</span></div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {epidemiology.trend.map((point) => {
+              const total = point.appointments + point.consultations + point.laboratoryOrders;
+              const height = Math.max(8, Math.round((total / maximum) * 100));
+              return (
+                <div className="patient-epidemiology-period" key={point.month}>
+                  <div className="patient-epidemiology-period__chart" aria-hidden="true"><span style={{ height: `${height}%` }} /></div>
+                  <strong>{point.label}</strong>
+                  <span>{total} eventos</span>
+                  <small>{point.appointments} citas · {point.consultations} consultas · {point.laboratoryOrders} laboratorios</small>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className={epidemiology.participation.consentActive ? "border-success/25" : "border-accent/20"}>
+            <div className="flex items-start gap-3"><ShieldCheck className={`mt-0.5 size-5 shrink-0 ${epidemiology.participation.consentActive ? "text-success" : "text-accent"}`} aria-hidden="true" /><div><h3 className="text-sm font-extrabold text-ink">Control de privacidad</h3><p className="mt-1 text-xs leading-relaxed text-muted">{epidemiology.message}</p>{epidemiology.participation.policyVersion ? <p className="mt-2 text-[0.65rem] font-bold text-muted">Política {epidemiology.participation.policyVersion}</p> : null}<Link className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-accent px-4 text-xs font-extrabold text-paper hover:bg-accent-hover" href="/patient/perfil">Gestionar consentimiento</Link></div></div>
+          </Card>
+          <Card className="bg-surface-subtle">
+            <div className="flex items-start gap-3"><Info className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" /><p className="text-xs leading-relaxed text-muted">{epidemiology.disclaimer}</p></div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1064,9 +1265,9 @@ export function PatientPortalView({ user, view }: { user: AuthenticatedUser; vie
     case "prescriptions":
       return <PrescriptionsView prescriptions={state.data.data} />;
     case "epidemiology":
-      return <div className="patient-page"><PageIntro title="IA epidemiológica" description="Este módulo no muestra afirmaciones clínicas ni riesgo si no existe una fuente vinculada." /><UnavailableState title="Datos no disponibles" message={state.data.data.message} /></div>;
+      return <EpidemiologyView epidemiology={state.data.data} />;
     case "membership":
-      return <div className="patient-page"><PageIntro title="Membresía" description="Solo se muestran suscripciones individuales persistidas y vinculadas a tu cuenta." /><UnavailableState title="Membresía no disponible" message={state.data.data.message} /></div>;
+      return <MembershipView membership={state.data.data} />;
     case "profile":
       return <ProfileView initialProfile={state.data.data} />;
   }
