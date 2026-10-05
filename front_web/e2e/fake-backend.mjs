@@ -207,6 +207,13 @@ const server = http.createServer(async (request, response) => {
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
 
+  if (pathname === "/sanctum/csrf-cookie") {
+    response.setHeader("Set-Cookie", "XSRF-TOKEN=e2e-token; Path=/; SameSite=Lax");
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (pathname === "/api/v1/auth/me") {
     if (!session) {
       response.writeHead(401);
