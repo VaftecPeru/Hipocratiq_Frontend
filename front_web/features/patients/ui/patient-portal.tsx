@@ -756,17 +756,70 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
 
 
 function ResultRow({ result }: { result: PatientLaboratoryResult }) {
-  return <div className="flex items-start gap-3 rounded-lg border border-line bg-surface-subtle p-3"><FlaskConical className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><div className="min-w-0 flex-1"><strong className="block truncate text-sm text-ink">{result.studyName}</strong><span className="text-xs text-muted">{formatDate(result.orderedAt, true)} · {result.clinic?.name ?? "Clínica no registrada"}</span></div><StatusBadge label={result.statusLabel} value={result.status} /></div>;
+  return (
+    <article className="patient-result-row">
+      <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
+      <div className="patient-result-row__main">
+        <strong>{result.studyName}</strong>
+        <span>{result.clinic?.name ?? "Clínica no registrada"} · {formatDate(result.orderedAt, true)}</span>
+        {result.doctor?.name ? <small>{result.doctor.name}{result.doctor.specialty ? " · " + result.doctor.specialty : ""}</small> : null}
+      </div>
+      <div className="patient-result-row__summary">
+        <StatusBadge label={result.statusLabel} value={result.status} />
+        <span>{result.resultAvailable ? "Resultado disponible" : "En proceso"}</span>
+      </div>
+      {result.resultAvailable && result.resultSummary ? <p className="patient-result-row__detail">{result.resultSummary}</p> : null}
+    </article>
+  );
 }
 
 function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
+  const available = results.filter((result) => result.resultAvailable);
+  const pending = results.filter((result) => !result.resultAvailable);
+  const latest = [...available].sort((a, b) => new Date(b.resultAt ?? b.orderedAt ?? 0).getTime() - new Date(a.resultAt ?? a.orderedAt ?? 0).getTime())[0] ?? null;
+
   return (
     <div className="patient-page">
-      <PageIntro title="Resultados de laboratorio" description="Se muestran solicitudes y resultados internos vinculados a tu perfil. No se agregan interpretaciones externas." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Estudios registrados</h2><span className="text-xs font-bold text-muted">{results.length} {results.length === 1 ? "estudio" : "estudios"}</span></div>
-        <div className="mt-4 space-y-3">{results.length ? results.map((result) => <div className="rounded-lg border border-line bg-surface-subtle p-3" key={result.id}><div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><FlaskConical className="mt-0.5 size-4 text-accent" aria-hidden="true" /><div><h3 className="text-sm font-extrabold text-ink">{result.studyName}</h3><p className="mt-1 text-xs text-muted">Solicitado: {formatDate(result.orderedAt, true)} · {result.clinic?.name ?? "Clínica no registrada"}</p></div></div><StatusBadge label={result.statusLabel} value={result.status} /></div>{result.resultAvailable ? <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-ink-secondary"><strong>Resultado registrado:</strong> {result.resultSummary ?? "El laboratorio no registró un resumen."}</p> : <p className="mt-3 border-t border-line pt-3 text-xs text-muted">El resultado todavía no está disponible para consulta.</p>}</div>) : <EmptyState message="No hay resultados de laboratorio vinculados a tu perfil." />}</div>
-      </Card>
+      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de resultados">
+        <Metric icon={FlaskConical} label="Estudios registrados" value={String(results.length)} />
+        <Metric icon={CheckCircle2} label="Disponibles" value={String(available.length)} />
+        <Metric icon={Clock3} label="En proceso" value={String(pending.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-heading">
+            <div><span>LABORATORIO E IMAGENOLOGÍA</span><h2>Mis resultados</h2></div>
+            <strong>{results.length} {results.length === 1 ? "estudio" : "estudios"}</strong>
+          </div>
+          <div className="patient-list-panel__body">
+            {results.length
+              ? results.map((result) => <ResultRow result={result} key={result.id} />)
+              : <EmptyState message="Cuando tu equipo clínico publique resultados aparecerán aquí, organizados por fecha y estado." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight patient-side-highlight--violet">
+            <span className="patient-side-highlight__eyebrow">ÚLTIMO RESULTADO</span>
+            {latest ? (
+              <>
+                <strong className="patient-side-highlight__title">{latest.studyName}</strong>
+                <p>{latest.resultSummary ?? "Resultado publicado sin resumen adicional."}</p>
+                <span className="patient-side-highlight__date">{formatDate(latest.resultAt ?? latest.orderedAt, true)}</span>
+              </>
+            ) : <EmptyState message="Aún no tienes resultados publicados." />}
+          </Card>
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon patient-guidance-card__icon--violet"><ShieldCheck className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Información clínica protegida</h3>
+              <p>Estos resultados provienen únicamente de estudios vinculados a tu expediente autenticado.</p>
+              <Link href="/patient/historial">Ver historial <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -954,17 +1007,68 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
 }
 
 function PrescriptionRow({ prescription }: { prescription: PatientPrescription }) {
-  return <div className="rounded-lg border border-line bg-surface-subtle p-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="block text-sm text-ink">{prescription.medication}</strong><span className="text-xs text-muted">{prescription.doctor?.name ?? "Profesional no registrado"} · {formatDate(prescription.issuedAt)}</span></div><StatusBadge label={prescription.statusLabel} value={prescription.status} /></div><dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="font-bold text-muted">Dosis</dt><dd className="font-bold text-ink">{prescription.dosage ?? "No registrada"}</dd></div><div><dt className="font-bold text-muted">Frecuencia</dt><dd className="font-bold text-ink">{prescription.frequency ?? "No registrada"}</dd></div><div><dt className="font-bold text-muted">Duración</dt><dd className="font-bold text-ink">{prescription.durationDays === null ? "No registrada" : `${prescription.durationDays} días`}</dd></div></dl>{prescription.notes ? <p className="mt-3 text-xs leading-relaxed text-ink-secondary">{prescription.notes}</p> : null}</div>;
+  return (
+    <article className="patient-prescription-card">
+      <span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span>
+      <div className="patient-prescription-card__main">
+        <strong>{prescription.medication}</strong>
+        <span>{prescription.doctor?.name ?? "Profesional no registrado"} · {formatDate(prescription.issuedAt)}</span>
+        <div className="patient-prescription-card__dosage">
+          <span><small>Dosis</small>{prescription.dosage ?? "No registrada"}</span>
+          <span><small>Frecuencia</small>{prescription.frequency ?? "No registrada"}</span>
+          <span><small>Duración</small>{prescription.durationDays === null ? "No registrada" : prescription.durationDays + " días"}</span>
+        </div>
+        {prescription.notes ? <p>{prescription.notes}</p> : null}
+      </div>
+      <div className="patient-prescription-card__status">
+        <StatusBadge label={prescription.statusLabel} value={prescription.status} />
+        {prescription.expiresAt ? <small>Vence {formatDate(prescription.expiresAt)}</small> : null}
+      </div>
+    </article>
+  );
 }
 
 function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescription[] }) {
+  const active = prescriptions.filter((prescription) => prescription.status === "active");
+  const completed = prescriptions.filter((prescription) => ["completed", "expired"].includes(prescription.status));
+
   return (
     <div className="patient-page">
-      <PageIntro title="Recetas" description="Se muestran recetas registradas por profesionales vinculados a tu atención. No se generan recordatorios ni renovaciones automáticas." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Recetas registradas</h2><span className="text-xs font-bold text-muted">{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</span></div>
-        <div className="mt-4 space-y-3">{prescriptions.length ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />) : <EmptyState message="No hay recetas vinculadas a tu perfil." />}</div>
-      </Card>
+      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de recetas">
+        <Metric icon={FileText} label="Recetas registradas" value={String(prescriptions.length)} />
+        <Metric icon={HeartPulse} label="Tratamientos activos" value={String(active.length)} />
+        <Metric icon={CheckCircle2} label="Finalizadas" value={String(completed.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-heading">
+            <div><span>TRATAMIENTO INDICADO</span><h2>Mis recetas</h2></div>
+            <strong>{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</strong>
+          </div>
+          <div className="patient-list-panel__body">
+            {prescriptions.length
+              ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />)
+              : <EmptyState message="No hay recetas vinculadas a tu perfil." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight patient-side-highlight--green">
+            <span className="patient-side-highlight__eyebrow">TRATAMIENTOS ACTIVOS</span>
+            <strong className="patient-side-highlight__metric">{active.length}</strong>
+            <p>Consulta siempre dosis, frecuencia y duración tal como fueron registradas por tu profesional.</p>
+          </Card>
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon patient-guidance-card__icon--green"><Info className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Renovaciones y cambios</h3>
+              <p>HIPOCRATIQ no modifica ni renueva recetas automáticamente. Cualquier ajuste corresponde a tu médico.</p>
+              <Link href="/patient/citas">Ver mis citas <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
