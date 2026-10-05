@@ -95,3 +95,35 @@ test("all patient Flow 6 routes render without an application error", async ({ p
     await expect(page.getByAltText("HIPOCRATIQ")).toBeVisible();
   }
 });
+
+
+test("patient internal views expose the premium interaction hierarchy", async ({ page }) => {
+  await setPatientSession(page);
+
+  await page.goto("/patient/citas", { waitUntil: "networkidle" });
+  await expect(page.getByRole("tab", { name: "Próximas" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Historial" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Canceladas" })).toBeVisible();
+  await expect(page.getByText("Teleconsultas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Antes de tu consulta", { exact: true })).toBeVisible();
+
+  await page.goto("/patient/resultados", { waitUntil: "networkidle" });
+  await expect(page.getByText("Estudios registrados", { exact: true })).toBeVisible();
+  await expect(page.getByText("Información clínica protegida", { exact: true })).toBeVisible();
+
+  await page.goto("/patient/recetas", { waitUntil: "networkidle" });
+  await expect(page.getByText("Tratamientos activos", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Renovaciones y cambios", { exact: true })).toBeVisible();
+
+  await page.goto("/patient/perfil", { waitUntil: "networkidle" });
+  const profileHero = page.locator(".patient-profile-hero");
+  await expect(profileHero.getByText("PERFIL DEL PACIENTE", { exact: true })).toBeVisible();
+  await expect(profileHero.getByText("Cuenta autenticada", { exact: true })).toBeVisible();
+
+  await page.goto("/patient/triaje", { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { name: "Triaje del paciente" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /III Urgente/i })).toBeVisible();
+
+  await page.goto("/patient/historial", { waitUntil: "networkidle" });
+  await expect(page.getByText("Consultas registradas", { exact: true })).toBeVisible();
+});

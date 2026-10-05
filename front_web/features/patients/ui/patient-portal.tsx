@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -11,6 +13,8 @@ import {
   HeartPulse,
   Info,
   LoaderCircle,
+  MapPin,
+  Pill,
   Save,
   ShieldCheck,
   Stethoscope,
@@ -130,15 +134,20 @@ function statusClasses(status: string): string {
 }
 
 function StatusBadge({ label, value }: { label: string; value: string }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[0.65rem] font-extrabold ${statusClasses(value)}`}>{label}</span>;
+  return <span className={"patient-status-badge " + statusClasses(value)}>{label}</span>;
 }
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-xl border border-line bg-surface p-4 shadow-sm ${className}`}>{children}</section>;
+  return <section className={"patient-premium-surface rounded-xl border border-line bg-surface p-4 shadow-sm " + className}>{children}</section>;
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <p className="rounded-lg border border-dashed border-line-strong bg-surface-subtle p-4 text-sm text-muted">{message}</p>;
+  return (
+    <div className="patient-empty-state">
+      <span className="patient-empty-state__icon"><Info className="size-5" aria-hidden="true" /></span>
+      <div><strong>Sin información por ahora</strong><p>{message}</p></div>
+    </div>
+  );
 }
 
 function PortalLoading() {
@@ -175,41 +184,41 @@ function PortalError({ message, onRetry }: { message: string; onRetry: () => voi
   );
 }
 
-function PageIntro({ title, description }: { title: string; description: string }) {
-  return (
-    <header className="mb-4">
-      <h2 className="text-lg font-extrabold tracking-tight text-ink">{title}</h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
-    </header>
-  );
-}
-
 function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: typeof CalendarDays }) {
   return (
-    <Card className="flex items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Icon className="size-5" aria-hidden="true" /></span>
-      <span className="min-w-0"><strong className="block text-xl font-black text-ink">{value}</strong><span className="block text-xs font-bold text-muted">{label}</span></span>
+    <Card className="patient-metric-card">
+      <span className="patient-metric-card__icon"><Icon className="size-5" aria-hidden="true" /></span>
+      <span className="patient-metric-card__copy"><span>{label}</span><strong>{value}</strong><small>Información de tu expediente</small></span>
     </Card>
   );
 }
 
 function AppointmentSummary({ appointment }: { appointment: PatientAppointment }) {
   return (
-    <div className="rounded-lg border border-line bg-surface-subtle p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article className="patient-appointment-row">
+      <div className="patient-appointment-row__date">
+        <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-wide text-muted">{appointmentTypeLabel(appointment.appointmentType)}</p>
-          <h3 className="mt-1 text-base font-extrabold text-ink">{formatDate(appointment.scheduledAt, true)}</h3>
+          <strong>{formatDate(appointment.scheduledAt, true)}</strong>
+          <small>{appointmentTypeLabel(appointment.appointmentType)}</small>
         </div>
+      </div>
+      <div className="patient-appointment-row__doctor">
+        <small>Profesional</small>
+        <strong>{appointment.doctor?.name ?? "No asignado"}</strong>
+        <span>{appointment.doctor?.specialty ?? "Especialidad no registrada"}</span>
+      </div>
+      <div className="patient-appointment-row__place">
+        <MapPin className="size-4 text-accent" aria-hidden="true" />
+        <div>
+          <strong>{appointment.clinic?.name ?? "Clínica no registrada"}</strong>
+          <span>{appointment.notes ?? "Sin indicaciones adicionales"}</span>
+        </div>
+      </div>
+      <div className="patient-appointment-row__status">
         <StatusBadge label={appointment.statusLabel} value={appointment.status} />
       </div>
-      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-        <div><dt className="text-xs font-bold text-muted">Profesional</dt><dd className="font-bold text-ink">{appointment.doctor?.name ?? "No asignado"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Especialidad</dt><dd className="font-bold text-ink">{appointment.doctor?.specialty ?? "No registrada"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="font-bold text-ink">{appointment.clinic?.name ?? "No registrada"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Notas</dt><dd className="font-bold text-ink">{appointment.notes ?? "Sin notas"}</dd></div>
-      </dl>
-    </div>
+    </article>
   );
 }
 
@@ -389,19 +398,99 @@ function DashboardView({ data }: { data: PatientDashboardData }) {
 }
 
 function AppointmentsView({ appointments }: { appointments: PatientAppointment[] }) {
+  const [now] = useState(() => Date.now());
+  const hasUpcoming = appointments.some((item) => item.scheduledAt && new Date(item.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(item.status));
+  const [tab, setTab] = useState<"upcoming" | "history" | "canceled">(() => hasUpcoming ? "upcoming" : "history");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const upcoming = appointments.filter((item) => item.scheduledAt && new Date(item.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(item.status));
+  const confirmed = appointments.filter((item) => item.status === "confirmed");
+  const teleconsultations = appointments.filter((item) => /tele|video|virtual/i.test(item.appointmentType));
+  const pending = appointments.filter((item) => item.status === "pending");
+
+  const filtered = appointments.filter((item) => {
+    const appointmentTime = item.scheduledAt ? new Date(item.scheduledAt).getTime() : 0;
+    if (tab === "upcoming" && (appointmentTime < now || ["canceled", "no_show"].includes(item.status))) return false;
+    if (tab === "history" && appointmentTime >= now) return false;
+    if (tab === "canceled" && !["canceled", "no_show"].includes(item.status)) return false;
+    if (statusFilter !== "all" && item.status !== statusFilter) return false;
+    return true;
+  });
+
+  const next = [...upcoming].sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime())[0] ?? null;
+
   return (
     <div className="patient-page">
-      <PageIntro title="Mis citas" description="Solo se muestran citas asociadas a tu perfil de paciente y a su clínica correspondiente." />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Metric icon={CalendarDays} label="Total registradas" value={String(appointments.length)} />
-        <Metric icon={CheckCircle2} label="Confirmadas" value={String(appointments.filter((item) => item.status === "confirmed").length)} />
-        <Metric icon={Clock3} label="Pendientes" value={String(appointments.filter((item) => item.status === "pending").length)} />
+      <section className="patient-stat-grid" aria-label="Resumen de citas">
+        <Metric icon={CalendarDays} label="Próximas" value={String(upcoming.length)} />
+        <Metric icon={CheckCircle2} label="Confirmadas" value={String(confirmed.length)} />
+        <Metric icon={Activity} label="Teleconsultas" value={String(teleconsultations.length)} />
+        <Metric icon={Clock3} label="Pendientes" value={String(pending.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-toolbar">
+            <div className="patient-tabs" role="tablist" aria-label="Filtrar citas">
+              {([
+                ["upcoming", "Próximas"],
+                ["history", "Historial"],
+                ["canceled", "Canceladas"],
+              ] as const).map(([value, label]) => (
+                <button
+                  className={tab === value ? "patient-tab patient-tab--active" : "patient-tab"}
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === value}
+                  onClick={() => setTab(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="patient-filter-control">
+              <span className="sr-only">Filtrar citas por estado</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">Todos los estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="confirmed">Confirmadas</option>
+                <option value="completed">Completadas</option>
+                <option value="canceled">Canceladas</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="patient-list-panel__body">
+            {filtered.length
+              ? filtered.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />)
+              : <EmptyState message="No hay citas que coincidan con este filtro." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight">
+            <span className="patient-side-highlight__eyebrow">PRÓXIMA ATENCIÓN</span>
+            {next ? (
+              <>
+                <strong className="patient-side-highlight__title">{formatDate(next.scheduledAt, true)}</strong>
+                <div className="patient-side-highlight__meta"><Stethoscope className="size-4" aria-hidden="true" /><span>{next.doctor?.name ?? "Profesional por asignar"}</span></div>
+                <div className="patient-side-highlight__meta"><MapPin className="size-4" aria-hidden="true" /><span>{next.clinic?.name ?? "Clínica no registrada"}</span></div>
+                <StatusBadge label={next.statusLabel} value={next.status} />
+              </>
+            ) : <EmptyState message="No tienes una próxima cita programada." />}
+          </Card>
+
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon"><ShieldCheck className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Antes de tu consulta</h3>
+              <p>Completa tu información previa para que el equipo clínico tenga mejor contexto al atenderte.</p>
+              <Link href="/patient/triaje">Preparar mi cita <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
       </div>
-      <Card className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-extrabold text-ink">Agenda registrada</h2><span className="text-xs font-bold text-muted">{appointments.length} {appointments.length === 1 ? "cita" : "citas"}</span></div>
-        <div className="mt-4 space-y-3">{appointments.length ? appointments.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />) : <EmptyState message="No hay citas vinculadas a tu perfil." />}</div>
-        <p className="mt-4 text-xs text-muted">Para agendar, reprogramar o cancelar, contacta a recepción de tu clínica o a tu médico. Ellos registran la cita y su confirmación; aquí puedes consultar su estado. Al llegar, recepción registra tu ingreso y el médico continúa tu atención e historial clínico.</p>
-      </Card>
     </div>
   );
 }
@@ -658,17 +747,70 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
 
 
 function ResultRow({ result }: { result: PatientLaboratoryResult }) {
-  return <div className="flex items-start gap-3 rounded-lg border border-line bg-surface-subtle p-3"><FlaskConical className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><div className="min-w-0 flex-1"><strong className="block truncate text-sm text-ink">{result.studyName}</strong><span className="text-xs text-muted">{formatDate(result.orderedAt, true)} · {result.clinic?.name ?? "Clínica no registrada"}</span></div><StatusBadge label={result.statusLabel} value={result.status} /></div>;
+  return (
+    <article className="patient-result-row">
+      <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
+      <div className="patient-result-row__main">
+        <strong>{result.studyName}</strong>
+        <span>{result.clinic?.name ?? "Clínica no registrada"} · {formatDate(result.orderedAt, true)}</span>
+        {result.doctor?.name ? <small>{result.doctor.name}{result.doctor.specialty ? " · " + result.doctor.specialty : ""}</small> : null}
+      </div>
+      <div className="patient-result-row__summary">
+        <StatusBadge label={result.statusLabel} value={result.status} />
+        <span>{result.resultAvailable ? "Resultado disponible" : "En proceso"}</span>
+      </div>
+      {result.resultAvailable && result.resultSummary ? <p className="patient-result-row__detail">{result.resultSummary}</p> : null}
+    </article>
+  );
 }
 
 function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
+  const available = results.filter((result) => result.resultAvailable);
+  const pending = results.filter((result) => !result.resultAvailable);
+  const latest = [...available].sort((a, b) => new Date(b.resultAt ?? b.orderedAt ?? 0).getTime() - new Date(a.resultAt ?? a.orderedAt ?? 0).getTime())[0] ?? null;
+
   return (
     <div className="patient-page">
-      <PageIntro title="Resultados de laboratorio" description="Se muestran solicitudes y resultados internos vinculados a tu perfil. No se agregan interpretaciones externas." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Estudios registrados</h2><span className="text-xs font-bold text-muted">{results.length} {results.length === 1 ? "estudio" : "estudios"}</span></div>
-        <div className="mt-4 space-y-3">{results.length ? results.map((result) => <div className="rounded-lg border border-line bg-surface-subtle p-3" key={result.id}><div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><FlaskConical className="mt-0.5 size-4 text-accent" aria-hidden="true" /><div><h3 className="text-sm font-extrabold text-ink">{result.studyName}</h3><p className="mt-1 text-xs text-muted">Solicitado: {formatDate(result.orderedAt, true)} · {result.clinic?.name ?? "Clínica no registrada"}</p></div></div><StatusBadge label={result.statusLabel} value={result.status} /></div>{result.resultAvailable ? <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-ink-secondary"><strong>Resultado registrado:</strong> {result.resultSummary ?? "El laboratorio no registró un resumen."}</p> : <p className="mt-3 border-t border-line pt-3 text-xs text-muted">El resultado todavía no está disponible para consulta.</p>}</div>) : <EmptyState message="No hay resultados de laboratorio vinculados a tu perfil." />}</div>
-      </Card>
+      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de resultados">
+        <Metric icon={FlaskConical} label="Estudios registrados" value={String(results.length)} />
+        <Metric icon={CheckCircle2} label="Disponibles" value={String(available.length)} />
+        <Metric icon={Clock3} label="En proceso" value={String(pending.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-heading">
+            <div><span>LABORATORIO E IMAGENOLOGÍA</span><h2>Mis resultados</h2></div>
+            <strong>{results.length} {results.length === 1 ? "estudio" : "estudios"}</strong>
+          </div>
+          <div className="patient-list-panel__body">
+            {results.length
+              ? results.map((result) => <ResultRow result={result} key={result.id} />)
+              : <EmptyState message="Cuando tu equipo clínico publique resultados aparecerán aquí, organizados por fecha y estado." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight patient-side-highlight--violet">
+            <span className="patient-side-highlight__eyebrow">ÚLTIMO RESULTADO</span>
+            {latest ? (
+              <>
+                <strong className="patient-side-highlight__title">{latest.studyName}</strong>
+                <p>{latest.resultSummary ?? "Resultado publicado sin resumen adicional."}</p>
+                <span className="patient-side-highlight__date">{formatDate(latest.resultAt ?? latest.orderedAt, true)}</span>
+              </>
+            ) : <EmptyState message="Aún no tienes resultados publicados." />}
+          </Card>
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon patient-guidance-card__icon--violet"><ShieldCheck className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Información clínica protegida</h3>
+              <p>Estos resultados provienen únicamente de estudios vinculados a tu expediente autenticado.</p>
+              <Link href="/patient/historial">Ver historial <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -736,12 +878,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
 
   return (
     <div className="patient-page">
-      <PageIntro
-        title="Historial clínico"
-        description="Consulta la cronología clínica registrada en HIPOCRATIQ. Solo se muestran atenciones finalizadas o firmadas vinculadas a tu perfil."
-      />
-
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen del historial clínico">
+      <section className="patient-stat-grid" aria-label="Resumen del historial clínico">
         <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
         <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
         <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
@@ -856,17 +993,68 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
 }
 
 function PrescriptionRow({ prescription }: { prescription: PatientPrescription }) {
-  return <div className="rounded-lg border border-line bg-surface-subtle p-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="block text-sm text-ink">{prescription.medication}</strong><span className="text-xs text-muted">{prescription.doctor?.name ?? "Profesional no registrado"} · {formatDate(prescription.issuedAt)}</span></div><StatusBadge label={prescription.statusLabel} value={prescription.status} /></div><dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3"><div><dt className="font-bold text-muted">Dosis</dt><dd className="font-bold text-ink">{prescription.dosage ?? "No registrada"}</dd></div><div><dt className="font-bold text-muted">Frecuencia</dt><dd className="font-bold text-ink">{prescription.frequency ?? "No registrada"}</dd></div><div><dt className="font-bold text-muted">Duración</dt><dd className="font-bold text-ink">{prescription.durationDays === null ? "No registrada" : `${prescription.durationDays} días`}</dd></div></dl>{prescription.notes ? <p className="mt-3 text-xs leading-relaxed text-ink-secondary">{prescription.notes}</p> : null}</div>;
+  return (
+    <article className="patient-prescription-card">
+      <span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span>
+      <div className="patient-prescription-card__main">
+        <strong>{prescription.medication}</strong>
+        <span>{prescription.doctor?.name ?? "Profesional no registrado"} · {formatDate(prescription.issuedAt)}</span>
+        <div className="patient-prescription-card__dosage">
+          <span><small>Dosis</small>{prescription.dosage ?? "No registrada"}</span>
+          <span><small>Frecuencia</small>{prescription.frequency ?? "No registrada"}</span>
+          <span><small>Duración</small>{prescription.durationDays === null ? "No registrada" : prescription.durationDays + " días"}</span>
+        </div>
+        {prescription.notes ? <p>{prescription.notes}</p> : null}
+      </div>
+      <div className="patient-prescription-card__status">
+        <StatusBadge label={prescription.statusLabel} value={prescription.status} />
+        {prescription.expiresAt ? <small>Vence {formatDate(prescription.expiresAt)}</small> : null}
+      </div>
+    </article>
+  );
 }
 
 function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescription[] }) {
+  const active = prescriptions.filter((prescription) => prescription.status === "active");
+  const completed = prescriptions.filter((prescription) => ["completed", "expired"].includes(prescription.status));
+
   return (
     <div className="patient-page">
-      <PageIntro title="Recetas" description="Se muestran recetas registradas por profesionales vinculados a tu atención. No se generan recordatorios ni renovaciones automáticas." />
-      <Card>
-        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-extrabold text-ink">Recetas registradas</h2><span className="text-xs font-bold text-muted">{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</span></div>
-        <div className="mt-4 space-y-3">{prescriptions.length ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />) : <EmptyState message="No hay recetas vinculadas a tu perfil." />}</div>
-      </Card>
+      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de recetas">
+        <Metric icon={FileText} label="Recetas registradas" value={String(prescriptions.length)} />
+        <Metric icon={HeartPulse} label="Tratamientos activos" value={String(active.length)} />
+        <Metric icon={CheckCircle2} label="Finalizadas" value={String(completed.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-heading">
+            <div><span>TRATAMIENTO INDICADO</span><h2>Mis recetas</h2></div>
+            <strong>{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</strong>
+          </div>
+          <div className="patient-list-panel__body">
+            {prescriptions.length
+              ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />)
+              : <EmptyState message="No hay recetas vinculadas a tu perfil." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight patient-side-highlight--green">
+            <span className="patient-side-highlight__eyebrow">TRATAMIENTOS ACTIVOS</span>
+            <strong className="patient-side-highlight__metric">{active.length}</strong>
+            <p>Consulta siempre dosis, frecuencia y duración tal como fueron registradas por tu profesional.</p>
+          </Card>
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon patient-guidance-card__icon--green"><Info className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Renovaciones y cambios</h3>
+              <p>HIPOCRATIQ no modifica ni renueva recetas automáticamente. Cualquier ajuste corresponde a tu médico.</p>
+              <Link href="/patient/citas">Ver mis citas <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -1205,10 +1393,22 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
 
   return (
     <div className="patient-page">
-      <PageIntro title="Mi perfil" description="Edita únicamente los datos que están respaldados por el perfil de paciente persistido." />
-      <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
-        <Card>
-          <div className="flex items-center gap-3 border-b border-line pb-4"><span className="grid size-12 place-items-center rounded-full bg-accent-soft text-sm font-black text-accent" aria-hidden="true">{initials}</span><div><h2 className="text-sm font-extrabold text-ink">Datos personales y de contacto</h2><p className="mt-1 text-xs text-muted">Los cambios se guardan en tu cuenta autenticada.</p></div></div>
+      <section className="patient-profile-hero">
+        <span className="patient-profile-hero__avatar" aria-hidden="true">{initials}</span>
+        <div className="patient-profile-hero__copy">
+          <span>PERFIL DEL PACIENTE</span>
+          <h2>{profile.name ?? "Paciente HIPOCRATIQ"}</h2>
+          <p>{profile.clinic?.name ?? "Sin clínica vinculada"} · {profile.patientCode}</p>
+        </div>
+        <div className="patient-profile-hero__status">
+          <ShieldCheck className="size-4" aria-hidden="true" />
+          <span>Cuenta autenticada</span>
+        </div>
+      </section>
+
+      <form className="patient-profile-layout" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
+        <Card className="patient-profile-main-card">
+          <div className="patient-panel-heading -mx-4 -mt-4 mb-5"><div><span>INFORMACIÓN PERSONAL</span><h2>Datos personales y de contacto</h2></div><ShieldCheck className="size-5 text-accent" aria-hidden="true" /></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <ProfileField id="profile-name" label="Nombre completo" value={form.name} onChange={(value) => setField("name", value)} required error={fieldErrors.name} />
             <ProfileField id="profile-email" label="Correo electrónico" value={form.email} onChange={(value) => setField("email", value)} type="email" error={fieldErrors.email} />
