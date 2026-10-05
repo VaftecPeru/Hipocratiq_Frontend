@@ -3223,3 +3223,38 @@ input {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Patient intake premium alignment — 2026-10-05 */
+.patient-intake-hero {
+  background:
+    radial-gradient(circle at 96% 14%, rgb(8 98 221 / 11%), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f6faff 100%);
+  box-shadow: 0 0.9rem 2.4rem rgb(28 65 116 / 7%);
+}
+
+.patient-form-section {
+  background:
+    radial-gradient(circle at 100% 0%, rgb(8 98 221 / 3%), transparent 26%),
+    linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.patient-form-control {
+  border-color: #d4e1f0;
+}
+
+.patient-form-control:hover {
+  border-color: #bcd2ea;
+}
+
+.patient-primary-action,
+.patient-secondary-action {
+  border-radius: 0.7rem;
+  box-shadow: 0 0.45rem 1rem rgb(28 65 116 / 7%);
+}
+
+.patient-primary-action:hover,
+.patient-secondary-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.7rem 1.4rem rgb(28 65 116 / 10%);
+}
