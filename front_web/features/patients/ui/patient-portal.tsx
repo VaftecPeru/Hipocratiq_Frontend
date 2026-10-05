@@ -891,6 +891,127 @@ function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescripti
   );
 }
 
+function formatMoneyMinor(value: number, currency: string): string {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(value / 100);
+}
+
+function MembershipView({ membership }: { membership: PatientMembershipData }) {
+  if (!membership.available) {
+    return (
+      <div className="patient-page">
+        <div className="patient-premium-intro">
+          <div><span className="patient-premium-intro__eyebrow">COBERTURA</span><h2>Membresía</h2><p>Consulta la cobertura HIPOCRATIQ asociada a la clínica donde recibes atención.</p></div>
+          <ShieldCheck className="size-8 text-accent" aria-hidden="true" />
+        </div>
+        <Card className="patient-premium-card">
+          <div className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-warning-soft text-warning"><Info className="size-5" aria-hidden="true" /></span>
+            <div><h3 className="text-sm font-extrabold text-ink">Cobertura no disponible</h3><p className="mt-1 text-sm leading-relaxed text-muted">{membership.message}</p></div>
+            <Link className="inline-flex min-h-10 items-center justify-center rounded-xl border border-line-strong px-4 text-xs font-extrabold text-ink hover:bg-surface-hover" href="/patient/perfil">Revisar mi perfil</Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  const cycle = membership.subscription.billingCycle === "annual" ? "Anual" : "Mensual";
+  const price = membership.subscription.billingCycle === "annual"
+    ? membership.plan.annualPriceCents
+    : membership.plan.monthlyPriceCents;
+
+  return (
+    <div className="patient-page">
+      <div className="patient-premium-intro">
+        <div><span className="patient-premium-intro__eyebrow">COBERTURA ACTIVA</span><h2>Tu membresía HIPOCRATIQ</h2><p>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"} y se actualiza desde la suscripción real de la institución.</p></div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-black text-success"><CheckCircle2 className="size-4" aria-hidden="true" />Activa</span>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(19rem,.8fr)]">
+        <Card className="patient-membership-hero">
+          <div className="relative z-10">
+            <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-accent">PLAN {membership.plan.key.toUpperCase()}</span>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-ink">{membership.plan.name}</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{membership.plan.description ?? membership.message}</p>
+            <div className="mt-6 flex flex-wrap items-end gap-2"><strong className="text-3xl font-black text-ink">{formatMoneyMinor(price, membership.plan.currency)}</strong><span className="pb-1 text-xs font-bold text-muted">/ {cycle.toLowerCase()}</span></div>
+
+            <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              {membership.plan.features.length ? membership.plan.features.map((feature) => (
+                <div className="flex items-start gap-2 rounded-xl border border-line bg-surface/80 px-3 py-2.5 text-xs font-bold text-ink-secondary" key={feature}><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{feature}</div>
+              )) : <p className="text-xs text-muted">Las funciones del plan se administran desde la clínica.</p>}
+            </div>
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="patient-premium-card">
+            <h3 className="text-sm font-extrabold text-ink">Estado de cobertura</h3>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="text-right font-extrabold text-ink">{membership.clinic?.name ?? "No registrada"}</dd></div>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Ciclo</dt><dd className="font-extrabold text-ink">{cycle}</dd></div>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Renovación automática</dt><dd className="font-extrabold text-ink">{membership.subscription.autoRenew ? "Activa" : "Desactivada"}</dd></div>
+              <div className="flex items-center justify-between gap-3"><dt className="text-xs font-bold text-muted">Vigencia</dt><dd className="text-right font-extrabold text-ink">{membership.subscription.endsAt ? formatDate(membership.subscription.endsAt) : "Sin fecha de término"}</dd></div>
+            </dl>
+          </Card>
+          {membership.latestPayment ? (
+            <Card>
+              <div className="flex items-start gap-3"><Clock3 className="mt-0.5 size-5 text-accent" aria-hidden="true" /><div><h3 className="text-xs font-extrabold text-ink">Último pago registrado</h3><p className="mt-1 text-lg font-black text-ink">{formatMoneyMinor(membership.latestPayment.amountCents, membership.latestPayment.currency)}</p><p className="text-xs text-muted">{formatDate(membership.latestPayment.paidAt, true)}</p></div></div>
+            </Card>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EpidemiologyView({ epidemiology }: { epidemiology: PatientEpidemiologyData }) {
+  const maximum = Math.max(1, ...epidemiology.trend.map((point) => point.appointments + point.consultations + point.laboratoryOrders));
+
+  return (
+    <div className="patient-page">
+      <div className="patient-premium-intro">
+        <div><span className="patient-premium-intro__eyebrow">SALUD Y DATOS</span><h2>IA epidemiológica</h2><p>Resumen privado de tu actividad clínica y de tu participación voluntaria en análisis anonimizados.</p></div>
+        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ${epidemiology.participation.consentActive ? "bg-success-soft text-success" : "bg-surface-subtle text-muted"}`}><ShieldCheck className="size-4" aria-hidden="true" />{epidemiology.participation.consentActive ? "Consentimiento activo" : "Participación desactivada"}</span>
+      </div>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Actividad clínica de los últimos 90 días">
+        <Metric icon={CalendarDays} label="Citas" value={String(epidemiology.metrics.appointments)} />
+        <Metric icon={Stethoscope} label="Consultas" value={String(epidemiology.metrics.consultations)} />
+        <Metric icon={FlaskConical} label="Resultados disponibles" value={String(epidemiology.metrics.availableResults)} />
+        <Metric icon={HeartPulse} label="Recetas activas" value={String(epidemiology.metrics.activePrescriptions)} />
+      </section>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,.85fr)]">
+        <Card className="patient-premium-card">
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-sm font-extrabold text-ink">Actividad registrada</h3><p className="mt-1 text-xs text-muted">Últimos {epidemiology.period.days} días · sin inferencias clínicas individuales.</p></div><span className="text-[0.65rem] font-bold text-muted">{formatDate(epidemiology.generatedAt, true)}</span></div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {epidemiology.trend.map((point) => {
+              const total = point.appointments + point.consultations + point.laboratoryOrders;
+              const height = Math.max(8, Math.round((total / maximum) * 100));
+              return (
+                <div className="patient-epidemiology-period" key={point.month}>
+                  <div className="patient-epidemiology-period__chart" aria-hidden="true"><span style={{ height: `${height}%` }} /></div>
+                  <strong>{point.label}</strong>
+                  <span>{total} eventos</span>
+                  <small>{point.appointments} citas · {point.consultations} consultas · {point.laboratoryOrders} laboratorios</small>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className={epidemiology.participation.consentActive ? "border-success/25" : "border-accent/20"}>
+            <div className="flex items-start gap-3"><ShieldCheck className={`mt-0.5 size-5 shrink-0 ${epidemiology.participation.consentActive ? "text-success" : "text-accent"}`} aria-hidden="true" /><div><h3 className="text-sm font-extrabold text-ink">Control de privacidad</h3><p className="mt-1 text-xs leading-relaxed text-muted">{epidemiology.message}</p>{epidemiology.participation.policyVersion ? <p className="mt-2 text-[0.65rem] font-bold text-muted">Política {epidemiology.participation.policyVersion}</p> : null}<Link className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-accent px-4 text-xs font-extrabold text-paper hover:bg-accent-hover" href="/patient/perfil">Gestionar consentimiento</Link></div></div>
+          </Card>
+          <Card className="bg-surface-subtle">
+            <div className="flex items-start gap-3"><Info className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" /><p className="text-xs leading-relaxed text-muted">{epidemiology.disclaimer}</p></div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type ProfileForm = {
   name: string;
   email: string;
@@ -1171,9 +1292,9 @@ export function PatientPortalView({ user, view }: { user: AuthenticatedUser; vie
     case "prescriptions":
       return <PrescriptionsView prescriptions={state.data.data} />;
     case "epidemiology":
-      return <div className="patient-page"><PageIntro title="IA epidemiológica" description="Este módulo no muestra afirmaciones clínicas ni riesgo si no existe una fuente vinculada." /><UnavailableState title="Datos no disponibles" message={state.data.data.message} /></div>;
+      return <EpidemiologyView epidemiology={state.data.data} />;
     case "membership":
-      return <div className="patient-page"><PageIntro title="Membresía" description="Solo se muestran suscripciones individuales persistidas y vinculadas a tu cuenta." /><UnavailableState title="Membresía no disponible" message={state.data.data.message} /></div>;
+      return <MembershipView membership={state.data.data} />;
     case "profile":
       return <ProfileView initialProfile={state.data.data} />;
   }
