@@ -116,8 +116,9 @@ test("patient internal views expose the premium interaction hierarchy", async ({
   await expect(page.getByText("Renovaciones y cambios", { exact: true })).toBeVisible();
 
   await page.goto("/patient/perfil", { waitUntil: "networkidle" });
-  await expect(page.getByText("PERFIL DEL PACIENTE", { exact: true })).toBeVisible();
-  await expect(page.getByText("Cuenta autenticada", { exact: true })).toBeVisible();
+  const profileHero = page.locator(".patient-profile-hero");
+  await expect(profileHero.getByText("PERFIL DEL PACIENTE", { exact: true })).toBeVisible();
+  await expect(profileHero.getByText("Cuenta autenticada", { exact: true })).toBeVisible();
 
   await page.goto("/patient/triaje", { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: "Triaje del paciente" })).toBeVisible();
