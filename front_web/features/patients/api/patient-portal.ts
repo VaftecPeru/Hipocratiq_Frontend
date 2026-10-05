@@ -165,23 +165,13 @@ export type PatientMembershipData =
         key: string;
         name: string;
         description: string | null;
-        currency: string;
-        monthlyPriceCents: number;
-        annualPriceCents: number;
         features: string[];
       };
-      subscription: {
+      coverage: {
         status: string;
-        billingCycle: string;
-        autoRenew: boolean;
         startsAt: string | null;
         endsAt: string | null;
       };
-      latestPayment: {
-        amountCents: number;
-        currency: string;
-        paidAt: string | null;
-      } | null;
       message: string;
     };
 
@@ -236,7 +226,6 @@ export type PatientTriagePayload = {
   heart_rate: number | null;
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
-  triage_priority?: PatientTriage["triagePriority"];
   triage_level: PatientTriageLevel;
   triage_status: PatientTriageStatus;
   triage_notes: string | null;
@@ -393,19 +382,13 @@ type ApiMembership =
         key: string;
         name: string;
         description: string | null;
-        currency: string;
-        monthly_price_cents: number;
-        annual_price_cents: number;
         features: string[];
       };
-      subscription: {
+      coverage: {
         status: string;
-        billing_cycle: string;
-        auto_renew: boolean;
         starts_at: string | null;
         ends_at: string | null;
       };
-      latest_payment: { amount_cents: number; currency: string; paid_at: string | null } | null;
       message: string;
     };
 
@@ -566,25 +549,13 @@ function mapMembership(data: ApiMembership): PatientMembershipData {
       key: data.plan.key,
       name: data.plan.name,
       description: data.plan.description,
-      currency: data.plan.currency,
-      monthlyPriceCents: data.plan.monthly_price_cents,
-      annualPriceCents: data.plan.annual_price_cents,
       features: Array.isArray(data.plan.features) ? data.plan.features : [],
     },
-    subscription: {
-      status: data.subscription.status,
-      billingCycle: data.subscription.billing_cycle,
-      autoRenew: data.subscription.auto_renew,
-      startsAt: data.subscription.starts_at,
-      endsAt: data.subscription.ends_at,
+    coverage: {
+      status: data.coverage.status,
+      startsAt: data.coverage.starts_at,
+      endsAt: data.coverage.ends_at,
     },
-    latestPayment: data.latest_payment
-      ? {
-          amountCents: data.latest_payment.amount_cents,
-          currency: data.latest_payment.currency,
-          paidAt: data.latest_payment.paid_at,
-        }
-      : null,
     message: data.message,
   };
 }
