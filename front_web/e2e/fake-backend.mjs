@@ -149,19 +149,13 @@ const patientMembership = {
     key: "professional",
     name: "Professional",
     description: "Cobertura integral de la clínica.",
-    currency: "USD",
-    monthly_price_cents: 14900,
-    annual_price_cents: 149000,
     features: ["Agenda", "Expediente clínico", "Resultados"],
   },
-  subscription: {
+  coverage: {
     status: "active",
-    billing_cycle: "monthly",
-    auto_renew: true,
     starts_at: "2026-01-01T00:00:00Z",
     ends_at: "2027-01-01T00:00:00Z",
   },
-  latest_payment: { amount_cents: 14900, currency: "USD", paid_at: "2026-10-01T12:00:00Z" },
   message: "Tu acceso está cubierto por la membresía activa de tu clínica.",
 };
 
@@ -262,9 +256,7 @@ const server = http.createServer(async (request, response) => {
         heart_rate: payload.heart_rate ?? null,
         respiratory_rate: payload.respiratory_rate ?? null,
         oxygen_saturation: payload.oxygen_saturation ?? null,
-        triage_priority: payload.triage_status === "submitted"
-          ? (["I", "II"].includes(payload.triage_level) ? "emergency" : payload.triage_level === "III" ? "urgent" : "routine")
-          : null,
+        triage_priority: null,
         triage_level: payload.triage_level,
         triage_status: payload.triage_status,
         submitted_at: payload.triage_status === "submitted" ? "2026-10-05T06:10:00Z" : null,
