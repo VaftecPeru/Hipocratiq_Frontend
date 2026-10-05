@@ -3002,3 +3002,111 @@ input {
     transition: none !important;
   }
 }
+
+
+/* Patient premium interaction polish — 2026-10-05 */
+.patient-premium-intro,
+.patient-membership-hero {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.patient-premium-intro:hover,
+.patient-membership-hero:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 1rem 2.7rem rgb(28 65 116 / 9%);
+}
+
+.patient-triage-level {
+  cursor: pointer;
+}
+
+.patient-triage-level:hover {
+  transform: translateY(-3px);
+  border-color: #aecaeb;
+  box-shadow: 0 0.8rem 1.8rem rgb(28 65 116 / 10%);
+}
+
+.patient-triage-level--selected {
+  transform: translateY(-2px);
+}
+
+.patient-epidemiology-period {
+  border-radius: 0.8rem;
+  padding: 0.55rem;
+  transition: transform 170ms ease, background 170ms ease, box-shadow 170ms ease;
+}
+
+.patient-epidemiology-period:hover {
+  transform: translateY(-2px);
+  background: #f8fbff;
+  box-shadow: 0 0.65rem 1.5rem rgb(28 65 116 / 6%);
+}
+
+.patient-page fieldset {
+  border-color: #d8e3f1;
+  border-radius: 0.95rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(8 98 221 / 3%), transparent 28%),
+    var(--patient-surface);
+  box-shadow: 0 0.55rem 1.6rem rgb(28 65 116 / 4%);
+  transition: border-color 170ms ease, box-shadow 170ms ease, transform 170ms ease;
+}
+
+.patient-page fieldset:hover {
+  border-color: #c7d8eb;
+  box-shadow: 0 0.8rem 2rem rgb(28 65 116 / 6%);
+}
+
+.patient-page fieldset legend {
+  color: var(--patient-navy);
+}
+
+.patient-page [role="alert"],
+.patient-page [role="status"] {
+  animation: patient-fade-up 180ms ease both;
+}
+
+.patient-page button:not(:disabled):hover {
+  box-shadow: 0 0.45rem 1.05rem rgb(28 65 116 / 8%);
+}
+
+.patient-page button.bg-accent:hover,
+.patient-whatsapp-button:hover {
+  transform: translateY(-1px);
+}
+
+.patient-page summary {
+  transition: color 150ms ease;
+}
+
+.patient-page summary:hover {
+  color: var(--patient-blue);
+}
+
+.patient-page input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.dark .patient-page-lead,
+.dark .patient-appointment-row,
+.dark .patient-result-row,
+.dark .patient-prescription-card,
+.dark .patient-empty-state,
+.dark .patient-panel-toolbar,
+.dark .patient-panel-heading {
+  background: var(--patient-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .patient-premium-intro,
+  .patient-membership-hero,
+  .patient-triage-level,
+  .patient-epidemiology-period,
+  .patient-page fieldset,
+  .patient-page [role="alert"],
+  .patient-page [role="status"] {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
