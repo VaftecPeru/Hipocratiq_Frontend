@@ -213,7 +213,7 @@ function AppointmentSummary({ appointment }: { appointment: PatientAppointment }
   );
 }
 
-function DashboardView({ data, user }: { data: PatientDashboardData; user: AuthenticatedUser }) {
+function DashboardView({ data }: { data: PatientDashboardData }) {
   const [now] = useState(() => Date.now());
   const upcoming = useMemo(() => data.appointments
     .filter((appointment) => appointment.scheduledAt && new Date(appointment.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(appointment.status))
@@ -1237,7 +1237,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
   );
 }
 
-export function PatientPortalView({ user, view }: { user: AuthenticatedUser; view: PatientPortalView }) {
+export function PatientPortalView({ view }: { user: AuthenticatedUser; view: PatientPortalView }) {
   const state = usePatientPortalData(view);
 
   if (state.status === "loading" || state.view !== view) return <PortalLoading />;
@@ -1245,7 +1245,7 @@ export function PatientPortalView({ user, view }: { user: AuthenticatedUser; vie
 
   switch (state.data.view) {
     case "dashboard":
-      return <DashboardView data={state.data.data} user={user} />;
+      return <DashboardView data={state.data.data} />;
     case "appointments":
       return <AppointmentsView appointments={state.data.data} />;
     case "triage":
