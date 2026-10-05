@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 PRODUCTION_DIR="${PRODUCTION_DIR:-/srv/hipocratiq/frontend}"
-COMPOSE_PROJECT="${COMPOSE_PROJECT:-hipocratiq-front-web}"
+COMPOSE_PROJECT="${COMPOSE_PROJECT:-}"
 HEALTH_URL="${HEALTH_URL:-https://hipocratiq.com/}"
 LOCK_FILE="${LOCK_FILE:-/tmp/hipocratiq-frontend-deploy.lock}"
 TARGET_BRANCH="main"
@@ -33,11 +33,16 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+if [[ -z "$COMPOSE_PROJECT" ]]; then
+  COMPOSE_PROJECT="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' front-web-app 2>/dev/null || true)"
+  COMPOSE_PROJECT="${COMPOSE_PROJECT:-front_web}"
+fi
+
 OLD_SHA="$(git rev-parse HEAD)"
 UPDATED=0
 
 compose() {
-  docker compose -p "$COMPOSE_PROJECT" -f front_web/compose.yaml "$@"
+  docker compose -p "$COMPOSE_PROJECT" -f "$PRODUCTION_DIR/front_web/compose.yaml" "$@"
 }
 
 rollback_code() {
@@ -58,6 +63,7 @@ trap 'on_error "$LINENO"' ERR
 
 echo "== HIPOCRATIQ Frontend deploy =="
 echo "Origen: $OLD_SHA"
+echo "Proyecto Compose detectado: $COMPOSE_PROJECT"
 
 git fetch --prune origin "$TARGET_BRANCH"
 TARGET_SHA="$(git rev-parse "origin/$TARGET_BRANCH")"
@@ -96,6 +102,7 @@ done
 
 if [[ "$READY" -ne 1 ]]; then
   echo "ERROR: Frontend local no quedó disponible." >&2
+  compose logs --tail=120 frontend || true
   exit 1
 fi
 
