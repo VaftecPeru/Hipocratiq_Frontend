@@ -225,6 +225,7 @@
     "account": "Cuenta autenticada",
     "closeMenu": "Cerrar menú",
     "openMenu": "Abrir menú",
+    "prepareAppointment": "Preparar mi cita",
     "page": {
       "appointments": { "title": "Mis citas", "subtitle": "Consulta las citas registradas y sus datos de atención." },
       "triage": { "title": "Triaje", "subtitle": "Guarda un borrador o envía tu preconsulta con un nivel orientativo I–V." },
