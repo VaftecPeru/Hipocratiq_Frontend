@@ -184,16 +184,6 @@ function PortalError({ message, onRetry }: { message: string; onRetry: () => voi
   );
 }
 
-function PageIntro({ title, description }: { title: string; description: string }) {
-  return (
-    <header className="patient-page-lead">
-      <span className="patient-page-lead__eyebrow">PORTAL DEL PACIENTE</span>
-      <h2>{title}</h2>
-      <p>{description}</p>
-    </header>
-  );
-}
-
 function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: typeof CalendarDays }) {
   return (
     <Card className="patient-metric-card">
