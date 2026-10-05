@@ -193,7 +193,7 @@ function TextField({
       <span>{label}</span>
       <input
         id={id}
-        className="min-h-11 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20"
+        className="patient-form-control min-h-11 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20"
         type={type}
         inputMode={inputMode}
         min={min}
@@ -233,7 +233,7 @@ function TextAreaField({
       {hint ? <span id={hintId} className="font-medium text-muted">{hint}</span> : null}
       <textarea
         id={id}
-        className="min-h-28 resize-y rounded-lg border border-line bg-surface-input px-3 py-2 text-sm font-medium leading-relaxed text-ink outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20"
+        className="patient-form-control min-h-28 resize-y rounded-lg border border-line bg-surface-input px-3 py-2 text-sm font-medium leading-relaxed text-ink outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
@@ -246,7 +246,7 @@ function TextAreaField({
 
 function FormSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <fieldset className="rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-5">
+    <fieldset className="patient-form-section rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-5">
       <legend className="px-1 text-base font-black tracking-tight text-ink">{title}</legend>
       <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p>
       <div className="mt-4 grid gap-4">{children}</div>
@@ -456,7 +456,7 @@ export function PatientIntakeForm() {
 
   return (
     <div className="patient-page">
-      <section className="relative overflow-hidden rounded-2xl border border-line border-l-4 border-l-accent bg-surface p-5 shadow-sm sm:p-7">
+      <section className="patient-intake-hero relative overflow-hidden rounded-2xl border border-line border-l-4 border-l-accent bg-surface p-5 shadow-sm sm:p-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-accent">Ingreso clínico virtual</p>
@@ -464,8 +464,8 @@ export function PatientIntakeForm() {
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-secondary">Completa tus antecedentes y síntomas con tus propias palabras. El documento se guarda como borrador de paciente y requiere verificación profesional.</p>
           </div>
           <div className="flex flex-wrap gap-2" aria-label="Acciones del formulario">
-            <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs font-extrabold text-ink transition hover:border-line-strong hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={reloadDraft} disabled={saving || exporting}><RefreshCw className="size-4" aria-hidden="true" />Recargar</button>
-            <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-3 text-xs font-extrabold text-paper transition hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={() => void exportPdf()} disabled={saving || exporting || dirty || !draft?.declarationAcceptedAt} aria-describedby="pdf-help"><Download className="size-4" aria-hidden="true" />{exporting ? "Generando PDF…" : "Exportar PDF"}</button>
+            <button className="patient-secondary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-xs font-extrabold text-ink transition hover:border-line-strong hover:bg-surface-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={reloadDraft} disabled={saving || exporting}><RefreshCw className="size-4" aria-hidden="true" />Recargar</button>
+            <button className="patient-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-3 text-xs font-extrabold text-paper transition hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="button" onClick={() => void exportPdf()} disabled={saving || exporting || dirty || !draft?.declarationAcceptedAt} aria-describedby="pdf-help"><Download className="size-4" aria-hidden="true" />{exporting ? "Generando PDF…" : "Exportar PDF"}</button>
           </div>
         </div>
          <p id="pdf-help" className="mt-4 text-xs font-bold text-muted">{pdfHelp}</p>
