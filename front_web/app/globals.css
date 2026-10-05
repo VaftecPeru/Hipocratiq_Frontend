@@ -2099,3 +2099,224 @@ input {
     align-items: center;
   }
 }
+
+
+/* Patient Figma alignment — dashboard and shared shell */
+.patient-brand {
+  height: 4.8rem;
+  gap: 0.62rem;
+  padding-inline: 1rem;
+  text-decoration: none;
+}
+
+.patient-brand__mark-wrap {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.68rem;
+  background: linear-gradient(145deg, #0874f9 0%, #0757d9 100%);
+  box-shadow: 0 0.55rem 1.2rem rgb(7 87 215 / 24%);
+}
+
+.patient-brand__symbol {
+  width: 1.68rem;
+  height: 1.68rem;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.patient-brand__wordmark {
+  width: 6.8rem;
+  height: auto;
+  object-fit: contain;
+}
+
+.patient-topbar {
+  min-height: 4.8rem;
+  padding: 0.72rem clamp(1.15rem, 2.4vw, 2.15rem);
+}
+
+.patient-topbar__heading h1 {
+  font-size: clamp(0.92rem, 1.12vw, 1.05rem);
+}
+
+.patient-topbar__heading p {
+  margin-top: 0.32rem;
+  font-size: 0.6rem;
+}
+
+.patient-topbar__cta {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--patient-blue);
+  border-radius: 0.62rem;
+  background: linear-gradient(135deg, #0b6ff0, #0757d7);
+  padding: 0 0.92rem;
+  color: white;
+  font-size: 0.62rem;
+  font-weight: 850;
+  text-decoration: none;
+  box-shadow: 0 0.5rem 1.2rem rgb(7 87 215 / 18%);
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.patient-topbar__cta:hover {
+  background: linear-gradient(135deg, #075fd8, #064cbe);
+  box-shadow: 0 0.7rem 1.5rem rgb(7 87 215 / 24%);
+  transform: translateY(-1px);
+}
+
+.patient-user-card {
+  margin: 0.15rem 0.7rem 1rem;
+  border: 1px solid rgb(8 98 221 / 6%);
+  background: linear-gradient(145deg, #f4f8ff 0%, #eaf3ff 100%);
+}
+
+.dark .patient-user-card {
+  background: var(--patient-blue-soft);
+}
+
+.patient-nav {
+  padding-inline: 0.72rem;
+}
+
+.patient-nav ul {
+  gap: 0.24rem;
+}
+
+.patient-nav__item {
+  min-height: 2.52rem;
+  border-radius: 0.6rem;
+  font-size: 0.68rem;
+}
+
+.patient-nav__item--active {
+  background: linear-gradient(90deg, #edf5ff 0%, #f5f9ff 100%);
+  box-shadow: inset 0 0 0 1px rgb(8 98 221 / 4%);
+}
+
+.patient-page {
+  width: min(100%, 88rem);
+  padding: clamp(1rem, 1.8vw, 1.5rem) clamp(0.95rem, 2.25vw, 1.8rem) 2rem;
+}
+
+.patient-appointment-hero {
+  border-radius: 0.95rem;
+  box-shadow: 0 0.75rem 2rem rgb(27 61 107 / 8%);
+}
+
+.patient-appointment-hero::before {
+  background: linear-gradient(135deg, #0b6ff0 0%, #0756d5 68%, #064aba 100%);
+}
+
+.patient-health-status {
+  border: 1px solid rgb(9 179 130 / 22%);
+  background:
+    radial-gradient(circle at 94% 8%, rgb(255 255 255 / 16%), transparent 28%),
+    linear-gradient(145deg, #18c99a 0%, #09ad7d 72%, #079a70 100%);
+  box-shadow: 0 0.8rem 2rem rgb(9 171 125 / 16%);
+}
+
+.patient-dashboard-grid {
+  gap: 0.95rem;
+}
+
+.patient-epidemiology,
+.patient-results-preview,
+.patient-prescriptions,
+.patient-quick-access {
+  border-radius: 0.95rem;
+  box-shadow: 0 0.7rem 1.9rem rgb(27 61 107 / 6%);
+}
+
+.patient-section-title__group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.patient-beta-badge {
+  display: inline-flex;
+  min-height: 1.3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--patient-blue-soft);
+  padding: 0 0.5rem;
+  color: var(--patient-blue);
+  font-size: 0.45rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.patient-risk-callout {
+  border-color: #c5e9dc;
+  background: linear-gradient(145deg, #f0fbf7, #e7f8f1);
+}
+
+.patient-preview-row,
+.patient-prescription-row {
+  padding-block: 0.68rem;
+}
+
+.patient-quick-item {
+  min-height: 3.45rem;
+  border-color: #d9e4f4;
+  background: linear-gradient(145deg, white, #fbfdff);
+}
+
+.patient-help-strip {
+  border-color: #c9def9;
+  background:
+    radial-gradient(circle at 92% 30%, rgb(255 255 255 / 65%), transparent 30%),
+    linear-gradient(135deg, #edf5ff 0%, #f5f9ff 100%);
+  box-shadow: 0 0.55rem 1.5rem rgb(27 61 107 / 5%);
+}
+
+.patient-whatsapp-button {
+  color: var(--patient-blue);
+}
+
+.patient-premium-intro,
+.patient-premium-card {
+  border-color: #d9e4f3;
+}
+
+@media (max-width: 920px) {
+  .patient-brand {
+    height: 4.45rem;
+  }
+
+  .patient-brand__wordmark {
+    width: 6.45rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-topbar__cta {
+    width: 2.1rem;
+    min-height: 2.1rem;
+    padding: 0;
+  }
+
+  .patient-topbar__cta span {
+    display: none;
+  }
+
+  .patient-brand__mark-wrap {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .patient-brand__symbol {
+    width: 1.56rem;
+    height: 1.56rem;
+  }
+}
