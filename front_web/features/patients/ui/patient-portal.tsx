@@ -453,7 +453,7 @@ function TriageSummary({ triage }: { triage: PatientTriage }) {
 
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div><dt className="text-xs font-bold text-muted">Actualizado</dt><dd className="font-bold text-ink">{formatDate(triage.submittedAt ?? triage.recordedAt, true)}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Prioridad interna</dt><dd className="font-bold text-ink">{triage.triagePriority ?? "Pendiente"}</dd></div>
+        <div><dt className="text-xs font-bold text-muted">Prioridad clínica</dt><dd className="font-bold text-ink">{triage.triagePriority ?? "Pendiente de valoración clínica"}</dd></div>
         <div><dt className="text-xs font-bold text-muted">Temperatura</dt><dd className="font-bold text-ink">{formatNumber(triage.temperatureC, " °C")}</dd></div>
         <div><dt className="text-xs font-bold text-muted">Saturación</dt><dd className="font-bold text-ink">{formatNumber(triage.oxygenSaturation, "%")}</dd></div>
       </dl>
@@ -877,10 +877,6 @@ function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescripti
   );
 }
 
-function formatMoneyMinor(value: number, currency: string): string {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(value / 100);
-}
-
 function MembershipView({ membership }: { membership: PatientMembershipData }) {
   if (!membership.available) {
     return (
@@ -900,15 +896,10 @@ function MembershipView({ membership }: { membership: PatientMembershipData }) {
     );
   }
 
-  const cycle = membership.subscription.billingCycle === "annual" ? "Anual" : "Mensual";
-  const price = membership.subscription.billingCycle === "annual"
-    ? membership.plan.annualPriceCents
-    : membership.plan.monthlyPriceCents;
-
   return (
     <div className="patient-page">
       <div className="patient-premium-intro">
-        <div><span className="patient-premium-intro__eyebrow">COBERTURA ACTIVA</span><h2>Tu membresía HIPOCRATIQ</h2><p>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"} y se actualiza desde la suscripción real de la institución.</p></div>
+        <div><span className="patient-premium-intro__eyebrow">COBERTURA ACTIVA</span><h2>Tu cobertura HIPOCRATIQ</h2><p>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"}. Los datos comerciales y de facturación de la institución permanecen privados.</p></div>
         <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-black text-success"><CheckCircle2 className="size-4" aria-hidden="true" />Activa</span>
       </div>
 
@@ -918,7 +909,7 @@ function MembershipView({ membership }: { membership: PatientMembershipData }) {
             <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-accent">PLAN {membership.plan.key.toUpperCase()}</span>
             <h3 className="mt-2 text-2xl font-black tracking-tight text-ink">{membership.plan.name}</h3>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{membership.plan.description ?? membership.message}</p>
-            <div className="mt-6 flex flex-wrap items-end gap-2"><strong className="text-3xl font-black text-ink">{formatMoneyMinor(price, membership.plan.currency)}</strong><span className="pb-1 text-xs font-bold text-muted">/ {cycle.toLowerCase()}</span></div>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-extrabold text-success"><ShieldCheck className="size-4" aria-hidden="true" />Cobertura institucional activa</div>
 
             <div className="mt-6 grid gap-2 sm:grid-cols-2">
               {membership.plan.features.length ? membership.plan.features.map((feature) => (
@@ -933,16 +924,10 @@ function MembershipView({ membership }: { membership: PatientMembershipData }) {
             <h3 className="text-sm font-extrabold text-ink">Estado de cobertura</h3>
             <dl className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="text-right font-extrabold text-ink">{membership.clinic?.name ?? "No registrada"}</dd></div>
-              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Ciclo</dt><dd className="font-extrabold text-ink">{cycle}</dd></div>
-              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Renovación automática</dt><dd className="font-extrabold text-ink">{membership.subscription.autoRenew ? "Activa" : "Desactivada"}</dd></div>
-              <div className="flex items-center justify-between gap-3"><dt className="text-xs font-bold text-muted">Vigencia</dt><dd className="text-right font-extrabold text-ink">{membership.subscription.endsAt ? formatDate(membership.subscription.endsAt) : "Sin fecha de término"}</dd></div>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Estado</dt><dd className="font-extrabold text-success">Activa</dd></div>
+              <div className="flex items-center justify-between gap-3"><dt className="text-xs font-bold text-muted">Vigencia de cobertura</dt><dd className="text-right font-extrabold text-ink">{membership.coverage.endsAt ? formatDate(membership.coverage.endsAt) : "Sin fecha de término"}</dd></div>
             </dl>
           </Card>
-          {membership.latestPayment ? (
-            <Card>
-              <div className="flex items-start gap-3"><Clock3 className="mt-0.5 size-5 text-accent" aria-hidden="true" /><div><h3 className="text-xs font-extrabold text-ink">Último pago registrado</h3><p className="mt-1 text-lg font-black text-ink">{formatMoneyMinor(membership.latestPayment.amountCents, membership.latestPayment.currency)}</p><p className="text-xs text-muted">{formatDate(membership.latestPayment.paidAt, true)}</p></div></div>
-            </Card>
-          ) : null}
         </div>
       </div>
     </div>
