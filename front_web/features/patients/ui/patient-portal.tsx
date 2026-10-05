@@ -887,12 +887,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
 
   return (
     <div className="patient-page">
-      <PageIntro
-        title="Historial clínico"
-        description="Consulta la cronología clínica registrada en HIPOCRATIQ. Solo se muestran atenciones finalizadas o firmadas vinculadas a tu perfil."
-      />
-
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen del historial clínico">
+      <section className="patient-stat-grid" aria-label="Resumen del historial clínico">
         <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
         <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
         <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
@@ -1407,10 +1402,22 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
 
   return (
     <div className="patient-page">
-      <PageIntro title="Mi perfil" description="Edita únicamente los datos que están respaldados por el perfil de paciente persistido." />
-      <form className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
-        <Card>
-          <div className="flex items-center gap-3 border-b border-line pb-4"><span className="grid size-12 place-items-center rounded-full bg-accent-soft text-sm font-black text-accent" aria-hidden="true">{initials}</span><div><h2 className="text-sm font-extrabold text-ink">Datos personales y de contacto</h2><p className="mt-1 text-xs text-muted">Los cambios se guardan en tu cuenta autenticada.</p></div></div>
+      <section className="patient-profile-hero">
+        <span className="patient-profile-hero__avatar" aria-hidden="true">{initials}</span>
+        <div className="patient-profile-hero__copy">
+          <span>PERFIL DEL PACIENTE</span>
+          <h2>{profile.name ?? "Paciente HIPOCRATIQ"}</h2>
+          <p>{profile.clinic?.name ?? "Sin clínica vinculada"} · {profile.patientCode}</p>
+        </div>
+        <div className="patient-profile-hero__status">
+          <ShieldCheck className="size-4" aria-hidden="true" />
+          <span>Cuenta autenticada</span>
+        </div>
+      </section>
+
+      <form className="patient-profile-layout" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
+        <Card className="patient-profile-main-card">
+          <div className="patient-panel-heading -mx-4 -mt-4 mb-5"><div><span>INFORMACIÓN PERSONAL</span><h2>Datos personales y de contacto</h2></div><ShieldCheck className="size-5 text-accent" aria-hidden="true" /></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <ProfileField id="profile-name" label="Nombre completo" value={form.name} onChange={(value) => setField("name", value)} required error={fieldErrors.name} />
             <ProfileField id="profile-email" label="Correo electrónico" value={form.email} onChange={(value) => setField("email", value)} type="email" error={fieldErrors.email} />
