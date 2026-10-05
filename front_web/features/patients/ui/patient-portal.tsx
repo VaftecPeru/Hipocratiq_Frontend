@@ -682,7 +682,7 @@ function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
 }
 
 function HistoryView({ consultations }: { consultations: PatientConsultation[] }) {
-  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures" | "documents">("all");
+  const [tab, setTab] = useState<"all" | "consultations" | "diagnoses" | "procedures">("all");
   const [year, setYear] = useState<string>("all");
 
   const years = useMemo(
@@ -710,6 +710,14 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     [consultations],
   );
 
+  const codingCount = useMemo(
+    () => new Set(
+      consultations.flatMap((consultation) => consultation.codings)
+        .map((coding) => coding.system + "|" + coding.code),
+    ).size,
+    [consultations],
+  );
+
   const filtered = useMemo(() => consultations.filter((consultation) => {
     if (year !== "all" && consultation.createdAt) {
       const consultationYear = new Date(consultation.createdAt).getFullYear();
@@ -724,7 +732,6 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     if (tab === "procedures") {
       return consultation.codings.some((coding) => coding.category === "procedure");
     }
-    if (tab === "documents") return false;
     return true;
   }), [consultations, tab, year]);
 
@@ -733,7 +740,6 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
     { value: "consultations" as const, label: "Consultas" },
     { value: "diagnoses" as const, label: "Diagnósticos" },
     { value: "procedures" as const, label: "Procedimientos" },
-    { value: "documents" as const, label: "Documentos" },
   ];
 
   return (
@@ -747,7 +753,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
         <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
         <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
         <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
-        <Metric icon={FileText} label="Documentos clínicos" value="0" />
+        <Metric icon={FileText} label="Conceptos codificados" value={String(codingCount)} />
       </section>
 
       <Card className="mt-4 overflow-hidden p-0">
@@ -782,11 +788,7 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
           </label>
         </div>
 
-        {tab === "documents" ? (
-          <div className="p-6">
-            <EmptyState message="Todavía no hay documentos clínicos publicados en tu expediente. La integración se habilitará cuando exista almacenamiento DocumentReference real." />
-          </div>
-        ) : filtered.length ? (
+        {filtered.length ? (
           <div className="relative px-4 py-2 sm:px-6">
             <div className="absolute bottom-8 left-[2.15rem] top-8 hidden w-px bg-line sm:block" aria-hidden="true" />
             {filtered.map((consultation) => {
