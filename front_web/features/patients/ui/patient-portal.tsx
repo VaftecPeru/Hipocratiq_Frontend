@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -11,6 +13,8 @@ import {
   HeartPulse,
   Info,
   LoaderCircle,
+  MapPin,
+  Pill,
   Save,
   ShieldCheck,
   Stethoscope,
@@ -130,15 +134,20 @@ function statusClasses(status: string): string {
 }
 
 function StatusBadge({ label, value }: { label: string; value: string }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[0.65rem] font-extrabold ${statusClasses(value)}`}>{label}</span>;
+  return <span className={"patient-status-badge " + statusClasses(value)}>{label}</span>;
 }
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-xl border border-line bg-surface p-4 shadow-sm ${className}`}>{children}</section>;
+  return <section className={"patient-premium-surface rounded-xl border border-line bg-surface p-4 shadow-sm " + className}>{children}</section>;
 }
 
 function EmptyState({ message }: { message: string }) {
-  return <p className="rounded-lg border border-dashed border-line-strong bg-surface-subtle p-4 text-sm text-muted">{message}</p>;
+  return (
+    <div className="patient-empty-state">
+      <span className="patient-empty-state__icon"><Info className="size-5" aria-hidden="true" /></span>
+      <div><strong>Sin información por ahora</strong><p>{message}</p></div>
+    </div>
+  );
 }
 
 function PortalLoading() {
@@ -177,18 +186,19 @@ function PortalError({ message, onRetry }: { message: string; onRetry: () => voi
 
 function PageIntro({ title, description }: { title: string; description: string }) {
   return (
-    <header className="mb-4">
-      <h2 className="text-lg font-extrabold tracking-tight text-ink">{title}</h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+    <header className="patient-page-lead">
+      <span className="patient-page-lead__eyebrow">PORTAL DEL PACIENTE</span>
+      <h2>{title}</h2>
+      <p>{description}</p>
     </header>
   );
 }
 
 function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: typeof CalendarDays }) {
   return (
-    <Card className="flex items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"><Icon className="size-5" aria-hidden="true" /></span>
-      <span className="min-w-0"><strong className="block text-xl font-black text-ink">{value}</strong><span className="block text-xs font-bold text-muted">{label}</span></span>
+    <Card className="patient-metric-card">
+      <span className="patient-metric-card__icon"><Icon className="size-5" aria-hidden="true" /></span>
+      <span className="patient-metric-card__copy"><span>{label}</span><strong>{value}</strong><small>Información de tu expediente</small></span>
     </Card>
   );
 }
