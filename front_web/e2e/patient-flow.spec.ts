@@ -47,3 +47,27 @@ test("patient epidemiology stays private and non-diagnostic", async ({ page }) =
   await expect(page.getByText(/no sustituye una evaluación médica/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Gestionar consentimiento" })).toHaveAttribute("href", "/patient/perfil");
 });
+
+
+test("all patient Flow 6 routes render without an application error", async ({ page }) => {
+  await setPatientSession(page);
+  const routes = [
+    "/patient/dashboard",
+    "/patient/citas",
+    "/patient/triaje",
+    "/patient/historia-clinica",
+    "/patient/resultados",
+    "/patient/historial",
+    "/patient/recetas",
+    "/patient/ia",
+    "/patient/membresia",
+    "/patient/perfil",
+  ];
+
+  for (const route of routes) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    await expect(page).toHaveURL(new RegExp(route.replaceAll("/", "\\/")));
+    await expect(page.getByText("No pudimos cargar esta información. Inténtalo nuevamente.")).toHaveCount(0);
+    await expect(page.getByAltText("HIPOCRATIQ")).toBeVisible();
+  }
+});
