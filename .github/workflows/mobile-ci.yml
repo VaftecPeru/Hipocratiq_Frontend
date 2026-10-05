@@ -47,8 +47,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Prepare Android SDK 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Flutter 3.44.4
         uses: subosito/flutter-action@v2
@@ -109,7 +112,7 @@ jobs:
 
   ios:
     name: Flutter iOS CI
-    if: (github.event_name == 'workflow_dispatch' && inputs.run_ios) || github.ref == 'refs/heads/build/mobile-artifacts-20261005'
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ios
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
