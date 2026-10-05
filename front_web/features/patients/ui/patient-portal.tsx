@@ -408,9 +408,10 @@ function DashboardView({ data }: { data: PatientDashboardData }) {
 }
 
 function AppointmentsView({ appointments }: { appointments: PatientAppointment[] }) {
-  const [tab, setTab] = useState<"upcoming" | "history" | "canceled">("upcoming");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [now] = useState(() => Date.now());
+  const hasUpcoming = appointments.some((item) => item.scheduledAt && new Date(item.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(item.status));
+  const [tab, setTab] = useState<"upcoming" | "history" | "canceled">(() => hasUpcoming ? "upcoming" : "history");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const upcoming = appointments.filter((item) => item.scheduledAt && new Date(item.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(item.status));
   const confirmed = appointments.filter((item) => item.status === "confirmed");
