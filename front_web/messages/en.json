@@ -225,6 +225,7 @@
     "account": "Authenticated account",
     "closeMenu": "Close menu",
     "openMenu": "Open menu",
+    "prepareAppointment": "Prepare my visit",
     "page": {
       "appointments": { "title": "My appointments", "subtitle": "Review your scheduled appointments and care details." },
       "triage": { "title": "Patient dashboard · Triage", "subtitle": "Complete your vital signs and reason for visit before care." },
