@@ -89,7 +89,7 @@ jobs:
       - name: Build Android APK
         working-directory: front_movil
         run: >-
-          flutter build apk --debug
+          flutter build apk --debug --split-per-abi
           --dart-define=BACKEND_URL=https://hipocratiq.com/backend
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
@@ -103,11 +103,9 @@ jobs:
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-android-validation
+          name: hipocratiq-android-arm64-validation
           if-no-files-found: error
-          path: |
-            front_movil/build/app/outputs/flutter-apk/app-debug.apk
-            front_movil/build/app/outputs/bundle/debug/app-debug.aab
+          path: front_movil/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
 
   ios:
     name: Flutter iOS CI
