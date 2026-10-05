@@ -213,15 +213,13 @@ function AppointmentSummary({ appointment }: { appointment: PatientAppointment }
   );
 }
 
-function DashboardView({ data, user }: { data: PatientDashboardData; user: AuthenticatedUser }) {
+function DashboardView({ data }: { data: PatientDashboardData }) {
   const [now] = useState(() => Date.now());
   const upcoming = useMemo(() => data.appointments
     .filter((appointment) => appointment.scheduledAt && new Date(appointment.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(appointment.status))
     .sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime()), [data.appointments, now]);
   const activePrescriptions = data.prescriptions.filter((prescription) => prescription.status === "active");
   const nextAppointment = upcoming[0] ?? null;
-  const firstName = user.name?.trim().split(/\s+/)[0] || "Paciente";
-
   const nextDate = nextAppointment?.scheduledAt
     ? new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long" }).format(new Date(nextAppointment.scheduledAt))
     : "Sin próxima cita";
@@ -231,15 +229,6 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
 
   return (
     <div className="patient-page">
-      <header className="mb-5">
-        <h2 className="text-[clamp(1.25rem,2vw,1.55rem)] font-black tracking-[-0.045em] text-ink">
-          Bienvenido de nuevo, {firstName}
-        </h2>
-        <p className="mt-1 text-sm font-bold text-muted">
-          Aquí puedes revisar tus citas, resultados y recetas en un solo lugar.
-        </p>
-      </header>
-
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.48fr)_minmax(340px,1fr)]">
         <article className="patient-appointment-hero">
           <div className="patient-appointment-hero__top">
@@ -296,7 +285,10 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
       <section className="patient-dashboard-grid mt-5">
         <Card className="patient-epidemiology">
           <div className="patient-section-title">
-            <h2>IA epidemiológica</h2>
+            <div className="patient-section-title__group">
+              <h2>IA epidemiológica</h2>
+              <span className="patient-beta-badge">Beta</span>
+            </div>
             <Info className="size-4 text-muted" aria-hidden="true" />
           </div>
           <div className="patient-risk-callout rounded-xl">
@@ -361,17 +353,17 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
               <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
               <span><strong>Mis citas</strong><small>{data.appointments.length} registradas</small></span>
             </Link>
+            <Link className="patient-quick-item" href="/patient/resultados">
+              <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
+              <span><strong>Mis resultados</strong><small>{data.results.length} estudios</small></span>
+            </Link>
+            <Link className="patient-quick-item" href="/patient/recetas">
+              <span className="patient-icon patient-icon--green"><HeartPulse className="size-4" aria-hidden="true" /></span>
+              <span><strong>Mis recetas</strong><small>{activePrescriptions.length} activas</small></span>
+            </Link>
             <Link className="patient-quick-item" href="/patient/historial">
-              <span className="patient-icon patient-icon--violet"><Stethoscope className="size-4" aria-hidden="true" /></span>
-              <span><strong>Historial</strong><small>{data.history.length} consultas</small></span>
-            </Link>
-            <Link className="patient-quick-item" href="/patient/triaje">
-              <span className="patient-icon patient-icon--green"><ClipboardCheck className="size-4" aria-hidden="true" /></span>
-              <span><strong>Triaje</strong><small>Datos previos</small></span>
-            </Link>
-            <Link className="patient-quick-item" href="/patient/perfil">
-              <span className="patient-icon patient-icon--amber"><ShieldCheck className="size-4" aria-hidden="true" /></span>
-              <span><strong>Privacidad</strong><small>Perfil y consentimientos</small></span>
+              <span className="patient-icon patient-icon--amber"><Stethoscope className="size-4" aria-hidden="true" /></span>
+              <span><strong>Mi historial</strong><small>{data.history.length} consultas</small></span>
             </Link>
           </div>
         </Card>
@@ -381,13 +373,13 @@ function DashboardView({ data, user }: { data: PatientDashboardData; user: Authe
             <div className="patient-help-strip__copy">
               <span className="patient-help-strip__icon"><Info className="size-6" aria-hidden="true" /></span>
               <div>
-                <h2>Tu expediente se construye con cada atención</h2>
-                <p>Citas, consultas, recetas y resultados comparten el mismo contexto clínico.</p>
+                <h2>Prepara tu próxima atención</h2>
+                <p>Completa tu ingreso clínico para que tu equipo tenga el contexto necesario antes de la consulta.</p>
               </div>
             </div>
             <div className="patient-help-strip__contact">
-              <strong>¿Necesitas revisar tus datos?</strong>
-              <Link className="patient-whatsapp-button" href="/patient/perfil">Ir a mi perfil</Link>
+              <strong>Información previa a la consulta</strong>
+              <Link className="patient-whatsapp-button" href="/patient/historia-clinica">Completar ingreso clínico</Link>
             </div>
           </div>
         </div>
@@ -1245,7 +1237,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
   );
 }
 
-export function PatientPortalView({ user, view }: { user: AuthenticatedUser; view: PatientPortalView }) {
+export function PatientPortalView({ view }: { user: AuthenticatedUser; view: PatientPortalView }) {
   const state = usePatientPortalData(view);
 
   if (state.status === "loading" || state.view !== view) return <PortalLoading />;
@@ -1253,7 +1245,7 @@ export function PatientPortalView({ user, view }: { user: AuthenticatedUser; vie
 
   switch (state.data.view) {
     case "dashboard":
-      return <DashboardView data={state.data.data} user={user} />;
+      return <DashboardView data={state.data.data} />;
     case "appointments":
       return <AppointmentsView appointments={state.data.data} />;
     case "triage":

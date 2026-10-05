@@ -7,6 +7,30 @@ async function setPatientSession(page: Page) {
   ]);
 }
 
+
+test("patient dashboard follows the Figma navigation hierarchy and keeps clinical shortcuts functional", async ({ page }) => {
+  await setPatientSession(page);
+  await page.goto("/patient/dashboard", { waitUntil: "networkidle" });
+
+  await expect(page.getByAltText("HIPOCRATIQ")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Bienvenida de nuevo/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Preparar mi cita" })).toHaveAttribute("href", "/patient/triaje");
+
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Mi panel")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Mis citas")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Resultados")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Historial clínico")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Recetas")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("IA epidemiológica")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Membresía")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegación del paciente" }).getByText("Mi perfil")).toBeVisible();
+
+  await expect(page.getByText("Mis resultados", { exact: true })).toBeVisible();
+  await expect(page.getByText("Mis recetas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Mi historial", { exact: true })).toBeVisible();
+  await expect(page.getByText("Beta", { exact: true })).toBeVisible();
+});
+
 test("patient triage saves a draft and submits the same coherent workflow", async ({ page }) => {
   await setPatientSession(page);
   await page.goto("/patient/triaje", { waitUntil: "networkidle" });
