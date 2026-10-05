@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - build/mobile-artifacts-20261005
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
@@ -33,7 +34,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/build/mobile-artifacts-20261005' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -108,7 +109,7 @@ jobs:
 
   ios:
     name: Flutter iOS CI
-    if: github.event_name == 'workflow_dispatch' && inputs.run_ios
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_ios) || github.ref == 'refs/heads/build/mobile-artifacts-20261005'
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
