@@ -10,7 +10,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   Menu,
-  SlidersHorizontal,
   UserRound,
   X,
 } from "lucide-react";
@@ -186,8 +185,6 @@ export function PatientShell({
   const navigation: NavigationItem[] = [
     { labelKey: "dashboard", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
     { labelKey: "appointments", href: "/patient/citas", icon: CalendarDays, enabled: true },
-    { labelKey: "triage", href: "/patient/triaje", icon: SlidersHorizontal, enabled: true },
-    { labelKey: "intake", href: "/patient/historia-clinica", icon: ClipboardCheck, enabled: true },
     { labelKey: "results", href: "/patient/resultados", icon: FlaskConical, enabled: true },
     { labelKey: "history", href: "/patient/historial", icon: FileText, enabled: true },
     { labelKey: "prescriptions", href: "/patient/recetas", icon: HeartPulse, enabled: true },
@@ -208,16 +205,26 @@ export function PatientShell({
         className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
         tabIndex={-1}
       >
-        <div className="patient-brand">
+        <Link className="patient-brand" href="/patient/dashboard" aria-label="HIPOCRATIQ">
+          <span className="patient-brand__mark-wrap" aria-hidden="true">
+            <Image
+              className="patient-brand__symbol"
+              src="/logo_hipocratiq.webp"
+              alt=""
+              width={34}
+              height={34}
+              priority
+            />
+          </span>
           <Image
-            className="patient-brand__logo"
-            src="/logo_hipocratiq.webp"
+            className="patient-brand__wordmark"
+            src="/logo_hipogratiq_1.png"
             alt="HIPOCRATIQ"
-            width={154}
-            height={42}
+            width={146}
+            height={26}
             priority
           />
-        </div>
+        </Link>
 
         <div className="patient-user-card">
           <PatientAvatar userName={userName} />
@@ -292,6 +299,10 @@ export function PatientShell({
 
           <div className="patient-topbar__actions">
             <PreferenceControls idPrefix="patient-header" />
+            <Link className="patient-topbar__cta" href="/patient/triaje">
+              <ClipboardCheck className="size-4" aria-hidden="true" />
+              <span>{t("prepareAppointment")}</span>
+            </Link>
           </div>
 
         </header>
