@@ -205,21 +205,30 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 
 function AppointmentSummary({ appointment }: { appointment: PatientAppointment }) {
   return (
-    <div className="rounded-lg border border-line bg-surface-subtle p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article className="patient-appointment-row">
+      <div className="patient-appointment-row__date">
+        <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-wide text-muted">{appointmentTypeLabel(appointment.appointmentType)}</p>
-          <h3 className="mt-1 text-base font-extrabold text-ink">{formatDate(appointment.scheduledAt, true)}</h3>
+          <strong>{formatDate(appointment.scheduledAt, true)}</strong>
+          <small>{appointmentTypeLabel(appointment.appointmentType)}</small>
         </div>
+      </div>
+      <div className="patient-appointment-row__doctor">
+        <small>Profesional</small>
+        <strong>{appointment.doctor?.name ?? "No asignado"}</strong>
+        <span>{appointment.doctor?.specialty ?? "Especialidad no registrada"}</span>
+      </div>
+      <div className="patient-appointment-row__place">
+        <MapPin className="size-4 text-accent" aria-hidden="true" />
+        <div>
+          <strong>{appointment.clinic?.name ?? "Clínica no registrada"}</strong>
+          <span>{appointment.notes ?? "Sin indicaciones adicionales"}</span>
+        </div>
+      </div>
+      <div className="patient-appointment-row__status">
         <StatusBadge label={appointment.statusLabel} value={appointment.status} />
       </div>
-      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-        <div><dt className="text-xs font-bold text-muted">Profesional</dt><dd className="font-bold text-ink">{appointment.doctor?.name ?? "No asignado"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Especialidad</dt><dd className="font-bold text-ink">{appointment.doctor?.specialty ?? "No registrada"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="font-bold text-ink">{appointment.clinic?.name ?? "No registrada"}</dd></div>
-        <div><dt className="text-xs font-bold text-muted">Notas</dt><dd className="font-bold text-ink">{appointment.notes ?? "Sin notas"}</dd></div>
-      </dl>
-    </div>
+    </article>
   );
 }
 
@@ -399,19 +408,98 @@ function DashboardView({ data }: { data: PatientDashboardData }) {
 }
 
 function AppointmentsView({ appointments }: { appointments: PatientAppointment[] }) {
+  const [tab, setTab] = useState<"upcoming" | "history" | "canceled">("upcoming");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [now] = useState(() => Date.now());
+
+  const upcoming = appointments.filter((item) => item.scheduledAt && new Date(item.scheduledAt).getTime() >= now && !["canceled", "no_show"].includes(item.status));
+  const confirmed = appointments.filter((item) => item.status === "confirmed");
+  const teleconsultations = appointments.filter((item) => /tele|video|virtual/i.test(item.appointmentType));
+  const pending = appointments.filter((item) => item.status === "pending");
+
+  const filtered = appointments.filter((item) => {
+    const appointmentTime = item.scheduledAt ? new Date(item.scheduledAt).getTime() : 0;
+    if (tab === "upcoming" && (appointmentTime < now || ["canceled", "no_show"].includes(item.status))) return false;
+    if (tab === "history" && appointmentTime >= now) return false;
+    if (tab === "canceled" && !["canceled", "no_show"].includes(item.status)) return false;
+    if (statusFilter !== "all" && item.status !== statusFilter) return false;
+    return true;
+  });
+
+  const next = [...upcoming].sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime())[0] ?? null;
+
   return (
     <div className="patient-page">
-      <PageIntro title="Mis citas" description="Solo se muestran citas asociadas a tu perfil de paciente y a su clínica correspondiente." />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Metric icon={CalendarDays} label="Total registradas" value={String(appointments.length)} />
-        <Metric icon={CheckCircle2} label="Confirmadas" value={String(appointments.filter((item) => item.status === "confirmed").length)} />
-        <Metric icon={Clock3} label="Pendientes" value={String(appointments.filter((item) => item.status === "pending").length)} />
+      <section className="patient-stat-grid" aria-label="Resumen de citas">
+        <Metric icon={CalendarDays} label="Próximas" value={String(upcoming.length)} />
+        <Metric icon={CheckCircle2} label="Confirmadas" value={String(confirmed.length)} />
+        <Metric icon={Activity} label="Teleconsultas" value={String(teleconsultations.length)} />
+        <Metric icon={Clock3} label="Pendientes" value={String(pending.length)} />
+      </section>
+
+      <div className="patient-premium-layout mt-5">
+        <Card className="patient-list-panel overflow-hidden p-0">
+          <div className="patient-panel-toolbar">
+            <div className="patient-tabs" role="tablist" aria-label="Filtrar citas">
+              {([
+                ["upcoming", "Próximas"],
+                ["history", "Historial"],
+                ["canceled", "Canceladas"],
+              ] as const).map(([value, label]) => (
+                <button
+                  className={tab === value ? "patient-tab patient-tab--active" : "patient-tab"}
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === value}
+                  onClick={() => setTab(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="patient-filter-control">
+              <span className="sr-only">Filtrar citas por estado</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">Todos los estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="confirmed">Confirmadas</option>
+                <option value="completed">Completadas</option>
+                <option value="canceled">Canceladas</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="patient-list-panel__body">
+            {filtered.length
+              ? filtered.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />)
+              : <EmptyState message="No hay citas que coincidan con este filtro." />}
+          </div>
+        </Card>
+
+        <aside className="patient-side-stack">
+          <Card className="patient-side-highlight">
+            <span className="patient-side-highlight__eyebrow">PRÓXIMA ATENCIÓN</span>
+            {next ? (
+              <>
+                <strong className="patient-side-highlight__title">{formatDate(next.scheduledAt, true)}</strong>
+                <div className="patient-side-highlight__meta"><Stethoscope className="size-4" aria-hidden="true" /><span>{next.doctor?.name ?? "Profesional por asignar"}</span></div>
+                <div className="patient-side-highlight__meta"><MapPin className="size-4" aria-hidden="true" /><span>{next.clinic?.name ?? "Clínica no registrada"}</span></div>
+                <StatusBadge label={next.statusLabel} value={next.status} />
+              </>
+            ) : <EmptyState message="No tienes una próxima cita programada." />}
+          </Card>
+
+          <Card className="patient-guidance-card">
+            <span className="patient-guidance-card__icon"><ShieldCheck className="size-5" aria-hidden="true" /></span>
+            <div>
+              <h3>Antes de tu consulta</h3>
+              <p>Completa tu información previa para que el equipo clínico tenga mejor contexto al atenderte.</p>
+              <Link href="/patient/triaje">Preparar mi cita <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+            </div>
+          </Card>
+        </aside>
       </div>
-      <Card className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-extrabold text-ink">Agenda registrada</h2><span className="text-xs font-bold text-muted">{appointments.length} {appointments.length === 1 ? "cita" : "citas"}</span></div>
-        <div className="mt-4 space-y-3">{appointments.length ? appointments.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />) : <EmptyState message="No hay citas vinculadas a tu perfil." />}</div>
-        <p className="mt-4 text-xs text-muted">Para agendar, reprogramar o cancelar, contacta a recepción de tu clínica o a tu médico. Ellos registran la cita y su confirmación; aquí puedes consultar su estado. Al llegar, recepción registra tu ingreso y el médico continúa tu atención e historial clínico.</p>
-      </Card>
     </div>
   );
 }
