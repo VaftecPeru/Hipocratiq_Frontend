@@ -274,6 +274,39 @@ const server = http.createServer(async (request, response) => {
       json(response, 200, { success: true, data: patientTriage, meta: { next_step: payload.triage_status === "submitted" ? "submitted" : "draft_saved" } });
       return;
     }
+    if (request.method === "GET" && pathname === "/api/v1/auth/patient/intake-draft") {
+      json(response, 200, {
+        success: true,
+        data: {
+          id: null,
+          status: "draft",
+          sections: {
+            patient_identification: {
+              name: "Paciente UAT", age: 36, document_type: "CURP", document_number: "UAT000000TEST",
+              birth_date: "1990-01-15", gender: "Otro", occupation: null, address: "Dirección UAT",
+              guardian_name: null, relationship: null, phone_number: "+525500000000",
+              email: "patient@hipocratiq.test", emergency_contact: "+525500000001", insurance: "Cobertura UAT",
+            },
+            family_history: { description: null },
+            non_pathological_history: { description: null },
+            pathological_history: { description: null },
+            gyneco_obstetric_history: { description: null },
+            present_illness: { reason: null, illness_narrative: null },
+            systems_review: { description: null },
+            vital_signs: {
+              blood_pressure_systolic: null, blood_pressure_diastolic: null, temperature_c: null,
+              heart_rate: null, respiratory_rate: null, oxygen_saturation: null, weight_kg: null,
+              height_cm: null, notes: null,
+            },
+          },
+          declaration_accepted_at: null,
+          updated_at: null,
+          clinic: { id: 10, name: "Clínica UAT" },
+        },
+        meta: { patient_owned: true },
+      });
+      return;
+    }
     if (request.method === "GET" && pathname === "/api/v1/auth/patient/membership") {
       json(response, 200, { success: true, data: patientMembership });
       return;
