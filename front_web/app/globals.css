@@ -1862,3 +1862,240 @@ input {
   .patient-security-list small { display: none; }
   .patient-profile-saved { right: 0.7rem; bottom: 0.7rem; left: 0.7rem; text-align: center; }
 }
+
+
+/* Patient premium refinement — Flow 6 */
+.patient-brand__logo {
+  width: min(9.6rem, 100%);
+  height: auto;
+  object-fit: contain;
+}
+
+.patient-premium-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--patient-border);
+  border-radius: 1.15rem;
+  background:
+    radial-gradient(circle at 92% 12%, rgb(8 98 221 / 10%), transparent 34%),
+    linear-gradient(135deg, var(--patient-surface), var(--patient-blue-soft));
+  padding: clamp(1.1rem, 2.5vw, 1.65rem);
+  box-shadow: var(--patient-shadow);
+}
+
+.patient-premium-intro h2 {
+  margin: 0.25rem 0 0;
+  color: var(--patient-navy);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.patient-premium-intro p {
+  max-width: 47rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.patient-premium-intro__eyebrow {
+  color: var(--patient-blue);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.patient-premium-intro__trust {
+  display: flex;
+  max-width: 15rem;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgb(8 98 221 / 14%);
+  border-radius: 0.85rem;
+  background: rgb(255 255 255 / 72%);
+  padding: 0.7rem 0.85rem;
+  color: var(--patient-blue);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.dark .patient-premium-intro__trust {
+  background: rgb(16 29 49 / 72%);
+}
+
+.patient-premium-card {
+  border-radius: 1.15rem;
+  box-shadow: 0 1rem 2.6rem rgb(27 61 107 / 7%);
+}
+
+.patient-triage-level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.patient-triage-level {
+  display: flex;
+  min-width: 0;
+  min-height: 7rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid var(--patient-border);
+  border-radius: 0.95rem;
+  background: var(--patient-surface);
+  padding: 0.8rem;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.patient-triage-level:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 0.7rem 1.6rem rgb(27 61 107 / 8%);
+}
+
+.patient-triage-level--selected {
+  border-color: var(--patient-blue);
+  box-shadow: 0 0 0 2px rgb(7 87 215 / 12%), 0 0.8rem 1.8rem rgb(27 61 107 / 9%);
+}
+
+.patient-triage-level__roman {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.6rem;
+  background: var(--surface-subtle);
+  color: var(--patient-navy);
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.patient-triage-level__copy {
+  min-width: 0;
+}
+
+.patient-triage-level__copy strong,
+.patient-triage-level__copy small {
+  display: block;
+}
+
+.patient-triage-level__copy strong {
+  color: var(--patient-navy);
+  font-size: 0.69rem;
+  line-height: 1.25;
+}
+
+.patient-triage-level__copy small {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.patient-triage-level--critical .patient-triage-level__roman { background: var(--danger-soft); color: var(--danger); }
+.patient-triage-level--high .patient-triage-level__roman { background: #fff0e9; color: #c94f16; }
+.patient-triage-level--medium .patient-triage-level__roman { background: var(--warning-soft); color: var(--warning); }
+.patient-triage-level--low .patient-triage-level__roman { background: var(--patient-blue-soft); color: var(--patient-blue); }
+.patient-triage-level--minimal .patient-triage-level__roman { background: var(--success-soft); color: var(--success); }
+
+.patient-triage-summary-level {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.9rem;
+  background: var(--surface-subtle);
+  padding: 0.8rem;
+}
+
+.patient-triage-summary-level > span {
+  display: grid;
+  min-width: 3.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--patient-surface);
+  color: var(--patient-blue);
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.patient-triage-summary-level strong,
+.patient-triage-summary-level small {
+  display: block;
+}
+
+.patient-triage-summary-level strong { color: var(--patient-navy); font-size: 0.75rem; }
+.patient-triage-summary-level small { margin-top: 0.15rem; color: var(--muted); font-size: 0.62rem; line-height: 1.35; }
+
+.patient-membership-hero {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(8 98 221 / 12%), transparent 34%),
+    linear-gradient(150deg, var(--patient-surface), var(--patient-blue-soft));
+  padding: clamp(1.3rem, 3vw, 2rem);
+}
+
+.patient-epidemiology-period {
+  display: grid;
+  grid-template-rows: 7rem auto auto auto;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.patient-epidemiology-period__chart {
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: linear-gradient(to top, var(--patient-blue-soft), var(--surface-subtle));
+  padding: 0.55rem;
+}
+
+.patient-epidemiology-period__chart span {
+  display: block;
+  width: 100%;
+  min-height: 0.5rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(to top, var(--patient-blue-dark), var(--patient-blue));
+  box-shadow: 0 0.4rem 1rem rgb(8 98 221 / 18%);
+}
+
+.patient-epidemiology-period strong { color: var(--patient-navy); font-size: 0.72rem; }
+.patient-epidemiology-period > span { color: var(--patient-blue); font-size: 0.68rem; font-weight: 850; }
+.patient-epidemiology-period small { color: var(--muted); font-size: 0.6rem; line-height: 1.4; }
+
+@media (max-width: 72rem) {
+  .patient-triage-level-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 40rem) {
+  .patient-premium-intro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .patient-premium-intro__trust {
+    max-width: none;
+    width: 100%;
+  }
+
+  .patient-triage-level-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-triage-level {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+  }
+}
