@@ -1511,7 +1511,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
 
           <div className="patient-profile-bottom-grid">
             <section className="patient-card patient-emergency-contact">
-              <div className="patient-profile-card-heading"><h2>Contacto de emergencia</h2><HeartPulse className="size-4 text-coral" aria-hidden="true" /></div>
+              <div className="patient-profile-card-heading"><h2>Contacto de emergencia</h2><HeartPulse className="size-4 text-danger" aria-hidden="true" /></div>
               <div className="mt-3"><ProfileField id="profile-emergency" label="Persona o teléfono de contacto" value={form.emergencyContact} onChange={(value) => setField("emergencyContact", value)} error={fieldErrors.emergencyContact} /></div>
               <p><Info className="size-3.5" aria-hidden="true" /> Mantén este dato actualizado para situaciones asistenciales.</p>
             </section>
