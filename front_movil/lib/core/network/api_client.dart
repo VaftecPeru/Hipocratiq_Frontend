@@ -29,12 +29,7 @@ class ApiClient {
     String? accessToken,
     Map<String, String>? headers,
   }) {
-    return _request(
-      'GET',
-      path,
-      accessToken: accessToken,
-      extraHeaders: headers,
-    );
+    return _request('GET', path, accessToken: accessToken, extraHeaders: headers);
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -43,13 +38,16 @@ class ApiClient {
     String? accessToken,
     Map<String, String>? headers,
   }) {
-    return _request(
-      'POST',
-      path,
-      body: body,
-      accessToken: accessToken,
-      extraHeaders: headers,
-    );
+    return _request('POST', path, body: body, accessToken: accessToken, extraHeaders: headers);
+  }
+
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    Map<String, dynamic>? body,
+    String? accessToken,
+    Map<String, String>? headers,
+  }) {
+    return _request('PATCH', path, body: body, accessToken: accessToken, extraHeaders: headers);
   }
 
   Future<Map<String, dynamic>> _request(
@@ -74,9 +72,7 @@ class ApiClient {
       headers['X-Device-Name'] = deviceIdentity.deviceName;
       headers['X-Device-ID'] = await deviceIdentity.id;
     }
-    if (extraHeaders != null) {
-      headers.addAll(extraHeaders);
-    }
+    if (extraHeaders != null) headers.addAll(extraHeaders);
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
     }
@@ -84,15 +80,12 @@ class ApiClient {
     final uri = _resolve(baseUri, path);
     late http.Response response;
     try {
-      response = method == 'GET'
-          ? await _client.get(uri, headers: headers).timeout(timeout)
-          : await _client
-                .post(
-                  uri,
-                  headers: headers,
-                  body: body == null ? null : jsonEncode(body),
-                )
-                .timeout(timeout);
+      final encodedBody = body == null ? null : jsonEncode(body);
+      response = switch (method) {
+        'GET' => await _client.get(uri, headers: headers).timeout(timeout),
+        'PATCH' => await _client.patch(uri, headers: headers, body: encodedBody).timeout(timeout),
+        _ => await _client.post(uri, headers: headers, body: encodedBody).timeout(timeout),
+      };
     } on TimeoutException {
       throw ApiException.network();
     } on http.ClientException {
@@ -114,13 +107,10 @@ class ApiClient {
       );
     }
 
-    if (bodyText.isEmpty) {
-      return <String, dynamic>{};
-    }
+    if (bodyText.isEmpty) return <String, dynamic>{};
     if (payload.isEmpty && bodyText.isNotEmpty) {
       throw ApiException.invalidResponse();
     }
-
     return payload;
   }
 
@@ -129,18 +119,11 @@ class ApiClient {
         ? baseUri.path.substring(0, baseUri.path.length - 1)
         : baseUri.path;
     final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return baseUri.replace(
-      path: '$basePath/$cleanPath',
-      query: null,
-      fragment: null,
-    );
+    return baseUri.replace(path: '$basePath/$cleanPath', query: null, fragment: null);
   }
 
   Map<String, dynamic> _decodePayload(String body) {
-    if (body.isEmpty) {
-      return <String, dynamic>{};
-    }
-
+    if (body.isEmpty) return <String, dynamic>{};
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map) {
@@ -149,7 +132,6 @@ class ApiClient {
     } on FormatException {
       return <String, dynamic>{};
     }
-
     return <String, dynamic>{};
   }
 
