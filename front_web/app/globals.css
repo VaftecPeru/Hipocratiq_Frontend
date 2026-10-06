@@ -3674,3 +3674,77 @@ input {
     transform: none !important;
   }
 }
+
+
+/* Patient triage vital-sign blocking alert — 2026-10-06 */
+.patient-vitals-alert {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  margin-top: 0.85rem;
+  border: 1px solid #f4bdc9;
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(circle at 96% 8%, rgb(225 65 97 / 7%), transparent 32%),
+    linear-gradient(145deg, #fffafb, #fff4f6);
+  padding: 0.9rem 1rem;
+  color: var(--patient-navy);
+  box-shadow: 0 0.55rem 1.3rem rgb(146 35 59 / 6%);
+}
+
+.patient-vitals-alert__icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: #ffe8ed;
+  color: var(--patient-coral);
+}
+
+.patient-vitals-alert strong {
+  display: block;
+  color: #a52343;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.patient-vitals-alert p {
+  margin-top: 0.2rem;
+  color: #6e5260;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.patient-vitals-alert ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: #8c2943;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.patient-vitals-alert small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #7a6570;
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.patient-triage-form input[aria-invalid="true"] {
+  border-color: #e65f7f !important;
+  background: #fff8fa !important;
+  box-shadow: 0 0 0 3px rgb(225 65 97 / 8%);
+}
+
+.patient-form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none !important;
+  box-shadow: none !important;
+}
