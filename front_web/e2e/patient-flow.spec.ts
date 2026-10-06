@@ -52,6 +52,35 @@ test("patient triage saves a draft and submits the same coherent workflow", asyn
   await expect(page.locator(".patient-priority-summary").getByText(/Nivel III/).first()).toBeVisible();
 });
 
+test("patient triage blocks improbable vital signs until corrected", async ({ page }) => {
+  await setPatientSession(page);
+  await page.goto("/patient/triaje", { waitUntil: "networkidle" });
+
+  await page.getByLabel(/Temperatura/).fill("26");
+  await page.getByLabel(/Presión sistólica/).fill("100");
+  await page.getByLabel(/Presión diastólica/).fill("100");
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78");
+  await page.getByLabel(/Frecuencia respiratoria/).fill("16");
+  await page.getByLabel(/Saturación de oxígeno/).fill("20");
+
+  const alert = page.locator(".patient-vitals-alert");
+  await expect(alert).toBeVisible();
+  await expect(alert.getByText(/30–45 °C/)).toBeVisible();
+  await expect(alert.getByText(/diastólica debe ser menor/i)).toBeVisible();
+  await expect(alert.getByText(/70–100%/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Guardar borrador" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeDisabled();
+
+  await page.getByLabel(/Temperatura/).fill("36.7");
+  await page.getByLabel(/Presión sistólica/).fill("118");
+  await page.getByLabel(/Presión diastólica/).fill("76");
+  await page.getByLabel(/Saturación de oxígeno/).fill("98");
+
+  await expect(alert).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Guardar borrador" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeEnabled();
+});
+
 test("patient membership renders real clinic coverage", async ({ page }) => {
   await setPatientSession(page);
   await page.goto("/patient/membresia", { waitUntil: "networkidle" });
