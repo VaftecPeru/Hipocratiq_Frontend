@@ -1287,7 +1287,7 @@ function profileFormFromData(profile: PatientProfile): ProfileForm {
 }
 
 function ProfileField({ id, label, value, onChange, type = "text", required = false, error }: { id: string; label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; error?: string }) {
-  return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id}>{label}{required ? <span className="text-danger">*</span> : null}<input id={id} className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={error} /></label>;
+  return <label className="patient-profile-field" htmlFor={id}>{label}{required ? <span className="text-danger">*</span> : null}<input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={error} /></label>;
 }
 
 const CONSENT_OPTIONS: Array<{ scope: PatientConsentScope; title: string; description: string }> = [
@@ -1435,6 +1435,7 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
     setMessage(null);
     setError(null);
     setFieldErrors({});
+
     const payload: PatientProfileUpdatePayload = {
       name: form.name.trim(),
       email: form.email.trim() || null,
@@ -1474,38 +1475,82 @@ function ProfileView({ initialProfile }: { initialProfile: PatientProfile }) {
           <h2>{profile.name ?? "Paciente HIPOCRATIQ"}</h2>
           <p>{profile.clinic?.name ?? "Sin clínica vinculada"} · {profile.patientCode}</p>
         </div>
-        <div className="patient-profile-hero__status">
-          <ShieldCheck className="size-4" aria-hidden="true" />
-          <span>Cuenta autenticada</span>
-        </div>
+        <div className="patient-profile-hero__status"><ShieldCheck className="size-4" aria-hidden="true" /><span>Cuenta autenticada</span></div>
       </section>
 
-      <form className="patient-profile-layout" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={(event) => void submit(event)}>
-        <Card className="patient-profile-main-card">
-          <div className="patient-panel-heading -mx-4 -mt-4 mb-5"><div><span>INFORMACIÓN PERSONAL</span><h2>Datos personales y de contacto</h2></div><ShieldCheck className="size-5 text-accent" aria-hidden="true" /></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <ProfileField id="profile-name" label="Nombre completo" value={form.name} onChange={(value) => setField("name", value)} required error={fieldErrors.name} />
-            <ProfileField id="profile-email" label="Correo electrónico" value={form.email} onChange={(value) => setField("email", value)} type="email" error={fieldErrors.email} />
-            <ProfileField id="profile-phone" label="Teléfono" value={form.phoneNumber} onChange={(value) => setField("phoneNumber", value)} required error={fieldErrors.phoneNumber} />
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="profile-country">Código de país<select id="profile-country" className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.countryCode} onChange={(event) => setField("countryCode", event.target.value)} required aria-invalid={fieldErrors.countryCode ? true : undefined} aria-describedby={fieldErrors.countryCode ? "profile-country-error" : undefined}><option value="">Selecciona un código</option><option value="PE">PE</option><option value="MX">MX</option><option value="US">US</option></select><FieldError id="profile-country-error" message={fieldErrors.countryCode} /></label>
-            <ProfileField id="profile-document-type" label="Tipo de documento" value={form.documentType} onChange={(value) => setField("documentType", value)} error={fieldErrors.documentType} />
-            <ProfileField id="profile-document-number" label="Número de documento" value={form.documentNumber} onChange={(value) => setField("documentNumber", value)} error={fieldErrors.documentNumber} />
-            <ProfileField id="profile-birth-date" label="Fecha de nacimiento" value={form.dateOfBirth} onChange={(value) => setField("dateOfBirth", value)} type="date" error={fieldErrors.dateOfBirth} />
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="profile-sex">Sexo<select id="profile-sex" className="h-10 rounded-lg border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.sex} onChange={(event) => setField("sex", event.target.value)} aria-invalid={fieldErrors.sex ? true : undefined} aria-describedby={fieldErrors.sex ? "profile-sex-error" : undefined}><option value="">No registrado</option><option value="Femenino">Femenino</option><option value="Masculino">Masculino</option><option value="Otro">Otro</option></select><FieldError id="profile-sex-error" message={fieldErrors.sex} /></label>
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary sm:col-span-2" htmlFor="profile-address">Dirección<textarea id="profile-address" className="min-h-20 rounded-lg border border-line bg-surface-input px-3 py-2 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value={form.address} onChange={(event) => setField("address", event.target.value)} aria-invalid={fieldErrors.address ? true : undefined} aria-describedby={fieldErrors.address ? "profile-address-error" : undefined} /><FieldError id="profile-address-error" message={fieldErrors.address} /></label>
-            <ProfileField id="profile-emergency" label="Contacto de emergencia" value={form.emergencyContact} onChange={(value) => setField("emergencyContact", value)} error={fieldErrors.emergencyContact} />
-            <ProfileField id="profile-insurance" label="Seguro o cobertura registrada" value={form.insurance} onChange={(value) => setField("insurance", value)} error={fieldErrors.insurance} />
+      <form className="patient-profile-layout" aria-describedby={error ? "profile-form-error" : message ? "profile-form-message" : undefined} aria-busy={saving} onSubmit={submit}>
+        <main className="patient-profile-main">
+          <section className="patient-card patient-profile-personal">
+            <div className="patient-profile-card-heading"><h2>Información personal</h2><span className="patient-form-tag"><ShieldCheck className="size-3.5" aria-hidden="true" /> Perfil verificado</span></div>
+            <div className="patient-profile-personal__body">
+              <div className="patient-profile-avatar-column">
+                <span className="patient-profile-avatar" aria-hidden="true">{initials}</span>
+                <strong className="text-sm font-extrabold text-ink">{profile.name ?? "Paciente"}</strong>
+                <small>{profile.patientCode}</small>
+              </div>
+              <div className="patient-profile-form-grid">
+                <ProfileField id="profile-name" label="Nombre completo" value={form.name} onChange={(value) => setField("name", value)} required error={fieldErrors.name} />
+                <ProfileField id="profile-document-type" label="Tipo de documento" value={form.documentType} onChange={(value) => setField("documentType", value)} error={fieldErrors.documentType} />
+                <ProfileField id="profile-document-number" label="Número de documento" value={form.documentNumber} onChange={(value) => setField("documentNumber", value)} error={fieldErrors.documentNumber} />
+                <ProfileField id="profile-birth-date" label="Fecha de nacimiento" value={form.dateOfBirth} onChange={(value) => setField("dateOfBirth", value)} type="date" error={fieldErrors.dateOfBirth} />
+                <label className="patient-profile-field" htmlFor="profile-sex">Sexo<select id="profile-sex" value={form.sex} onChange={(event) => setField("sex", event.target.value)} aria-invalid={fieldErrors.sex ? true : undefined} aria-describedby={fieldErrors.sex ? "profile-sex-error" : undefined}><option value="">No registrado</option><option value="Femenino">Femenino</option><option value="Masculino">Masculino</option><option value="Otro">Otro</option></select><FieldError id="profile-sex-error" message={fieldErrors.sex} /></label>
+                <label className="patient-profile-field" htmlFor="profile-country">País<select id="profile-country" value={form.countryCode} onChange={(event) => setField("countryCode", event.target.value)} required aria-invalid={fieldErrors.countryCode ? true : undefined} aria-describedby={fieldErrors.countryCode ? "profile-country-error" : undefined}><option value="">Selecciona un país</option><option value="PE">Perú</option><option value="MX">México</option><option value="US">Estados Unidos</option></select><FieldError id="profile-country-error" message={fieldErrors.countryCode} /></label>
+              </div>
+            </div>
+          </section>
+
+          <section className="patient-card patient-profile-contact">
+            <div className="patient-profile-card-heading"><h2>Contacto y ubicación</h2><span className="patient-form-tag">Editable</span></div>
+            <div className="patient-profile-contact-grid">
+              <ProfileField id="profile-email" label="Correo electrónico" value={form.email} onChange={(value) => setField("email", value)} type="email" error={fieldErrors.email} />
+              <ProfileField id="profile-phone" label="Teléfono" value={form.phoneNumber} onChange={(value) => setField("phoneNumber", value)} required error={fieldErrors.phoneNumber} />
+              <label className="patient-profile-field" htmlFor="profile-whatsapp"><span>WhatsApp</span><span className="patient-profile-consent-row"><input id="profile-whatsapp" className="size-4 accent-accent" type="checkbox" checked={form.whatsappConsent} onChange={(event) => setField("whatsappConsent", event.target.checked)} disabled={saving} /><strong>{form.whatsappConsent ? "Autorizado" : "Desactivado"}</strong></span><FieldError id="profile-whatsapp-error" message={fieldErrors.whatsappConsent} /></label>
+              <label className="patient-profile-field patient-profile-field--wide" htmlFor="profile-address">Dirección<textarea id="profile-address" rows={3} value={form.address} onChange={(event) => setField("address", event.target.value)} aria-invalid={fieldErrors.address ? true : undefined} aria-describedby={fieldErrors.address ? "profile-address-error" : undefined} /><FieldError id="profile-address-error" message={fieldErrors.address} /></label>
+            </div>
+          </section>
+
+          <div className="patient-profile-bottom-grid">
+            <section className="patient-card patient-emergency-contact">
+              <div className="patient-profile-card-heading"><h2>Contacto de emergencia</h2><HeartPulse className="size-4 text-coral" aria-hidden="true" /></div>
+              <div className="mt-3"><ProfileField id="profile-emergency" label="Persona o teléfono de contacto" value={form.emergencyContact} onChange={(value) => setField("emergencyContact", value)} error={fieldErrors.emergencyContact} /></div>
+              <p><Info className="size-3.5" aria-hidden="true" /> Mantén este dato actualizado para situaciones asistenciales.</p>
+            </section>
+
+            <section className="patient-card patient-insurance-card">
+              <div className="patient-side-heading"><h2>Seguro o cobertura</h2><span>Paciente</span></div>
+              <div className="mt-3"><ProfileField id="profile-insurance" label="Cobertura registrada" value={form.insurance} onChange={(value) => setField("insurance", value)} error={fieldErrors.insurance} /></div>
+              <div className="patient-insurance-body"><span className="patient-icon patient-icon--green"><ShieldCheck className="size-4" aria-hidden="true" /></span><span><b>Información declarativa</b><small>La cobertura efectiva se valida con la clínica o institución correspondiente.</small></span></div>
+            </section>
           </div>
-          <label className="mt-4 flex items-start gap-2 text-xs font-bold text-ink-secondary" htmlFor="profile-whatsapp"><input id="profile-whatsapp" className="mt-0.5 size-4 accent-accent" type="checkbox" checked={form.whatsappConsent} onChange={(event) => setField("whatsappConsent", event.target.checked)} disabled={saving} aria-invalid={fieldErrors.whatsappConsent ? true : undefined} aria-describedby={fieldErrors.whatsappConsent ? "profile-whatsapp-error" : undefined} />Acepto recibir comunicaciones por WhatsApp.<FieldError id="profile-whatsapp-error" message={fieldErrors.whatsappConsent} /></label>
-          {error ? <p className="mt-4 rounded-lg bg-danger-soft p-3 text-sm font-bold text-danger" id="profile-form-error" role="alert">{error}</p> : null}
-          {message ? <p className="mt-4 rounded-lg bg-success-soft p-3 text-sm font-bold text-success" id="profile-form-message" role="status">{message}</p> : null}
-          <button className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-extrabold text-paper transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={saving}>{saving ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}{saving ? "Guardando…" : "Guardar cambios"}</button>
-        </Card>
-        <aside className="space-y-4">
-          <Card><h2 className="text-sm font-extrabold text-ink">Identificación de cuenta</h2><dl className="mt-3 space-y-3 text-sm"><div><dt className="text-xs font-bold text-muted">Código de paciente</dt><dd className="font-extrabold text-ink">{profile.patientCode}</dd></div><div><dt className="text-xs font-bold text-muted">Estado</dt><dd><StatusBadge label={profile.status ?? "No registrado"} value={profile.status ?? "unknown"} /></dd></div><div><dt className="text-xs font-bold text-muted">Clínica vinculada</dt><dd className="font-extrabold text-ink">{profile.clinic?.name ?? "No hay clínica vinculada"}</dd></div></dl></Card>
-          <Card><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 size-5 text-success" aria-hidden="true" /><p className="text-xs leading-relaxed text-muted">Tus datos se cargan desde el perfil asociado a la sesión actual. No puedes seleccionar otro paciente desde este portal.</p></div></Card>
+
+          {error ? <p className="rounded-lg bg-danger-soft p-3 text-sm font-bold text-danger" id="profile-form-error" role="alert">{error}</p> : null}
+          <div className="patient-profile-actions">
+            <Link className="patient-action-button" href="/patient/dashboard">Volver al panel</Link>
+            <button className="patient-action-button patient-action-button--primary" type="submit" disabled={saving}>{saving ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}{saving ? "Guardando…" : "Guardar cambios"}</button>
+          </div>
+        </main>
+
+        <aside className="patient-profile-side">
+          <section className="patient-card patient-profile-summary">
+            <div className="patient-side-heading"><h2>Resumen de cuenta</h2><span>{profile.status ?? "Activo"}</span></div>
+            <div>
+              <div><FileText className="size-3.5" aria-hidden="true" /><span>Código de paciente</span><strong>{profile.patientCode}</strong></div>
+              <div><ShieldCheck className="size-3.5" aria-hidden="true" /><span>Estado</span><strong>{profile.status ?? "No registrado"}</strong></div>
+              <div><Stethoscope className="size-3.5" aria-hidden="true" /><span>Clínica</span><strong>{profile.clinic?.name ?? "No vinculada"}</strong></div>
+              <div><CalendarDays className="size-3.5" aria-hidden="true" /><span>Registro</span><strong>{formatDate(profile.createdAt)}</strong></div>
+            </div>
+          </section>
+
           <ConsentPreferencesCard />
+
+          <section className="patient-card patient-profile-help">
+            <div className="patient-help-strip">
+              <div className="patient-help-strip__copy"><span className="patient-help-strip__icon"><Info className="size-5" aria-hidden="true" /></span><div><h2>Privacidad del paciente</h2><p>Solo puedes editar y consultar información vinculada a tu propia sesión autenticada.</p></div></div>
+            </div>
+          </section>
         </aside>
+
+        {message ? <p className="patient-profile-saved" id="profile-form-message" role="status">{message}</p> : null}
       </form>
     </div>
   );
