@@ -3258,3 +3258,419 @@ input {
   transform: translateY(-1px);
   box-shadow: 0 0.7rem 1.4rem rgb(28 65 116 / 10%);
 }
+
+
+/* Patient triage structural premium — 2026-10-05 */
+.patient-triage-banner {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 9rem;
+  background:
+    radial-gradient(circle at 88% 18%, rgb(255 255 255 / 18%), transparent 26%),
+    linear-gradient(135deg, #0b6ff0 0%, #0757d7 62%, #0649b7 100%);
+}
+
+.patient-triage-banner::after {
+  position: absolute;
+  right: -3rem;
+  bottom: -5rem;
+  z-index: -1;
+  width: 15rem;
+  height: 15rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.8rem rgb(255 255 255 / 4%), 0 0 0 5.8rem rgb(255 255 255 / 3%);
+  content: "";
+}
+
+.patient-triage-banner__status {
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.patient-triage-metric {
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.patient-triage-metric:hover {
+  transform: translateY(-2px);
+  border-color: #bfd4ef;
+  box-shadow: 0 0.8rem 1.8rem rgb(28 65 116 / 8%);
+}
+
+.patient-triage-metric__date {
+  font-size: 0.82rem !important;
+}
+
+.patient-triage-form {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(8 98 221 / 3%), transparent 26%),
+    var(--patient-surface);
+  box-shadow: 0 0.85rem 2.2rem rgb(28 65 116 / 7%);
+}
+
+.patient-triage-form .patient-form-heading {
+  margin: -0.95rem -0.95rem 0;
+  padding: 0.9rem 0.95rem;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.patient-priority-option {
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.patient-priority-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.65rem 1.4rem rgb(28 65 116 / 8%);
+}
+
+.patient-priority-option small b {
+  color: var(--patient-navy);
+  font-weight: 900;
+}
+
+.patient-priority-option--coral.patient-priority-option--selected {
+  border-color: #ef92a7;
+  background: #fff3f6;
+  box-shadow: 0 0 0 2px rgb(224 75 110 / 10%);
+}
+
+.patient-priority-option--amber.patient-priority-option--selected {
+  border-color: #f2c45b;
+  background: #fff9e9;
+  box-shadow: 0 0 0 2px rgb(241 160 0 / 12%);
+}
+
+.patient-priority-option--blue.patient-priority-option--selected {
+  border-color: #8eb8f5;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgb(8 98 221 / 10%);
+}
+
+.patient-priority-option--green.patient-priority-option--selected {
+  border-color: #8bd6bd;
+  background: #eefaf6;
+  box-shadow: 0 0 0 2px rgb(9 156 113 / 10%);
+}
+
+.patient-priority-summary {
+  overflow: hidden;
+  box-shadow: 0 0.75rem 1.9rem rgb(28 65 116 / 6%);
+}
+
+.patient-priority-summary__headline {
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.patient-priority-summary--amber .patient-priority-summary__headline {
+  border-color: #f6d989;
+  background: #fff9e9;
+}
+
+.patient-priority-summary--amber .patient-priority-summary__headline > span {
+  color: #ba7800;
+}
+
+.patient-priority-summary--blue .patient-priority-summary__headline {
+  border-color: #bed5f3;
+  background: #eff6ff;
+}
+
+.patient-priority-summary--blue .patient-priority-summary__headline > span {
+  color: var(--patient-blue);
+}
+
+.patient-priority-summary--green .patient-priority-summary__headline {
+  border-color: #b8e3d4;
+  background: #eefaf6;
+}
+
+.patient-priority-summary--green .patient-priority-summary__headline > span {
+  color: #08845f;
+}
+
+.patient-legend-dot--amber {
+  background: var(--patient-amber);
+}
+
+.patient-legend-dot--green {
+  background: var(--patient-green);
+}
+
+.patient-legend-dot--blue {
+  background: var(--patient-blue);
+}
+
+.patient-triage-emergency {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  border-color: #f4d5dc;
+  background: linear-gradient(145deg, #fffafa, #fff6f8);
+  padding: 0.9rem;
+}
+
+.patient-triage-emergency__icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.68rem;
+  background: #fff0f3;
+  color: var(--patient-coral);
+}
+
+.patient-triage-emergency h3 {
+  margin: 0;
+  color: var(--patient-navy);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.patient-triage-emergency p {
+  margin: 0.25rem 0 0;
+  color: #657b9e;
+  font-size: 0.53rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.patient-triage-side > .patient-card {
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.patient-triage-side > .patient-card:hover {
+  transform: translateY(-2px);
+  border-color: #c6d8ec;
+  box-shadow: 0 0.85rem 2rem rgb(28 65 116 / 8%);
+}
+
+.patient-form-grid textarea,
+.patient-form-grid input {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.patient-form-grid textarea:hover,
+.patient-form-grid input:hover {
+  border-color: #b9d0eb;
+  background: white;
+}
+
+.patient-form-actions .patient-action-button {
+  min-height: 2.35rem;
+  padding-inline: 0.9rem;
+}
+
+.patient-form-actions .patient-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.55rem 1.2rem rgb(28 65 116 / 9%);
+}
+
+@media (max-width: 920px) {
+  .patient-triage-side {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .patient-triage-emergency {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-triage-banner {
+    min-height: auto;
+  }
+
+  .patient-triage-side {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-triage-emergency {
+    grid-column: auto;
+  }
+
+  .patient-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-form-field--full {
+    grid-column: auto;
+  }
+
+  .patient-form-actions {
+    flex-direction: column;
+  }
+
+  .patient-form-actions .patient-action-button {
+    width: 100%;
+  }
+}
+
+
+/* Patient internal views premium v2 — 2026-10-05 */
+.patient-data-table tbody tr {
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.patient-data-table tbody tr:hover {
+  background: #f7faff;
+  box-shadow: inset 0 0 0 1px rgb(8 98 221 / 4%);
+}
+
+.patient-summary-stat {
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.patient-summary-stat:hover {
+  transform: translateY(-2px);
+  border-color: #bfd3ed;
+  box-shadow: 0 0.8rem 1.8rem rgb(28 65 116 / 8%);
+}
+
+.patient-membership-hero,
+.patient-membership-benefit,
+.patient-usage-row,
+.patient-profile-personal,
+.patient-profile-contact,
+.patient-emergency-contact,
+.patient-insurance-card,
+.patient-profile-summary,
+.patient-history-row,
+.patient-featured-prescription__body,
+.patient-pending-item,
+.patient-highlighted-result__item {
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease, background-color 170ms ease;
+}
+
+.patient-membership-benefit:hover,
+.patient-profile-personal:hover,
+.patient-profile-contact:hover,
+.patient-emergency-contact:hover,
+.patient-insurance-card:hover,
+.patient-profile-summary:hover,
+.patient-featured-prescription__body:hover,
+.patient-pending-item:hover,
+.patient-highlighted-result__item:hover {
+  transform: translateY(-2px);
+  border-color: #c4d7ed;
+  box-shadow: 0 0.75rem 1.7rem rgb(28 65 116 / 7%);
+}
+
+.patient-history-row:hover {
+  background: linear-gradient(90deg, #fbfdff, #f6faff);
+}
+
+.patient-membership-benefit:hover .patient-icon,
+.patient-reminder:hover .patient-icon,
+.patient-result-study:hover .patient-icon {
+  transform: scale(1.04);
+}
+
+.patient-icon {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.patient-profile-field textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  border: 1px solid #d7e3f2;
+  border-radius: 0.45rem;
+  outline: none;
+  background: #fbfdff;
+  padding: 0.55rem 0.6rem;
+  color: var(--patient-navy);
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.patient-profile-field textarea:focus {
+  border-color: #8cb6f2;
+  box-shadow: 0 0 0 3px rgb(7 87 215 / 10%);
+}
+
+.patient-profile-field--wide {
+  grid-column: 1 / -1;
+}
+
+.patient-profile-consent-row {
+  display: flex;
+  min-height: 2.15rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #d7e3f2;
+  border-radius: 0.45rem;
+  background: #fbfdff;
+  padding: 0.48rem 0.6rem;
+}
+
+.patient-profile-consent-row strong {
+  color: var(--patient-navy);
+  font-size: 0.5rem;
+  font-weight: 900;
+}
+
+.patient-table-action,
+.patient-action-button,
+.patient-whatsapp-button,
+.patient-reminder {
+  cursor: pointer;
+}
+
+.patient-table-action:hover,
+.patient-action-button:hover,
+.patient-whatsapp-button:hover,
+.patient-reminder:hover {
+  transform: translateY(-1px);
+}
+
+.patient-card {
+  transition: border-color 170ms ease, box-shadow 170ms ease;
+}
+
+.patient-card:hover {
+  border-color: #cbd9ea;
+}
+
+.patient-table-toolbar,
+.patient-history-toolbar,
+.patient-form-heading,
+.patient-panel-heading {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.patient-membership-hero__details > div:hover {
+  border-color: #bdd2ed;
+  background: #f8fbff;
+}
+
+.patient-profile-avatar {
+  color: var(--patient-blue);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .patient-data-table tbody tr,
+  .patient-summary-stat,
+  .patient-membership-hero,
+  .patient-membership-benefit,
+  .patient-profile-personal,
+  .patient-profile-contact,
+  .patient-emergency-contact,
+  .patient-insurance-card,
+  .patient-profile-summary,
+  .patient-history-row,
+  .patient-featured-prescription__body,
+  .patient-pending-item,
+  .patient-highlighted-result__item,
+  .patient-icon {
+    transition: none !important;
+    transform: none !important;
+  }
+}
