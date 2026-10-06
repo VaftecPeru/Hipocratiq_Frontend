@@ -418,77 +418,89 @@ function AppointmentsView({ appointments }: { appointments: PatientAppointment[]
   });
 
   const next = [...upcoming].sort((a, b) => new Date(a.scheduledAt ?? 0).getTime() - new Date(b.scheduledAt ?? 0).getTime())[0] ?? null;
+  const nextDate = next?.scheduledAt ? new Date(next.scheduledAt) : null;
 
   return (
     <div className="patient-page">
-      <section className="patient-stat-grid" aria-label="Resumen de citas">
-        <Metric icon={CalendarDays} label="Próximas" value={String(upcoming.length)} />
-        <Metric icon={CheckCircle2} label="Confirmadas" value={String(confirmed.length)} />
-        <Metric icon={Activity} label="Teleconsultas" value={String(teleconsultations.length)} />
-        <Metric icon={Clock3} label="Pendientes" value={String(pending.length)} />
+      <section className="patient-summary-grid" aria-label="Resumen de citas">
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span><div><span>Próximas</span><strong>{upcoming.length}</strong><small>Citas por atender</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--green"><CheckCircle2 className="size-4" aria-hidden="true" /></span><div><span>Confirmadas</span><strong>{confirmed.length}</strong><small>Con asistencia confirmada</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--violet"><Activity className="size-4" aria-hidden="true" /></span><div><span>Teleconsultas</span><strong>{teleconsultations.length}</strong><small>Atenciones virtuales</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--amber"><Clock3 className="size-4" aria-hidden="true" /></span><div><span>Pendientes</span><strong>{pending.length}</strong><small>Por confirmar</small></div></article>
       </section>
 
-      <div className="patient-premium-layout mt-5">
-        <Card className="patient-list-panel overflow-hidden p-0">
-          <div className="patient-panel-toolbar">
-            <div className="patient-tabs" role="tablist" aria-label="Filtrar citas">
-              {([
-                ["upcoming", "Próximas"],
-                ["history", "Historial"],
-                ["canceled", "Canceladas"],
-              ] as const).map(([value, label]) => (
-                <button
-                  className={tab === value ? "patient-tab patient-tab--active" : "patient-tab"}
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === value}
-                  onClick={() => setTab(value)}
-                >
-                  {label}
-                </button>
-              ))}
+      <div className="patient-appointments-layout">
+        <main className="patient-appointments-main">
+          <section className="patient-card patient-appointments-table">
+            <div className="patient-table-toolbar">
+              <div className="patient-tabs" role="tablist" aria-label="Filtrar citas">
+                {([
+                  ["upcoming", "Próximas"],
+                  ["history", "Historial"],
+                  ["canceled", "Canceladas"],
+                ] as const).map(([value, label]) => (
+                  <button key={value} className={tab === value ? "patient-tab patient-tab--active" : "patient-tab"} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{label}</button>
+                ))}
+              </div>
+              <div className="patient-filter-actions">
+                <label className="patient-select-wrap">
+                  <span className="sr-only">Filtrar por estado</span>
+                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                    <option value="all">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmada</option>
+                    <option value="completed">Completada</option>
+                    <option value="canceled">Cancelada</option>
+                  </select>
+                </label>
+              </div>
             </div>
-            <label className="patient-filter-control">
-              <span className="sr-only">Filtrar citas por estado</span>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="confirmed">Confirmadas</option>
-                <option value="completed">Completadas</option>
-                <option value="canceled">Canceladas</option>
-              </select>
-            </label>
-          </div>
 
-          <div className="patient-list-panel__body">
-            {filtered.length
-              ? filtered.map((appointment) => <AppointmentSummary key={appointment.id} appointment={appointment} />)
-              : <EmptyState message="No hay citas que coincidan con este filtro." />}
-          </div>
-        </Card>
+            {filtered.length ? (
+              <div className="patient-table-scroll">
+                <table className="patient-data-table">
+                  <thead><tr><th>Fecha y hora</th><th>Profesional</th><th>Especialidad</th><th>Clínica</th><th>Tipo</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {filtered.map((appointment) => (
+                      <tr key={appointment.id}>
+                        <td><span className="patient-table-date"><CalendarDays className="size-4" aria-hidden="true" /><strong>{formatDate(appointment.scheduledAt, true)}</strong><small>{appointment.notes ?? "Sin indicaciones"}</small></span></td>
+                        <td><strong>{appointment.doctor?.name ?? "No asignado"}</strong><small>{appointment.doctor?.medicalLicense ?? "Credencial no registrada"}</small></td>
+                        <td><span className="patient-table-specialty"><Stethoscope className="size-4" aria-hidden="true" />{appointment.doctor?.specialty ?? "No registrada"}</span></td>
+                        <td><span className="patient-table-location"><MapPin className="size-3.5" aria-hidden="true" /><strong>{appointment.clinic?.name ?? "No registrada"}</strong><small>Atención vinculada a tu perfil</small></span></td>
+                        <td>{appointmentTypeLabel(appointment.appointmentType)}</td>
+                        <td><StatusBadge label={appointment.statusLabel} value={appointment.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="p-4"><EmptyState message="No hay citas que coincidan con los filtros seleccionados." /></div>}
+            <div className="patient-table-footer"><span>{filtered.length} {filtered.length === 1 ? "cita visible" : "citas visibles"}</span><span>Datos asociados únicamente a tu perfil</span></div>
+          </section>
+        </main>
 
-        <aside className="patient-side-stack">
-          <Card className="patient-side-highlight">
-            <span className="patient-side-highlight__eyebrow">PRÓXIMA ATENCIÓN</span>
-            {next ? (
-              <>
-                <strong className="patient-side-highlight__title">{formatDate(next.scheduledAt, true)}</strong>
-                <div className="patient-side-highlight__meta"><Stethoscope className="size-4" aria-hidden="true" /><span>{next.doctor?.name ?? "Profesional por asignar"}</span></div>
-                <div className="patient-side-highlight__meta"><MapPin className="size-4" aria-hidden="true" /><span>{next.clinic?.name ?? "Clínica no registrada"}</span></div>
-                <StatusBadge label={next.statusLabel} value={next.status} />
-              </>
-            ) : <EmptyState message="No tienes una próxima cita programada." />}
-          </Card>
+        <aside className="patient-appointments-side">
+          <section className="patient-card patient-appointment-highlight">
+            <div className="patient-side-heading"><h2>Próxima atención</h2><span>{next ? next.statusLabel : "Sin cita"}</span></div>
+            {next && nextDate ? (
+              <div className="patient-blue-appointment">
+                <div className="patient-blue-appointment__date"><span>{nextDate.toLocaleDateString("es-PE", { month: "short" }).toUpperCase()}</span><strong>{nextDate.getDate()}</strong><small>{nextDate.getFullYear()}</small></div>
+                <div className="patient-blue-appointment__info"><div><strong>{nextDate.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</strong><span>{appointmentTypeLabel(next.appointmentType)}</span></div><p><Stethoscope className="size-3.5" aria-hidden="true" />{next.doctor?.name ?? "Profesional por asignar"}</p><small>{next.doctor?.specialty ?? "Especialidad no registrada"}</small></div>
+                <div className="patient-blue-appointment__location"><MapPin className="size-3.5" aria-hidden="true" /><strong>{next.clinic?.name ?? "Clínica no registrada"}</strong><span>{next.notes ?? "Sin indicaciones adicionales"}</span></div>
+                <div className="patient-blue-appointment__actions"><Link className="patient-action-button patient-action-button--primary" href="/patient/triaje">Preparar preconsulta</Link><Link className="patient-action-button" href="/patient/perfil">Revisar datos</Link></div>
+              </div>
+            ) : <div className="mt-3"><EmptyState message="No tienes una próxima cita programada." /></div>}
+          </section>
 
-          <Card className="patient-guidance-card">
-            <span className="patient-guidance-card__icon"><ShieldCheck className="size-5" aria-hidden="true" /></span>
-            <div>
-              <h3>Antes de tu consulta</h3>
-              <p>Completa tu información previa para que el equipo clínico tenga mejor contexto al atenderte.</p>
-              <Link href="/patient/triaje">Preparar mi cita <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+          <section className="patient-card patient-reminders">
+            <div className="patient-section-title"><h2>Antes de tu cita</h2><ShieldCheck className="size-4 text-accent" aria-hidden="true" /></div>
+            <div className="patient-reminders__grid">
+              <Link className="patient-reminder" href="/patient/triaje"><span className="patient-icon patient-icon--blue"><ClipboardCheck className="size-4" aria-hidden="true" /></span><span><strong>Preconsulta</strong><small>Registra tus síntomas</small></span></Link>
+              <Link className="patient-reminder" href="/patient/resultados"><span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span><span><strong>Resultados</strong><small>Revisa tus estudios</small></span></Link>
+              <Link className="patient-reminder" href="/patient/recetas"><span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span><span><strong>Recetas</strong><small>Consulta tratamientos</small></span></Link>
+              <Link className="patient-reminder" href="/patient/perfil"><span className="patient-icon patient-icon--amber"><ShieldCheck className="size-4" aria-hidden="true" /></span><span><strong>Perfil</strong><small>Verifica tus datos</small></span></Link>
             </div>
-          </Card>
+          </section>
         </aside>
       </div>
     </div>
@@ -882,44 +894,49 @@ function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
 
   return (
     <div className="patient-page">
-      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de resultados">
-        <Metric icon={FlaskConical} label="Estudios registrados" value={String(results.length)} />
-        <Metric icon={CheckCircle2} label="Disponibles" value={String(available.length)} />
-        <Metric icon={Clock3} label="En proceso" value={String(pending.length)} />
+      <section className="patient-summary-grid patient-results-summary-grid" aria-label="Resumen de resultados">
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span><div><span>Estudios</span><strong>{results.length}</strong><small>Registrados</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--green"><CheckCircle2 className="size-4" aria-hidden="true" /></span><div><span>Disponibles</span><strong>{available.length}</strong><small>Con resultado</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--amber"><Clock3 className="size-4" aria-hidden="true" /></span><div><span>En proceso</span><strong>{pending.length}</strong><small>Pendientes</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--blue"><ShieldCheck className="size-4" aria-hidden="true" /></span><div><span>Privacidad</span><strong>100%</strong><small>Perfil autenticado</small></div></article>
       </section>
 
-      <div className="patient-premium-layout mt-5">
-        <Card className="patient-list-panel overflow-hidden p-0">
-          <div className="patient-panel-heading">
-            <div><span>LABORATORIO E IMAGENOLOGÍA</span><h2>Mis resultados</h2></div>
-            <strong>{results.length} {results.length === 1 ? "estudio" : "estudios"}</strong>
-          </div>
-          <div className="patient-list-panel__body">
-            {results.length
-              ? results.map((result) => <ResultRow result={result} key={result.id} />)
-              : <EmptyState message="Cuando tu equipo clínico publique resultados aparecerán aquí, organizados por fecha y estado." />}
-          </div>
-        </Card>
+      <div className="patient-results-layout">
+        <main className="patient-results-main">
+          <section className="patient-card patient-results-table">
+            <div className="patient-table-toolbar patient-table-toolbar--results"><div className="patient-section-title"><h2>Estudios y resultados</h2></div><span className="patient-form-tag">{results.length} {results.length === 1 ? "estudio" : "estudios"}</span></div>
+            {results.length ? (
+              <div className="patient-table-scroll">
+                <table className="patient-data-table patient-data-table--results">
+                  <thead><tr><th>Estudio</th><th>Fecha</th><th>Profesional</th><th>Clínica</th><th>Prioridad</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {results.map((result) => (
+                      <tr key={result.id}>
+                        <td><span className="patient-result-study"><span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span><span><strong>{result.studyName}</strong><small>{result.resultAvailable ? result.resultSummary ?? "Resultado disponible" : "Resultado aún no disponible"}</small></span></span></td>
+                        <td><strong>{formatDate(result.resultAt ?? result.orderedAt, true)}</strong><small>{result.resultAvailable ? "Publicado" : "Solicitado"}</small></td>
+                        <td><strong>{result.doctor?.name ?? "No registrado"}</strong><small>{result.doctor?.specialty ?? "Especialidad no registrada"}</small></td>
+                        <td>{result.clinic?.name ?? "No registrada"}</td>
+                        <td className="patient-table-accent">{result.priority || "Normal"}</td>
+                        <td><StatusBadge label={result.statusLabel} value={result.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="p-4"><EmptyState message="Cuando tu equipo clínico publique resultados aparecerán aquí, organizados por fecha y estado." /></div>}
+          </section>
+        </main>
 
-        <aside className="patient-side-stack">
-          <Card className="patient-side-highlight patient-side-highlight--violet">
-            <span className="patient-side-highlight__eyebrow">ÚLTIMO RESULTADO</span>
-            {latest ? (
-              <>
-                <strong className="patient-side-highlight__title">{latest.studyName}</strong>
-                <p>{latest.resultSummary ?? "Resultado publicado sin resumen adicional."}</p>
-                <span className="patient-side-highlight__date">{formatDate(latest.resultAt ?? latest.orderedAt, true)}</span>
-              </>
-            ) : <EmptyState message="Aún no tienes resultados publicados." />}
-          </Card>
-          <Card className="patient-guidance-card">
-            <span className="patient-guidance-card__icon patient-guidance-card__icon--violet"><ShieldCheck className="size-5" aria-hidden="true" /></span>
-            <div>
-              <h3>Información clínica protegida</h3>
-              <p>Estos resultados provienen únicamente de estudios vinculados a tu expediente autenticado.</p>
-              <Link href="/patient/historial">Ver historial <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
-            </div>
-          </Card>
+        <aside className="patient-results-side">
+          <section className="patient-card patient-highlighted-result">
+            <div className="patient-side-heading"><h2>Resultado más reciente</h2><span>{latest ? "Disponible" : "Sin datos"}</span></div>
+            {latest ? <><div className="patient-highlighted-result__item"><span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span><div><strong>{latest.studyName}</strong><span>{formatDate(latest.resultAt ?? latest.orderedAt, true)}</span></div><StatusBadge label={latest.statusLabel} value={latest.status} /></div>{latest.resultSummary ? <div className="patient-highlighted-result__interpretation"><strong>Resumen registrado</strong><p>{latest.resultSummary}</p></div> : null}</> : <div className="mt-3"><EmptyState message="Aún no tienes resultados publicados." /></div>}
+          </section>
+
+          <section className="patient-card patient-pending-results">
+            <div className="patient-side-heading"><h2>Seguimiento</h2><span>{pending.length} pendientes</span></div>
+            {pending.length ? pending.slice(0,3).map((result) => <div className="patient-pending-item" key={result.id}><span className="patient-icon patient-icon--amber"><Clock3 className="size-4" aria-hidden="true" /></span><div><strong>{result.studyName}</strong><span>{formatDate(result.orderedAt, true)}</span></div><StatusBadge label={result.statusLabel} value={result.status} /></div>) : <div className="mt-3"><EmptyState message="No tienes estudios pendientes." /></div>}
+          </section>
         </aside>
       </div>
     </div>
