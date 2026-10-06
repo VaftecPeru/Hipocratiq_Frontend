@@ -44,7 +44,7 @@ test("patient triage saves a draft and submits the same coherent workflow", asyn
 
   await page.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(page.getByText(/Borrador guardado/).first()).toBeVisible();
-  await expect(page.getByText("Borrador", { exact: true })).toBeVisible();
+  await expect(page.locator(".patient-triage-banner__status").getByText("Borrador", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Enviar preconsulta" }).click();
   await expect(page.getByText(/Preconsulta enviada correctamente/)).toBeVisible();
@@ -57,7 +57,7 @@ test("patient membership renders real clinic coverage", async ({ page }) => {
   await page.goto("/patient/membresia", { waitUntil: "networkidle" });
 
   await expect(page.getByText("COBERTURA ACTIVA", { exact: true })).toBeVisible();
-  await expect(page.getByText("Professional", { exact: true })).toBeVisible();
+  await expect(page.locator(".patient-membership-hero__copy").getByRole("heading", { name: "Professional" })).toBeVisible();
   await expect(page.getByText("Clínica UAT", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Resumen del plan", { exact: true })).toBeVisible();
 });
