@@ -594,7 +594,7 @@ function validateTriageVitals(form: TriageForm): Record<string, string> {
     }
 
     if (value < rule.min || value > rule.max) {
-      errors[field] = \`\${rule.label}: verifica el dato. El rango técnico aceptado es \${rule.min}–\${rule.max} \${rule.suffix}.\`;
+      errors[field] = rule.label + ": verifica el dato. El rango técnico aceptado es " + rule.min + "–" + rule.max + " " + rule.suffix + ".";
     }
   }
 
