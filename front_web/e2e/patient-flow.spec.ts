@@ -48,8 +48,8 @@ test("patient triage saves a draft and submits the same coherent workflow", asyn
 
   await page.getByRole("button", { name: "Enviar preconsulta" }).click();
   await expect(page.getByText(/Preconsulta enviada correctamente/)).toBeVisible();
-  await expect(page.getByText("Enviado", { exact: true })).toBeVisible();
-  await expect(page.getByText("Nivel III")).toBeVisible();
+  await expect(page.locator(".patient-triage-banner__status").getByText("Enviado", { exact: true })).toBeVisible();
+  await expect(page.locator(".patient-priority-summary").getByText(/Nivel III/).first()).toBeVisible();
 });
 
 test("patient membership renders real clinic coverage", async ({ page }) => {
