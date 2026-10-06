@@ -629,7 +629,7 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
       setTriage(saved);
       setForm(triageFormFromData(saved));
       setMessage(status === "submitted"
-        ? "Triaje enviado correctamente. El equipo clínico ya puede consultarlo."
+        ? "Preconsulta enviada correctamente. El equipo clínico ya puede consultarla."
         : "Borrador guardado. Puedes volver y completarlo antes de enviarlo.");
     } catch (submitError) {
       setError(errorMessage(submitError));
@@ -645,101 +645,212 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
   }
 
   const fields = [
-    { id: "temperatureC", label: "Temperatura (°C)", inputMode: "decimal" as const },
-    { id: "systolicBp", label: "Presión sistólica", inputMode: "numeric" as const },
-    { id: "diastolicBp", label: "Presión diastólica", inputMode: "numeric" as const },
-    { id: "heartRate", label: "Frecuencia cardiaca", inputMode: "numeric" as const },
-    { id: "respiratoryRate", label: "Frecuencia respiratoria", inputMode: "numeric" as const },
-    { id: "oxygenSaturation", label: "Saturación de oxígeno (%)", inputMode: "numeric" as const },
+    { id: "temperatureC", label: "Temperatura", suffix: "°C", inputMode: "decimal" as const },
+    { id: "systolicBp", label: "Presión sistólica", suffix: "mmHg", inputMode: "numeric" as const },
+    { id: "diastolicBp", label: "Presión diastólica", suffix: "mmHg", inputMode: "numeric" as const },
+    { id: "heartRate", label: "Frecuencia cardiaca", suffix: "lpm", inputMode: "numeric" as const },
+    { id: "respiratoryRate", label: "Frecuencia respiratoria", suffix: "rpm", inputMode: "numeric" as const },
+    { id: "oxygenSaturation", label: "Saturación de oxígeno", suffix: "%", inputMode: "numeric" as const },
   ] as const;
 
   const isSaving = savingAs !== null;
+  const selectedLevel = TRIAGE_LEVELS.find((item) => item.value === form.triageLevel) ?? TRIAGE_LEVELS[2];
+  const completedVitals = fields.filter((field) => form[field.id].trim() !== "").length;
+  const statusLabel = triage?.triageStatus === "submitted" ? "Enviado" : triage?.triageStatus === "draft" ? "Borrador" : "Nuevo";
+  const lastUpdated = triage ? formatDate(triage.submittedAt ?? triage.recordedAt, true) : "Sin registro";
+  const levelTone = (level: PatientTriageLevel) => {
+    if (level === "I") return "coral";
+    if (level === "II" || level === "III") return "amber";
+    if (level === "V") return "green";
+    return "blue";
+  };
 
   return (
     <div className="patient-page">
-      <div className="patient-premium-intro">
+      <section className="patient-triage-banner">
         <div>
-          <span className="patient-premium-intro__eyebrow">PRECONSULTA SEGURA</span>
-          <h2>Triaje del paciente</h2>
-          <p>Completa lo que conoces antes de tu cita. Puedes guardar un borrador y enviarlo cuando esté listo.</p>
+          <span className="patient-banner-kicker">PRECONSULTA SEGURA</span>
+          <h2>Prepara tu atención antes de la cita</h2>
+          <p>
+            Registra cómo te sientes y, si cuentas con ellos, tus signos vitales. Esta información orienta el flujo de atención,
+            pero no reemplaza la valoración de un profesional.
+          </p>
         </div>
-        <div className="patient-premium-intro__trust"><ShieldCheck className="size-5" aria-hidden="true" /><span>Datos vinculados únicamente a tu perfil</span></div>
-      </div>
+        <div className="patient-triage-banner__status">
+          <span>ESTADO DE PRECONSULTA</span>
+          <strong>{statusLabel}</strong>
+          <small>Nivel orientativo seleccionado: {form.triageLevel} · {selectedLevel.title}</small>
+        </div>
+      </section>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Card className="patient-premium-card">
-          <div className="flex items-start gap-3">
-            <ClipboardCheck className="mt-0.5 size-5 text-accent" aria-hidden="true" />
-            <div><h3 className="text-sm font-extrabold text-ink">¿Cómo percibes tu necesidad de atención?</h3><p className="mt-1 text-xs leading-relaxed text-muted">Selecciona un nivel orientativo. El sistema lo utiliza para ordenar el flujo, pero no diagnostica ni reemplaza la evaluación de un profesional.</p></div>
-          </div>
+      <section className="patient-triage-metrics" aria-label="Resumen de preconsulta">
+        <article className="patient-triage-metric">
+          <span className="patient-icon patient-icon--blue"><ClipboardCheck className="size-4" aria-hidden="true" /></span>
+          <div><span>Nivel orientativo</span><strong>{form.triageLevel}</strong><small>{selectedLevel.title}</small></div>
+        </article>
+        <article className="patient-triage-metric">
+          <span className="patient-icon patient-icon--green"><HeartPulse className="size-4" aria-hidden="true" /></span>
+          <div><span>Signos vitales</span><strong>{completedVitals}/6</strong><small>Campos completados</small></div>
+        </article>
+        <article className="patient-triage-metric">
+          <span className="patient-icon patient-icon--violet"><ShieldCheck className="size-4" aria-hidden="true" /></span>
+          <div><span>Estado</span><strong>{statusLabel}</strong><small>Vinculado a tu perfil</small></div>
+        </article>
+        <article className="patient-triage-metric">
+          <span className="patient-icon patient-icon--amber"><Clock3 className="size-4" aria-hidden="true" /></span>
+          <div><span>Última actualización</span><strong className="patient-triage-metric__date">{triage ? "Registrada" : "—"}</strong><small>{lastUpdated}</small></div>
+        </article>
+      </section>
 
-          <form className="mt-5 space-y-5" aria-describedby={error ? "triage-form-error" : message ? "triage-form-message" : undefined} aria-busy={isSaving} onSubmit={submit}>
-            <fieldset disabled={isSaving}>
-              <legend className="sr-only">Nivel orientativo de triaje</legend>
-              <div className="patient-triage-level-grid">
-                {TRIAGE_LEVELS.map((level) => {
-                  const selected = form.triageLevel === level.value;
+      <div className="patient-triage-layout">
+        <main className="patient-appointments-main">
+          <section className="patient-card patient-triage-form">
+            <div className="patient-form-heading">
+              <div>
+                <h2><ClipboardCheck className="size-4 text-accent" aria-hidden="true" /> Formulario de preconsulta</h2>
+                <p>Completa únicamente la información que conoces. Los signos vitales son opcionales.</p>
+              </div>
+              <span className="patient-form-tag">Privado y seguro</span>
+            </div>
+
+            <form aria-describedby={error ? "triage-form-error" : message ? "triage-form-message" : undefined} aria-busy={isSaving} onSubmit={submit}>
+              <fieldset className="patient-priority-fieldset" disabled={isSaving}>
+                <legend>¿Cómo percibes tu necesidad de atención?</legend>
+                <div className="patient-priority-grid">
+                  {TRIAGE_LEVELS.map((level) => {
+                    const selected = form.triageLevel === level.value;
+                    const tone = levelTone(level.value);
+                    return (
+                      <button
+                        key={level.value}
+                        className={"patient-priority-option patient-priority-option--" + tone + (selected ? " patient-priority-option--selected" : "")}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setField("triageLevel", level.value)}
+                      >
+                        <span><strong>Nivel {level.value}</strong><i aria-hidden="true" /></span>
+                        <small><b>{level.title}</b><br />{level.helper}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+                <FieldError id="triage-level-error" message={fieldErrors.triageLevel} />
+              </fieldset>
+
+              <div className="patient-form-grid">
+                <label className="patient-form-field--full" htmlFor="triage-reason">
+                  Motivo de consulta *
+                  <textarea
+                    id="triage-reason"
+                    rows={4}
+                    required
+                    minLength={10}
+                    maxLength={2000}
+                    value={form.reason}
+                    onChange={(event) => setField("reason", event.target.value)}
+                    disabled={isSaving}
+                    aria-invalid={fieldErrors.reason ? true : undefined}
+                    aria-describedby={fieldErrors.reason ? "triage-reason-error" : undefined}
+                    placeholder="Cuéntanos qué sientes, desde cuándo comenzó y qué cambió hoy."
+                  />
+                  <FieldError id="triage-reason-error" message={fieldErrors.reason} />
+                </label>
+
+                {fields.map((field) => {
+                  const id = "triage-" + field.id;
+                  const fieldError = fieldErrors[field.id];
                   return (
-                    <button
-                      key={level.value}
-                      className={`patient-triage-level ${level.tone} ${selected ? "patient-triage-level--selected" : ""}`}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setField("triageLevel", level.value)}
-                    >
-                      <span className="patient-triage-level__roman">{level.value}</span>
-                      <span className="patient-triage-level__copy"><strong>{level.title}</strong><small>{level.helper}</small></span>
-                    </button>
+                    <label htmlFor={id} key={field.id}>
+                      {field.label}
+                      <span className="patient-input-suffix">
+                        <input
+                          id={id}
+                          inputMode={field.inputMode}
+                          value={form[field.id]}
+                          onChange={(event) => setField(field.id, event.target.value)}
+                          disabled={isSaving}
+                          aria-invalid={fieldError ? true : undefined}
+                          aria-describedby={fieldError ? id + "-error" : undefined}
+                        />
+                        <small>{field.suffix}</small>
+                      </span>
+                      <FieldError id={id + "-error"} message={fieldError} />
+                    </label>
                   );
                 })}
+
+                <label className="patient-form-field--full" htmlFor="triage-notes">
+                  Notas adicionales
+                  <textarea
+                    id="triage-notes"
+                    rows={3}
+                    maxLength={2000}
+                    value={form.triageNotes}
+                    onChange={(event) => setField("triageNotes", event.target.value)}
+                    disabled={isSaving}
+                    placeholder="Medicamentos tomados, alergias conocidas u otra información que consideres útil."
+                    aria-invalid={fieldErrors.triageNotes ? true : undefined}
+                    aria-describedby={fieldErrors.triageNotes ? "triage-notes-error" : undefined}
+                  />
+                  <FieldError id="triage-notes-error" message={fieldErrors.triageNotes} />
+                </label>
               </div>
-              <FieldError id="triage-level-error" message={fieldErrors.triageLevel} />
-            </fieldset>
 
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-reason">
-              Motivo de consulta<span className="text-danger">*</span>
-              <textarea id="triage-reason" className="min-h-28 rounded-xl border border-line bg-surface-input px-3.5 py-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" required minLength={10} maxLength={2000} value={form.reason} onChange={(event) => setField("reason", event.target.value)} disabled={isSaving} aria-invalid={fieldErrors.reason ? true : undefined} aria-describedby={fieldErrors.reason ? "triage-reason-error" : undefined} placeholder="Cuéntanos qué sientes, desde cuándo y qué cambió hoy." />
-              <FieldError id="triage-reason-error" message={fieldErrors.reason} />
-            </label>
+              {error ? <p className="rounded-xl bg-danger-soft p-3 text-sm font-bold text-danger" id="triage-form-error" role="alert">{error}</p> : null}
+              {message ? <p className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success" id="triage-form-message" role="status">{message}</p> : null}
 
+              <div className="patient-form-actions">
+                <button className="patient-action-button" type="button" disabled={isSaving} onClick={() => void persist("draft")}>
+                  {savingAs === "draft" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                  {savingAs === "draft" ? "Guardando…" : "Guardar borrador"}
+                </button>
+                <button className="patient-action-button patient-action-button--primary" type="submit" disabled={isSaving}>
+                  {savingAs === "submitted" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4" aria-hidden="true" />}
+                  {savingAs === "submitted" ? "Enviando…" : "Enviar preconsulta"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </main>
+
+        <aside className="patient-triage-side">
+          <section className={"patient-card patient-priority-summary patient-priority-summary--" + levelTone(form.triageLevel)}>
+            <div className="patient-priority-summary__headline">
+              <span>NIVEL AUTORREPORTADO</span>
+              <h2>Nivel {form.triageLevel} · {selectedLevel.title}</h2>
+              <p>{selectedLevel.helper}</p>
+            </div>
+            <div className="patient-triage-legend" aria-label="Guía de niveles de atención">
+              {TRIAGE_LEVELS.map((level) => {
+                const tone = levelTone(level.value);
+                return (
+                  <div className={"patient-legend-item" + (level.value === form.triageLevel ? " patient-legend-item--selected" : "")} key={level.value}>
+                    <i className={"patient-legend-dot patient-legend-dot--" + tone}>{level.value}</i>
+                    <span><strong>{level.title}</strong><small>{level.helper}</small></span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="patient-card patient-patient-summary">
+            <div className="patient-section-title">
+              <h2>Registro más reciente</h2>
+              <Clock3 className="size-4 text-muted" aria-hidden="true" />
+            </div>
+            <div className="mt-3">
+              {triage ? <TriageSummary triage={triage} /> : <EmptyState message="Todavía no tienes una preconsulta guardada. Puedes comenzar y conservarla como borrador." />}
+            </div>
+          </section>
+
+          <section className="patient-card patient-triage-emergency">
+            <span className="patient-triage-emergency__icon"><AlertTriangle className="size-5" aria-hidden="true" /></span>
             <div>
-              <div className="mb-2 flex items-end justify-between gap-3"><div><h3 className="text-xs font-extrabold text-ink">Signos vitales</h3><p className="mt-0.5 text-[0.68rem] text-muted">Completa solo las mediciones que tengas disponibles.</p></div><span className="rounded-full bg-surface-subtle px-2.5 py-1 text-[0.62rem] font-bold text-muted">Opcionales</span></div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {fields.map((field) => {
-                  const id = `triage-${field.id}`;
-                  const fieldError = fieldErrors[field.id];
-                  return <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor={id} key={field.id}>{field.label}<input id={id} className="h-11 rounded-xl border border-line bg-surface-input px-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" inputMode={field.inputMode} value={form[field.id]} onChange={(event) => setField(field.id, event.target.value)} disabled={isSaving} aria-invalid={fieldError ? true : undefined} aria-describedby={fieldError ? `${id}-error` : undefined} /><FieldError id={`${id}-error`} message={fieldError} /></label>;
-                })}
-              </div>
+              <h3>¿Tienes síntomas graves o súbitos?</h3>
+              <p>Este formulario no es un servicio de emergencias. Busca atención inmediata mediante los canales locales cuando corresponda.</p>
             </div>
-
-            <label className="grid gap-1.5 text-xs font-extrabold text-ink-secondary" htmlFor="triage-notes">Notas adicionales<textarea id="triage-notes" className="min-h-24 rounded-xl border border-line bg-surface-input px-3.5 py-3 text-sm font-medium text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" maxLength={2000} value={form.triageNotes} onChange={(event) => setField("triageNotes", event.target.value)} disabled={isSaving} placeholder="Medicamentos tomados, alergias conocidas u otra información que consideres útil." aria-invalid={fieldErrors.triageNotes ? true : undefined} aria-describedby={fieldErrors.triageNotes ? "triage-notes-error" : undefined} /><FieldError id="triage-notes-error" message={fieldErrors.triageNotes} /></label>
-
-            {error ? <p className="rounded-xl bg-danger-soft p-3 text-sm font-bold text-danger" id="triage-form-error" role="alert">{error}</p> : null}
-            {message ? <p className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success" id="triage-form-message" role="status">{message}</p> : null}
-
-            <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
-              <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-surface px-4 text-xs font-extrabold text-ink transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60" type="button" disabled={isSaving} onClick={() => void persist("draft")}>
-                {savingAs === "draft" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
-                {savingAs === "draft" ? "Guardando…" : "Guardar borrador"}
-              </button>
-              <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-xs font-extrabold text-paper shadow-[0_10px_24px_rgb(8_98_221_/_20%)] transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isSaving}>
-                {savingAs === "submitted" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4" aria-hidden="true" />}
-                {savingAs === "submitted" ? "Enviando…" : "Enviar triaje"}
-              </button>
-            </div>
-          </form>
-        </Card>
-
-        <div className="space-y-4">
-          <Card className="patient-premium-card">
-            <h2 className="text-sm font-extrabold text-ink">Registro más reciente</h2>
-            <div className="mt-4">{triage ? <TriageSummary triage={triage} /> : <EmptyState message="Todavía no tienes un registro de triaje. Puedes comenzar y guardarlo como borrador." />}</div>
-          </Card>
-          <Card className="border-accent/20 bg-accent-soft/50">
-            <div className="flex items-start gap-3"><Info className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" /><div><h3 className="text-xs font-extrabold text-ink">¿Tienes síntomas graves o súbitos?</h3><p className="mt-1 text-xs leading-relaxed text-muted">Este formulario no es un servicio de emergencias. Busca atención inmediata por los canales locales de emergencia cuando corresponda.</p></div></div>
-          </Card>
-        </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
