@@ -21,6 +21,37 @@ async function setRoleSession(page: Page, role: string) {
   ]);
 }
 
+test("login visual panel keeps the clinical mockup contained and responsive", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/", { waitUntil: "networkidle" });
+
+  const panel = page.getByTestId("auth-visual-panel");
+  const stage = page.getByTestId("auth-visual-stage");
+  const image = stage.locator("img");
+
+  await expect(panel).toBeVisible();
+  await expect(stage).toBeVisible();
+  await expect(image).toBeVisible();
+
+  const objectFit = await image.evaluate((element) => getComputedStyle(element).objectFit);
+  expect(objectFit).toBe("contain");
+
+  const noHorizontalOverflow = await panel.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
+  expect(noHorizontalOverflow).toBeTruthy();
+
+  const [panelBox, stageBox] = await Promise.all([panel.boundingBox(), stage.boundingBox()]);
+  expect(panelBox).not.toBeNull();
+  expect(stageBox).not.toBeNull();
+  expect(stageBox!.x).toBeGreaterThanOrEqual(panelBox!.x);
+  expect(stageBox!.x + stageBox!.width).toBeLessThanOrEqual(panelBox!.x + panelBox!.width + 1);
+
+  await expect(panel.getByRole("heading", { name: "Seguridad de grado médico" })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(panel).toBeHidden();
+});
+
 for (const { cookieRole, expectedPath } of landingCases) {
   test(`${cookieRole} lands on ${expectedPath}`, async ({ page }) => {
     await setRoleSession(page, cookieRole);
