@@ -3674,3 +3674,209 @@ input {
     transform: none !important;
   }
 }
+
+
+/* Patient dashboard typography + appointment reminders responsive — 2026-10-06 */
+
+/* Dashboard: use the same readable scale established by the appointments view. */
+.patient-appointment-hero__eyebrow span {
+  font-size: 0.56rem;
+}
+
+.patient-appointment-hero__time span,
+.patient-appointment-hero__location {
+  font-size: 0.62rem;
+}
+
+.patient-appointment-hero__doctor small,
+.patient-appointment-hero__doctor span {
+  font-size: 0.6rem;
+}
+
+.patient-appointment-hero__doctor strong {
+  font-size: 0.88rem;
+}
+
+.patient-health-status__badge {
+  font-size: 0.56rem;
+}
+
+.patient-health-status__stable {
+  font-size: 0.56rem;
+}
+
+.patient-health-status h2 {
+  font-size: 1.05rem;
+}
+
+.patient-health-status p {
+  max-width: 24rem;
+  font-size: 0.67rem;
+  line-height: 1.58;
+}
+
+.patient-health-status > strong {
+  font-size: 0.59rem;
+}
+
+.patient-dashboard-grid .patient-section-title h2 {
+  font-size: 0.72rem;
+}
+
+.patient-dashboard-grid .patient-text-link,
+.patient-dashboard-grid .patient-card-footer-link {
+  font-size: 0.55rem;
+}
+
+.patient-dashboard-grid .patient-beta-badge {
+  font-size: 0.5rem;
+}
+
+.patient-dashboard-grid .patient-risk-callout p {
+  font-size: 0.61rem;
+}
+
+.patient-dashboard-grid .patient-risk-callout span {
+  font-size: 0.56rem;
+}
+
+.patient-dashboard-grid .patient-epidemiology__recommendation p {
+  font-size: 0.59rem;
+}
+
+.patient-dashboard-grid .patient-epidemiology__recommendation strong {
+  font-size: 0.56rem;
+}
+
+.patient-dashboard-grid .patient-card-meta {
+  font-size: 0.52rem;
+}
+
+.patient-dashboard-grid .patient-preview-row__copy strong,
+.patient-dashboard-grid .patient-prescription-row__copy strong {
+  font-size: 0.62rem;
+}
+
+.patient-dashboard-grid .patient-preview-row__copy span,
+.patient-dashboard-grid .patient-prescription-row__copy span {
+  font-size: 0.54rem;
+}
+
+.patient-dashboard-grid .patient-prescription-row__next small {
+  font-size: 0.49rem;
+}
+
+.patient-dashboard-grid .patient-prescription-row__next strong {
+  font-size: 0.59rem;
+}
+
+.patient-dashboard-grid .patient-quick-item strong {
+  font-size: 0.59rem;
+}
+
+.patient-dashboard-grid .patient-quick-item small {
+  font-size: 0.52rem;
+}
+
+.patient-dashboard-grid .patient-help-strip h2 {
+  font-size: 0.76rem;
+}
+
+.patient-dashboard-grid .patient-help-strip p {
+  font-size: 0.56rem;
+  line-height: 1.5;
+}
+
+.patient-dashboard-grid .patient-help-strip__contact strong {
+  font-size: 0.58rem;
+}
+
+.patient-dashboard-grid .patient-whatsapp-button {
+  font-size: 0.55rem;
+}
+
+/* "Antes de tu cita": keep content readable instead of squeezing four cards
+   into the narrow appointment sidebar. */
+.patient-reminders {
+  min-width: 0;
+}
+
+.patient-reminders__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.patient-reminder {
+  min-height: 4.2rem;
+  align-items: flex-start;
+  gap: 0.58rem;
+  padding: 0.65rem;
+}
+
+.patient-reminder .patient-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.05rem;
+}
+
+.patient-reminder > span {
+  align-content: start;
+  gap: 0.2rem;
+}
+
+.patient-reminder strong,
+.patient-reminder small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.patient-reminder strong {
+  font-size: 0.57rem;
+  line-height: 1.25;
+}
+
+.patient-reminder small {
+  display: block;
+  font-size: 0.5rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .patient-reminders__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .patient-appointments-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patient-reminders__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-appointments-side {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-reminders__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-reminder {
+    min-height: 0;
+  }
+
+  .patient-dashboard-grid .patient-section-title h2 {
+    font-size: 0.76rem;
+  }
+
+  .patient-health-status p,
+  .patient-dashboard-grid .patient-help-strip p {
+    font-size: 0.6rem;
+  }
+}
