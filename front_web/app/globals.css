@@ -3880,3 +3880,188 @@ input {
     font-size: 0.6rem;
   }
 }
+
+
+/* Auth login visual v2 — 2026-10-06 */
+.auth-login-shell {
+  background:
+    radial-gradient(circle at 18% 12%, rgb(8 98 221 / 6%), transparent 28rem),
+    #f5f8fc;
+}
+
+.auth-login-form-panel {
+  position: relative;
+  isolation: isolate;
+  border-right: 1px solid #dce6f2;
+  background:
+    radial-gradient(circle at 16% 8%, rgb(8 98 221 / 5%), transparent 24rem),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.auth-login-form-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0%), rgb(255 255 255 / 72%)),
+    radial-gradient(circle at 10% 85%, rgb(116 76 255 / 4%), transparent 18rem);
+  content: "";
+  pointer-events: none;
+}
+
+.auth-visual-panel {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: clamp(1rem, 2.2vh, 1.5rem);
+  background:
+    radial-gradient(circle at 78% 10%, rgb(255 255 255 / 18%), transparent 22rem),
+    radial-gradient(circle at 10% 78%, rgb(120 177 255 / 18%), transparent 20rem),
+    linear-gradient(145deg, #0b56d7 0%, #0a49c2 42%, #06328f 100%);
+  padding:
+    clamp(1.1rem, 2.2vw, 2rem)
+    clamp(1.1rem, 2.4vw, 2.25rem)
+    clamp(1.15rem, 2.2vw, 2rem);
+}
+
+.auth-visual-panel__glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(0.2rem);
+  pointer-events: none;
+}
+
+.auth-visual-panel__glow--top {
+  top: -7rem;
+  right: -5rem;
+  width: 22rem;
+  height: 22rem;
+  background: rgb(98 168 255 / 16%);
+}
+
+.auth-visual-panel__glow--bottom {
+  bottom: -9rem;
+  left: -7rem;
+  width: 25rem;
+  height: 25rem;
+  background: rgb(15 115 255 / 12%);
+}
+
+.auth-visual-panel__stage {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: clamp(1.25rem, 1.8vw, 1.75rem);
+  background:
+    radial-gradient(circle at 74% 16%, rgb(255 255 255 / 26%), transparent 34%),
+    linear-gradient(145deg, #eaf3ff 0%, #d5e8ff 100%);
+  box-shadow:
+    0 1.4rem 3.2rem rgb(0 25 78 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 62%);
+}
+
+.auth-visual-panel__image {
+  object-fit: contain;
+  object-position: center;
+  padding: clamp(0.75rem, 1.6vw, 1.4rem);
+  transform: scale(0.985);
+  transform-origin: center;
+}
+
+.auth-visual-panel__stage-shine {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 26%),
+    radial-gradient(circle at 80% 12%, rgb(255 255 255 / 18%), transparent 28%);
+  pointer-events: none;
+}
+
+.auth-visual-panel__security {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.95rem;
+  align-items: start;
+  max-width: 34rem;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 1.15rem;
+  background: rgb(255 255 255 / 12%);
+  padding: clamp(1rem, 1.6vw, 1.35rem);
+  color: white;
+  box-shadow:
+    0 1.1rem 2.6rem rgb(0 21 70 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 16%);
+  backdrop-filter: blur(14px);
+}
+
+.auth-visual-panel__security-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 0.85rem;
+  background: rgb(255 255 255 / 14%);
+}
+
+.auth-visual-panel__security-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  color: rgb(255 255 255 / 74%);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-visual-panel__security h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.auth-visual-panel__security p {
+  margin: 0.45rem 0 0;
+  max-width: 29rem;
+  color: rgb(255 255 255 / 78%);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+@media (max-height: 760px) and (min-width: 900px) {
+  .auth-visual-panel {
+    gap: 0.8rem;
+    padding: 1rem;
+  }
+
+  .auth-visual-panel__security {
+    padding: 0.8rem 0.9rem;
+  }
+
+  .auth-visual-panel__security p {
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 1080px) and (min-width: 900px) {
+  .auth-login-shell {
+    grid-template-columns: minmax(24rem, 49fr) minmax(0, 51fr);
+  }
+
+  .auth-visual-panel {
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-visual-panel__image {
+    transform: none;
+  }
+}
