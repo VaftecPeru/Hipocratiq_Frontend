@@ -56,10 +56,10 @@ test("patient membership renders real clinic coverage", async ({ page }) => {
   await setPatientSession(page);
   await page.goto("/patient/membresia", { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("heading", { name: "Tu cobertura HIPOCRATIQ" })).toBeVisible();
+  await expect(page.getByText("COBERTURA ACTIVA", { exact: true })).toBeVisible();
   await expect(page.getByText("Professional", { exact: true })).toBeVisible();
   await expect(page.getByText("Clínica UAT", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Agenda", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resumen del plan", { exact: true })).toBeVisible();
 });
 
 test("patient epidemiology stays private and non-diagnostic", async ({ page }) => {
@@ -105,15 +105,15 @@ test("patient internal views expose the premium interaction hierarchy", async ({
   await expect(page.getByRole("tab", { name: "Historial" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Canceladas" })).toBeVisible();
   await expect(page.getByText("Teleconsultas", { exact: true })).toBeVisible();
-  await expect(page.getByText("Antes de tu consulta", { exact: true })).toBeVisible();
+  await expect(page.getByText("Antes de tu cita", { exact: true })).toBeVisible();
 
   await page.goto("/patient/resultados", { waitUntil: "networkidle" });
-  await expect(page.getByText("Estudios registrados", { exact: true })).toBeVisible();
-  await expect(page.getByText("Información clínica protegida", { exact: true })).toBeVisible();
+  await expect(page.getByText("Estudios", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resultado más reciente", { exact: true })).toBeVisible();
 
   await page.goto("/patient/recetas", { waitUntil: "networkidle" });
-  await expect(page.getByText("Tratamientos activos", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Renovaciones y cambios", { exact: true })).toBeVisible();
+  await expect(page.getByText("Activas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Uso seguro de medicamentos", { exact: true })).toBeVisible();
 
   await page.goto("/patient/perfil", { waitUntil: "networkidle" });
   const profileHero = page.locator(".patient-profile-hero");
@@ -128,5 +128,5 @@ test("patient internal views expose the premium interaction hierarchy", async ({
   await expect(page.getByRole("button", { name: /Nivel III.*Urgente/i })).toBeVisible();
 
   await page.goto("/patient/historial", { waitUntil: "networkidle" });
-  await expect(page.getByText("Consultas registradas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resumen clínico", { exact: true })).toBeVisible();
 });
