@@ -114,7 +114,7 @@ export function CredentialsStep({
     : "Acceso de Superadministrador";
 
   return (
-    <div className="w-full max-w-[38rem]">
+    <div className="auth-login-content w-full max-w-[36rem]">
       <div className="mb-6 flex items-center gap-4">
         <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-accent shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)]">
           <BrandLogo className="h-9 w-10 brightness-0 invert" />
@@ -123,7 +123,7 @@ export function CredentialsStep({
       </div>
 
       <h1 className="text-[clamp(1.55rem,4vw,2rem)] leading-tight font-extrabold tracking-[-0.04em]">
-         {t("welcome")} <span className="text-accent">HipocratiQ</span>
+         {t("welcome")} <span className="text-accent">HIPOCRATIQ</span>
       </h1>
        <p className="mt-2 text-sm leading-5 text-muted">{t("secureAccess")}</p>
 
@@ -153,7 +153,7 @@ export function CredentialsStep({
                     <button
                       key={option.value}
                       type="button"
-                      className={`group flex min-h-[8.5rem] min-w-0 flex-col items-center rounded-xl border p-2.5 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-surface text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
+                      className={`auth-role-card group flex min-h-[8rem] min-w-0 flex-col items-center rounded-xl border p-2.5 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "auth-role-card--selected border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-surface text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
                       onClick={() => onLoginRoleChange(option.value)}
                       aria-pressed={isSelected}
                     >
