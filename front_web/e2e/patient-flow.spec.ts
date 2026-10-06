@@ -36,18 +36,18 @@ test("patient triage saves a draft and submits the same coherent workflow", asyn
   await page.goto("/patient/triaje", { waitUntil: "networkidle" });
 
   await expect(page.getByAltText("HIPOCRATIQ")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Triaje del paciente" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prepara tu atención antes de la cita" })).toBeVisible();
 
   await page.getByRole("button", { name: /III Urgente/i }).click();
   await page.getByLabel(/Motivo de consulta/).fill("Dolor de cabeza moderado desde esta mañana.");
-  await page.getByLabel("Temperatura (°C)").fill("37.2");
+  await page.getByLabel(/Temperatura/).fill("37.2");
 
   await page.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(page.getByText(/Borrador guardado/).first()).toBeVisible();
   await expect(page.getByText("Borrador", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Enviar triaje" }).click();
-  await expect(page.getByText(/Triaje enviado correctamente/)).toBeVisible();
+  await page.getByRole("button", { name: "Enviar preconsulta" }).click();
+  await expect(page.getByText(/Preconsulta enviada correctamente/)).toBeVisible();
   await expect(page.getByText("Enviado", { exact: true })).toBeVisible();
   await expect(page.getByText("Nivel III")).toBeVisible();
 });
@@ -121,8 +121,11 @@ test("patient internal views expose the premium interaction hierarchy", async ({
   await expect(profileHero.getByText("Cuenta autenticada", { exact: true })).toBeVisible();
 
   await page.goto("/patient/triaje", { waitUntil: "networkidle" });
-  await expect(page.getByRole("heading", { name: "Triaje del paciente" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /III Urgente/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prepara tu atención antes de la cita" })).toBeVisible();
+  await expect(page.getByText("Nivel orientativo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Signos vitales", { exact: true })).toBeVisible();
+  await expect(page.getByText("Última actualización", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Nivel III.*Urgente/i })).toBeVisible();
 
   await page.goto("/patient/historial", { waitUntil: "networkidle" });
   await expect(page.getByText("Consultas registradas", { exact: true })).toBeVisible();
