@@ -97,6 +97,41 @@ test("all patient Flow 6 routes render without an application error", async ({ p
 });
 
 
+test("patient dashboard typography is readable and appointment reminders are responsive", async ({ page }) => {
+  await setPatientSession(page);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/patient/dashboard", { waitUntil: "networkidle" });
+
+  const healthCopy = page.locator(".patient-health-status p");
+  await expect(healthCopy).toBeVisible();
+  const healthFontSize = await healthCopy.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(healthFontSize).toBeGreaterThanOrEqual(10);
+
+  await page.goto("/patient/citas", { waitUntil: "networkidle" });
+
+  const reminders = page.locator(".patient-reminders");
+  const reminderGrid = reminders.locator(".patient-reminders__grid");
+  await expect(reminders.getByRole("heading", { name: "Antes de tu cita" })).toBeVisible();
+
+  const desktopColumns = await reminderGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length);
+  expect(desktopColumns).toBe(2);
+
+  for (const reminder of await reminderGrid.locator(".patient-reminder").all()) {
+    const fits = await reminder.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
+    expect(fits).toBeTruthy();
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "networkidle" });
+
+  const mobileColumns = await reminderGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length);
+  expect(mobileColumns).toBe(1);
+
+  const remindersFitMobile = await reminders.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
+  expect(remindersFitMobile).toBeTruthy();
+});
+
 test("patient internal views expose the premium interaction hierarchy", async ({ page }) => {
   await setPatientSession(page);
 
