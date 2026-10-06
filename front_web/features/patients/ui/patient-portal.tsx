@@ -569,6 +569,50 @@ function nullableNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const TRIAGE_VITAL_RULES = {
+  temperatureC: { label: "Temperatura", min: 30, max: 45, suffix: "°C", step: "0.1" },
+  systolicBp: { label: "Presión sistólica", min: 60, max: 250, suffix: "mmHg", step: "1" },
+  diastolicBp: { label: "Presión diastólica", min: 30, max: 160, suffix: "mmHg", step: "1" },
+  heartRate: { label: "Frecuencia cardiaca", min: 30, max: 220, suffix: "lpm", step: "1" },
+  respiratoryRate: { label: "Frecuencia respiratoria", min: 5, max: 60, suffix: "rpm", step: "1" },
+  oxygenSaturation: { label: "Saturación de oxígeno", min: 70, max: 100, suffix: "%", step: "1" },
+} as const;
+
+type TriageVitalField = keyof typeof TRIAGE_VITAL_RULES;
+
+function validateTriageVitals(form: TriageForm): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  for (const [field, rule] of Object.entries(TRIAGE_VITAL_RULES) as [TriageVitalField, (typeof TRIAGE_VITAL_RULES)[TriageVitalField]][]) {
+    const raw = form[field].trim();
+    if (!raw) continue;
+
+    const value = Number(raw);
+    if (!Number.isFinite(value)) {
+      errors[field] = "Ingresa un valor numérico válido.";
+      continue;
+    }
+
+    if (value < rule.min || value > rule.max) {
+      errors[field] = \`\${rule.label}: verifica el dato. El rango técnico aceptado es \${rule.min}–\${rule.max} \${rule.suffix}.\`;
+    }
+  }
+
+  const systolic = nullableNumber(form.systolicBp);
+  const diastolic = nullableNumber(form.diastolicBp);
+  if (
+    systolic !== null
+    && diastolic !== null
+    && !errors.systolicBp
+    && !errors.diastolicBp
+    && diastolic >= systolic
+  ) {
+    errors.diastolicBp = "La presión diastólica debe ser menor que la presión sistólica.";
+  }
+
+  return errors;
+}
+
 function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) {
   const [triage, setTriage] = useState(initialTriage);
   const [form, setForm] = useState<TriageForm>(() => triageFormFromData(initialTriage));
@@ -589,6 +633,14 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
   }
 
   async function persist(status: PatientTriageStatus) {
+    const vitalErrors = validateTriageVitals(form);
+    if (Object.keys(vitalErrors).length > 0) {
+      setMessage(null);
+      setError("Revisa los signos vitales marcados antes de guardar o enviar la preconsulta.");
+      setFieldErrors((current) => ({ ...current, ...vitalErrors }));
+      return;
+    }
+
     setSavingAs(status);
     setMessage(null);
     setError(null);
@@ -628,14 +680,20 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
   }
 
   const fields = [
-    { id: "temperatureC", label: "Temperatura", suffix: "°C", inputMode: "decimal" as const },
-    { id: "systolicBp", label: "Presión sistólica", suffix: "mmHg", inputMode: "numeric" as const },
-    { id: "diastolicBp", label: "Presión diastólica", suffix: "mmHg", inputMode: "numeric" as const },
-    { id: "heartRate", label: "Frecuencia cardiaca", suffix: "lpm", inputMode: "numeric" as const },
-    { id: "respiratoryRate", label: "Frecuencia respiratoria", suffix: "rpm", inputMode: "numeric" as const },
-    { id: "oxygenSaturation", label: "Saturación de oxígeno", suffix: "%", inputMode: "numeric" as const },
+    { id: "temperatureC", ...TRIAGE_VITAL_RULES.temperatureC, inputMode: "decimal" as const },
+    { id: "systolicBp", ...TRIAGE_VITAL_RULES.systolicBp, inputMode: "numeric" as const },
+    { id: "diastolicBp", ...TRIAGE_VITAL_RULES.diastolicBp, inputMode: "numeric" as const },
+    { id: "heartRate", ...TRIAGE_VITAL_RULES.heartRate, inputMode: "numeric" as const },
+    { id: "respiratoryRate", ...TRIAGE_VITAL_RULES.respiratoryRate, inputMode: "numeric" as const },
+    { id: "oxygenSaturation", ...TRIAGE_VITAL_RULES.oxygenSaturation, inputMode: "numeric" as const },
   ] as const;
 
+  const clientVitalErrors = useMemo(() => validateTriageVitals(form), [form]);
+  const effectiveFieldErrors = useMemo(
+    () => ({ ...fieldErrors, ...clientVitalErrors }),
+    [clientVitalErrors, fieldErrors],
+  );
+  const hasBlockingVitalErrors = Object.keys(clientVitalErrors).length > 0;
   const isSaving = savingAs !== null;
   const selectedLevel = TRIAGE_LEVELS.find((item) => item.value === form.triageLevel) ?? TRIAGE_LEVELS[2];
   const completedVitals = fields.filter((field) => form[field.id].trim() !== "").length;
@@ -741,14 +799,18 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
 
                 {fields.map((field) => {
                   const id = "triage-" + field.id;
-                  const fieldError = fieldErrors[field.id];
+                  const fieldError = effectiveFieldErrors[field.id];
                   return (
                     <label htmlFor={id} key={field.id}>
                       {field.label}
                       <span className="patient-input-suffix">
                         <input
                           id={id}
+                          type="number"
                           inputMode={field.inputMode}
+                          min={field.min}
+                          max={field.max}
+                          step={field.step}
                           value={form[field.id]}
                           onChange={(event) => setField(field.id, event.target.value)}
                           disabled={isSaving}
@@ -779,15 +841,29 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
                 </label>
               </div>
 
+              {hasBlockingVitalErrors ? (
+                <div className="patient-vitals-alert" role="alert" aria-live="assertive">
+                  <span className="patient-vitals-alert__icon"><AlertTriangle className="size-5" aria-hidden="true" /></span>
+                  <div>
+                    <strong>Verifica los signos vitales</strong>
+                    <p>Detectamos uno o más valores fuera del rango técnico permitido o una combinación inconsistente.</p>
+                    <ul>
+                      {Object.values(clientVitalErrors).map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                    <small>Corrige los datos para habilitar Guardar borrador y Enviar preconsulta.</small>
+                  </div>
+                </div>
+              ) : null}
+
               {error ? <p className="rounded-xl bg-danger-soft p-3 text-sm font-bold text-danger" id="triage-form-error" role="alert">{error}</p> : null}
               {message ? <p className="rounded-xl bg-success-soft p-3 text-sm font-bold text-success" id="triage-form-message" role="status">{message}</p> : null}
 
               <div className="patient-form-actions">
-                <button className="patient-action-button" type="button" disabled={isSaving} onClick={() => void persist("draft")}>
+                <button className="patient-action-button" type="button" disabled={isSaving || hasBlockingVitalErrors} onClick={() => void persist("draft")}>
                   {savingAs === "draft" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
                   {savingAs === "draft" ? "Guardando…" : "Guardar borrador"}
                 </button>
-                <button className="patient-action-button patient-action-button--primary" type="submit" disabled={isSaving}>
+                <button className="patient-action-button patient-action-button--primary" type="submit" disabled={isSaving || hasBlockingVitalErrors}>
                   {savingAs === "submitted" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="size-4" aria-hidden="true" />}
                   {savingAs === "submitted" ? "Enviando…" : "Enviar preconsulta"}
                 </button>
