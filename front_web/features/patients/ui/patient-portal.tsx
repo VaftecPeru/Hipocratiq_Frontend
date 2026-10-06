@@ -1092,54 +1092,99 @@ function MembershipView({ membership }: { membership: PatientMembershipData }) {
   if (!membership.available) {
     return (
       <div className="patient-page">
-        <div className="patient-premium-intro">
-          <div><span className="patient-premium-intro__eyebrow">COBERTURA</span><h2>Membresía</h2><p>Consulta la cobertura HIPOCRATIQ asociada a la clínica donde recibes atención.</p></div>
-          <ShieldCheck className="size-8 text-accent" aria-hidden="true" />
-        </div>
-        <Card className="patient-premium-card">
-          <div className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
-            <span className="grid size-12 place-items-center rounded-2xl bg-warning-soft text-warning"><Info className="size-5" aria-hidden="true" /></span>
-            <div><h3 className="text-sm font-extrabold text-ink">Cobertura no disponible</h3><p className="mt-1 text-sm leading-relaxed text-muted">{membership.message}</p></div>
-            <Link className="inline-flex min-h-10 items-center justify-center rounded-xl border border-line-strong px-4 text-xs font-extrabold text-ink hover:bg-surface-hover" href="/patient/perfil">Revisar mi perfil</Link>
+        <section className="patient-membership-hero">
+          <div className="patient-membership-hero__copy">
+            <span className="patient-membership-kicker"><ShieldCheck className="size-3.5" aria-hidden="true" /> COBERTURA HIPOCRATIQ</span>
+            <h2>Tu cobertura clínica en un solo lugar</h2>
+            <p>{membership.message}</p>
+            <div className="patient-membership-hero__actions"><Link className="patient-action-button patient-action-button--primary" href="/patient/perfil">Revisar mi perfil</Link><Link className="patient-action-button" href="/patient/citas">Ver mis citas</Link></div>
           </div>
-        </Card>
+          <div className="patient-membership-hero__details">
+            <div><span>Estado</span><strong>No disponible</strong></div>
+            <div><span>Fuente</span><strong>Clínica</strong></div>
+            <div><span>Privacidad</span><strong>Institucional</strong></div>
+            <div><span>Acceso</span><strong>Perfil autenticado</strong></div>
+          </div>
+        </section>
+
+        <section className="patient-card patient-membership-recommendation mt-4">
+          <h2><Info className="size-4" aria-hidden="true" /> ¿Qué puedes hacer?</h2>
+          <strong>Verifica que tu perfil esté vinculado a la clínica correcta.</strong>
+          <p>La cobertura depende de la relación registrada por la institución. No se generan membresías individuales ficticias desde el portal.</p>
+          <Link className="patient-table-action" href="/patient/perfil">Revisar información</Link>
+        </section>
       </div>
     );
   }
 
   return (
     <div className="patient-page">
-      <div className="patient-premium-intro">
-        <div><span className="patient-premium-intro__eyebrow">COBERTURA ACTIVA</span><h2>Tu cobertura HIPOCRATIQ</h2><p>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"}. Los datos comerciales y de facturación de la institución permanecen privados.</p></div>
-        <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-black text-success"><CheckCircle2 className="size-4" aria-hidden="true" />Activa</span>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(19rem,.8fr)]">
-        <Card className="patient-membership-hero">
-          <div className="relative z-10">
-            <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-accent">PLAN {membership.plan.key.toUpperCase()}</span>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-ink">{membership.plan.name}</h3>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{membership.plan.description ?? membership.message}</p>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-extrabold text-success"><ShieldCheck className="size-4" aria-hidden="true" />Cobertura institucional activa</div>
-
-            <div className="mt-6 grid gap-2 sm:grid-cols-2">
-              {membership.plan.features.length ? membership.plan.features.map((feature) => (
-                <div className="flex items-start gap-2 rounded-xl border border-line bg-surface/80 px-3 py-2.5 text-xs font-bold text-ink-secondary" key={feature}><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />{feature}</div>
-              )) : <p className="text-xs text-muted">Las funciones del plan se administran desde la clínica.</p>}
+      <div className="patient-membership-layout">
+        <main className="patient-membership-main">
+          <section className="patient-membership-hero">
+            <div className="patient-membership-hero__copy">
+              <span className="patient-membership-kicker"><ShieldCheck className="size-3.5" aria-hidden="true" /> COBERTURA ACTIVA</span>
+              <h2>{membership.plan.name}</h2>
+              <p>{membership.plan.description ?? membership.message}</p>
+              <div className="patient-membership-hero__actions"><Link className="patient-action-button patient-action-button--primary" href="/patient/citas">Ver mis citas</Link><Link className="patient-action-button" href="/patient/perfil">Datos del paciente</Link></div>
             </div>
-          </div>
-        </Card>
+            <div className="patient-membership-hero__details">
+              <div><span>Clínica</span><strong>{membership.clinic?.name ?? "No registrada"}</strong></div>
+              <div><span>Estado</span><strong>{membership.coverage.status}</strong></div>
+              <div><span>Inicio</span><strong>{membership.coverage.startsAt ? formatDate(membership.coverage.startsAt) : "No registrado"}</strong></div>
+              <div><span>Vigencia</span><strong>{membership.coverage.endsAt ? formatDate(membership.coverage.endsAt) : "Sin fecha de término"}</strong></div>
+            </div>
+          </section>
 
-        <div className="space-y-4">
-          <Card className="patient-premium-card">
-            <h3 className="text-sm font-extrabold text-ink">Estado de cobertura</h3>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Clínica</dt><dd className="text-right font-extrabold text-ink">{membership.clinic?.name ?? "No registrada"}</dd></div>
-              <div className="flex items-center justify-between gap-3 border-b border-line pb-3"><dt className="text-xs font-bold text-muted">Estado</dt><dd className="font-extrabold text-success">Activa</dd></div>
-              <div className="flex items-center justify-between gap-3"><dt className="text-xs font-bold text-muted">Vigencia de cobertura</dt><dd className="text-right font-extrabold text-ink">{membership.coverage.endsAt ? formatDate(membership.coverage.endsAt) : "Sin fecha de término"}</dd></div>
+          <section className="patient-card patient-membership-benefits">
+            <div className="patient-section-title"><h2>Beneficios y funciones disponibles</h2><span className="patient-form-tag">{membership.plan.features.length} funciones</span></div>
+            <div className="patient-membership-benefits__grid">
+              {membership.plan.features.length ? membership.plan.features.map((feature,index) => (
+                <article className="patient-membership-benefit" key={feature}>
+                  <span className={"patient-icon " + (index % 3 === 0 ? "patient-icon--blue" : index % 3 === 1 ? "patient-icon--green" : "patient-icon--violet")}><CheckCircle2 className="size-4" aria-hidden="true" /></span>
+                  <span><strong>{feature}</strong><small>Incluido según la cobertura de tu clínica.</small></span>
+                </article>
+              )) : <EmptyState message="La clínica administra las funciones disponibles para este plan." />}
+            </div>
+          </section>
+
+          <div className="patient-membership-bottom-grid">
+            <section className="patient-card patient-monthly-usage">
+              <div className="patient-side-heading"><h2>Uso del portal</h2><span>Paciente</span></div>
+              <div className="patient-usage-list">
+                <div className="patient-usage-row"><div><strong>Citas y seguimiento</strong><small>Acceso al calendario registrado</small></div><span><i className="patient-usage-bar patient-usage-bar--blue" style={{ width: "100%" }} /></span></div>
+                <div className="patient-usage-row"><div><strong>Expediente clínico</strong><small>Consulta de historial y resultados</small></div><span><i className="patient-usage-bar patient-usage-bar--green" style={{ width: "100%" }} /></span></div>
+                <div className="patient-usage-row"><div><strong>Preconsulta</strong><small>Formulario previo a la atención</small></div><span><i className="patient-usage-bar patient-usage-bar--amber" style={{ width: "100%" }} /></span></div>
+              </div>
+            </section>
+
+            <section className="patient-card patient-membership-recommendation">
+              <h2><ShieldCheck className="size-4" aria-hidden="true" /> Cobertura institucional</h2>
+              <strong>Tu acceso está vinculado a {membership.clinic?.name ?? "tu clínica"}.</strong>
+              <p>Los datos comerciales y de facturación pertenecen a la institución y no se exponen en el portal del paciente.</p>
+              <Link className="patient-table-action" href="/patient/perfil">Revisar perfil</Link>
+            </section>
+          </div>
+        </main>
+
+        <aside className="patient-membership-side">
+          <section className="patient-card patient-membership-plan-summary">
+            <div className="patient-side-heading"><h2>Resumen del plan</h2><span>Activo</span></div>
+            <strong className="patient-membership-price">Institucional</strong>
+            <p>{membership.message}</p>
+            <dl>
+              <div><dt><ShieldCheck className="size-3.5" aria-hidden="true" /> Plan</dt><dd>{membership.plan.name}</dd></div>
+              <div><dt><CalendarDays className="size-3.5" aria-hidden="true" /> Inicio</dt><dd>{membership.coverage.startsAt ? formatDate(membership.coverage.startsAt) : "No registrado"}</dd></div>
+              <div><dt><CheckCircle2 className="size-3.5" aria-hidden="true" /> Estado</dt><dd>{membership.coverage.status}</dd></div>
             </dl>
-          </Card>
-        </div>
+          </section>
+
+          <section className="patient-card patient-membership-support">
+            <div className="patient-side-heading"><h2>¿Necesitas ayuda?</h2><Info className="size-4 text-accent" aria-hidden="true" /></div>
+            <p>Si detectas datos de cobertura que no corresponden, revisa primero tu perfil y luego comunícate con la clínica.</p>
+            <Link className="patient-whatsapp-button" href="/patient/perfil">Revisar mis datos</Link>
+          </section>
+        </aside>
       </div>
     </div>
   );
