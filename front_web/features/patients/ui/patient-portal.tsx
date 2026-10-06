@@ -193,35 +193,6 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
   );
 }
 
-function AppointmentSummary({ appointment }: { appointment: PatientAppointment }) {
-  return (
-    <article className="patient-appointment-row">
-      <div className="patient-appointment-row__date">
-        <span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span>
-        <div>
-          <strong>{formatDate(appointment.scheduledAt, true)}</strong>
-          <small>{appointmentTypeLabel(appointment.appointmentType)}</small>
-        </div>
-      </div>
-      <div className="patient-appointment-row__doctor">
-        <small>Profesional</small>
-        <strong>{appointment.doctor?.name ?? "No asignado"}</strong>
-        <span>{appointment.doctor?.specialty ?? "Especialidad no registrada"}</span>
-      </div>
-      <div className="patient-appointment-row__place">
-        <MapPin className="size-4 text-accent" aria-hidden="true" />
-        <div>
-          <strong>{appointment.clinic?.name ?? "Clínica no registrada"}</strong>
-          <span>{appointment.notes ?? "Sin indicaciones adicionales"}</span>
-        </div>
-      </div>
-      <div className="patient-appointment-row__status">
-        <StatusBadge label={appointment.statusLabel} value={appointment.status} />
-      </div>
-    </article>
-  );
-}
-
 function DashboardView({ data }: { data: PatientDashboardData }) {
   const [now] = useState(() => Date.now());
   const upcoming = useMemo(() => data.appointments
@@ -869,24 +840,6 @@ function TriageView({ initialTriage }: { initialTriage: PatientTriage | null }) 
 }
 
 
-function ResultRow({ result }: { result: PatientLaboratoryResult }) {
-  return (
-    <article className="patient-result-row">
-      <span className="patient-icon patient-icon--violet"><FlaskConical className="size-4" aria-hidden="true" /></span>
-      <div className="patient-result-row__main">
-        <strong>{result.studyName}</strong>
-        <span>{result.clinic?.name ?? "Clínica no registrada"} · {formatDate(result.orderedAt, true)}</span>
-        {result.doctor?.name ? <small>{result.doctor.name}{result.doctor.specialty ? " · " + result.doctor.specialty : ""}</small> : null}
-      </div>
-      <div className="patient-result-row__summary">
-        <StatusBadge label={result.statusLabel} value={result.status} />
-        <span>{result.resultAvailable ? "Resultado disponible" : "En proceso"}</span>
-      </div>
-      {result.resultAvailable && result.resultSummary ? <p className="patient-result-row__detail">{result.resultSummary}</p> : null}
-    </article>
-  );
-}
-
 function ResultsView({ results }: { results: PatientLaboratoryResult[] }) {
   const available = results.filter((result) => result.resultAvailable);
   const pending = results.filter((result) => !result.resultAvailable);
@@ -981,206 +934,154 @@ function HistoryView({ consultations }: { consultations: PatientConsultation[] }
   );
 
   const filtered = useMemo(() => consultations.filter((consultation) => {
-    if (year !== "all" && consultation.createdAt) {
-      const consultationYear = new Date(consultation.createdAt).getFullYear();
-      if (String(consultationYear) !== year) return false;
-    } else if (year !== "all" && !consultation.createdAt) {
-      return false;
+    if (year !== "all") {
+      if (!consultation.createdAt || String(new Date(consultation.createdAt).getFullYear()) !== year) return false;
     }
-
-    if (tab === "diagnoses") {
-      return consultation.codings.some((coding) => ["diagnosis", "problem"].includes(coding.category));
-    }
-    if (tab === "procedures") {
-      return consultation.codings.some((coding) => coding.category === "procedure");
-    }
+    if (tab === "diagnoses") return consultation.codings.some((coding) => ["diagnosis", "problem"].includes(coding.category));
+    if (tab === "procedures") return consultation.codings.some((coding) => coding.category === "procedure");
     return true;
   }), [consultations, tab, year]);
 
-  const tabs = [
-    { value: "all" as const, label: "Todo" },
-    { value: "consultations" as const, label: "Consultas" },
-    { value: "diagnoses" as const, label: "Diagnósticos" },
-    { value: "procedures" as const, label: "Procedimientos" },
-  ];
+  const latest = [...consultations].sort((a,b) => new Date(b.completedAt ?? b.createdAt ?? 0).getTime() - new Date(a.completedAt ?? a.createdAt ?? 0).getTime())[0] ?? null;
 
   return (
     <div className="patient-page">
-      <section className="patient-stat-grid" aria-label="Resumen del historial clínico">
-        <Metric icon={CalendarDays} label="Consultas registradas" value={String(consultations.length)} />
-        <Metric icon={HeartPulse} label="Diagnósticos activos" value={String(diagnosisCount)} />
-        <Metric icon={Stethoscope} label="Especialidades atendidas" value={String(specialtyCount)} />
-        <Metric icon={FileText} label="Conceptos codificados" value={String(codingCount)} />
+      <section className="patient-summary-grid" aria-label="Resumen del historial clínico">
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span><div><span>Consultas</span><strong>{consultations.length}</strong><small>Atenciones registradas</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--coral"><HeartPulse className="size-4" aria-hidden="true" /></span><div><span>Diagnósticos</span><strong>{diagnosisCount}</strong><small>Conceptos identificados</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--violet"><Stethoscope className="size-4" aria-hidden="true" /></span><div><span>Especialidades</span><strong>{specialtyCount}</strong><small>Profesionales atendidos</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--green"><FileText className="size-4" aria-hidden="true" /></span><div><span>Codificaciones</span><strong>{codingCount}</strong><small>Registros clínicos</small></div></article>
       </section>
 
-      <Card className="mt-4 overflow-hidden p-0">
-        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex max-w-full gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filtrar historial clínico">
-            {tabs.map((item) => (
-              <button
-                key={item.value}
-                className={`relative min-h-9 shrink-0 rounded-lg px-3 text-xs font-extrabold transition-colors focus-visible:outline-3 focus-visible:outline-focus ${tab === item.value ? "bg-accent-soft text-accent" : "text-ink-secondary hover:bg-surface-subtle hover:text-ink"}`}
-                type="button"
-                role="tab"
-                aria-selected={tab === item.value}
-                onClick={() => setTab(item.value)}
-              >
-                {item.label}
-                {tab === item.value ? <span className="absolute inset-x-3 -bottom-3 h-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
-              </button>
-            ))}
-          </div>
+      <div className="patient-history-layout">
+        <main className="patient-history-main">
+          <section className="patient-card patient-history-card">
+            <div className="patient-history-toolbar">
+              <div className="patient-tabs" role="tablist" aria-label="Filtrar historial clínico">
+                {([
+                  ["all", "Todo"],
+                  ["consultations", "Consultas"],
+                  ["diagnoses", "Diagnósticos"],
+                  ["procedures", "Procedimientos"],
+                ] as const).map(([value,label]) => (
+                  <button key={value} className={tab === value ? "patient-tab patient-tab--active" : "patient-tab"} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{label}</button>
+                ))}
+              </div>
+              <label className="patient-select-wrap patient-filter-button">
+                <CalendarDays className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">Filtrar historial por año</span>
+                <select value={year} onChange={(event) => setYear(event.target.value)}>
+                  <option value="all">Todas las fechas</option>
+                  {years.map((item) => <option key={item} value={String(item)}>{item}</option>)}
+                </select>
+              </label>
+            </div>
 
-          <label className="flex shrink-0 items-center gap-2 text-xs font-extrabold text-ink-secondary">
-            <CalendarDays className="size-4 text-accent" aria-hidden="true" />
-            <span className="sr-only">Filtrar historial por año</span>
-            <select
-              className="h-9 rounded-lg border border-line bg-surface px-3 text-xs font-bold text-ink outline-none focus:border-focus focus:ring-2 focus:ring-focus/20"
-              value={year}
-              onChange={(event) => setYear(event.target.value)}
-            >
-              <option value="all">Todas las fechas</option>
-              {years.map((item) => <option value={String(item)} key={item}>{item}</option>)}
-            </select>
-          </label>
-        </div>
+            {filtered.length ? (
+              <div className="patient-history-list">
+                {filtered.map((consultation) => {
+                  const relevantCodings = tab === "diagnoses"
+                    ? consultation.codings.filter((coding) => ["diagnosis","problem"].includes(coding.category))
+                    : tab === "procedures"
+                      ? consultation.codings.filter((coding) => coding.category === "procedure")
+                      : consultation.codings;
+                  return (
+                    <article className="patient-history-row" key={consultation.id}>
+                      <div className="patient-history-row__date"><strong>{formatDate(consultation.createdAt, true)}</strong><small>{consultation.clinic?.name ?? "Clínica no registrada"}</small></div>
+                      <span className="patient-history-marker patient-history-marker--blue"><Stethoscope className="size-3.5" aria-hidden="true" /></span>
+                      <div className="patient-history-row__content">
+                        <strong>{consultation.chiefComplaint}</strong>
+                        <div><span>{consultation.doctor?.name ?? "Profesional no registrado"}</span><i aria-hidden="true" /><span>{consultation.doctor?.specialty ?? "Especialidad no registrada"}</span></div>
+                        <p>{consultation.objective ?? (relevantCodings[0] ? relevantCodings[0].display + " · " + relevantCodings[0].code : "Sin evolución clínica visible")}</p>
+                      </div>
+                      <StatusBadge label={consultation.statusLabel} value={consultation.status} />
+                    </article>
+                  );
+                })}
+              </div>
+            ) : <div className="p-4"><EmptyState message="No hay registros que coincidan con los filtros seleccionados." /></div>}
+          </section>
+        </main>
 
-        {filtered.length ? (
-          <div className="relative px-4 py-2 sm:px-6">
-            <div className="absolute bottom-8 left-[2.15rem] top-8 hidden w-px bg-line sm:block" aria-hidden="true" />
-            {filtered.map((consultation) => {
-              const relevantCodings = tab === "diagnoses"
-                ? consultation.codings.filter((coding) => ["diagnosis", "problem"].includes(coding.category))
-                : tab === "procedures"
-                  ? consultation.codings.filter((coding) => coding.category === "procedure")
-                  : consultation.codings;
+        <aside className="patient-history-side">
+          <section className="patient-card patient-health-summary">
+            <div className="patient-side-heading"><h2>Resumen clínico</h2><span>Actualizado</span></div>
+            <div className="patient-health-summary__list">
+              <div className="patient-health-summary__item"><span className="patient-icon patient-icon--blue"><CalendarDays className="size-4" aria-hidden="true" /></span><span><strong>Última consulta</strong><small>Registro más reciente</small></span><b>{latest ? formatDate(latest.completedAt ?? latest.createdAt) : "Sin datos"}</b></div>
+              <div className="patient-health-summary__item"><span className="patient-icon patient-icon--coral"><HeartPulse className="size-4" aria-hidden="true" /></span><span><strong>Diagnósticos</strong><small>Codificados</small></span><b>{diagnosisCount}</b></div>
+              <div className="patient-health-summary__item"><span className="patient-icon patient-icon--violet"><Stethoscope className="size-4" aria-hidden="true" /></span><span><strong>Especialidades</strong><small>Atendidas</small></span><b>{specialtyCount}</b></div>
+            </div>
+          </section>
 
-              return (
-                <article className="relative border-b border-line py-5 last:border-0 sm:pl-14" key={consultation.id}>
-                  <span className="absolute left-[0.2rem] top-7 hidden size-4 rounded-full border-4 border-surface bg-accent shadow-[0_0_0_1px_var(--color-border)] sm:block" aria-hidden="true" />
-                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-accent">
-                        {formatDate(consultation.createdAt, true)}
-                      </p>
-                      <h3 className="mt-1 text-sm font-extrabold text-ink">{consultation.chiefComplaint}</h3>
-                      <p className="mt-1 text-xs font-bold text-muted">
-                        {consultation.doctor?.name ?? "Profesional no registrado"}
-                        {consultation.doctor?.specialty ? ` · ${consultation.doctor.specialty}` : ""}
-                        {consultation.clinic?.name ? ` · ${consultation.clinic.name}` : ""}
-                      </p>
-                    </div>
-                    <StatusBadge label={consultation.statusLabel} value={consultation.status} />
-                  </div>
-
-                  {consultation.objective ? (
-                    <p className="mt-3 max-w-4xl text-sm leading-relaxed text-ink-secondary">
-                      <strong className="text-ink">Evolución:</strong> {consultation.objective}
-                    </p>
-                  ) : null}
-
-                  {relevantCodings.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2" aria-label="Conceptos clínicos codificados">
-                      {relevantCodings.map((coding, index) => (
-                        <span
-                          className="rounded-full border border-accent/20 bg-accent-soft px-2.5 py-1 text-[0.65rem] font-bold text-accent"
-                          key={coding.system + "-" + coding.code + "-" + index}
-                          title={coding.system}
-                        >
-                          {coding.display} · {coding.code}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {consultation.clinicalHistory?.sections && Object.keys(consultation.clinicalHistory.sections).length ? (
-                    <details className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
-                      <summary className="cursor-pointer text-xs font-extrabold text-ink">Ver expediente de esta atención</summary>
-                      <dl className="mt-3 grid gap-2 text-xs text-ink-secondary">
-                        {Object.entries(consultation.clinicalHistory.sections).map(([key, value]) => (
-                          <div className="border-t border-line pt-2" key={key}>
-                            <dt className="font-extrabold text-ink">{key}</dt>
-                            <dd className="mt-1 whitespace-pre-wrap">{typeof value === "string" ? value : JSON.stringify(value)}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </details>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-6">
-            <EmptyState message="No hay registros que coincidan con los filtros seleccionados." />
-          </div>
-        )}
-      </Card>
+          <section className="patient-card patient-next-control">
+            <div className="patient-side-heading"><h2>Continuidad de atención</h2><ShieldCheck className="size-4 text-accent" aria-hidden="true" /></div>
+            <div className="patient-next-control__body"><span className="patient-icon patient-icon--green"><CheckCircle2 className="size-4" aria-hidden="true" /></span><div><strong>Tu historial se alimenta con cada atención finalizada.</strong><b>Consulta tus próximas citas</b><small>La nueva información aparecerá aquí cuando sea registrada por el equipo clínico.</small></div></div>
+            <Link className="patient-table-action" href="/patient/citas">Ver mis citas</Link>
+          </section>
+        </aside>
+      </div>
     </div>
-  );
-}
-
-function PrescriptionRow({ prescription }: { prescription: PatientPrescription }) {
-  return (
-    <article className="patient-prescription-card">
-      <span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span>
-      <div className="patient-prescription-card__main">
-        <strong>{prescription.medication}</strong>
-        <span>{prescription.doctor?.name ?? "Profesional no registrado"} · {formatDate(prescription.issuedAt)}</span>
-        <div className="patient-prescription-card__dosage">
-          <span><small>Dosis</small>{prescription.dosage ?? "No registrada"}</span>
-          <span><small>Frecuencia</small>{prescription.frequency ?? "No registrada"}</span>
-          <span><small>Duración</small>{prescription.durationDays === null ? "No registrada" : prescription.durationDays + " días"}</span>
-        </div>
-        {prescription.notes ? <p>{prescription.notes}</p> : null}
-      </div>
-      <div className="patient-prescription-card__status">
-        <StatusBadge label={prescription.statusLabel} value={prescription.status} />
-        {prescription.expiresAt ? <small>Vence {formatDate(prescription.expiresAt)}</small> : null}
-      </div>
-    </article>
   );
 }
 
 function PrescriptionsView({ prescriptions }: { prescriptions: PatientPrescription[] }) {
   const active = prescriptions.filter((prescription) => prescription.status === "active");
   const completed = prescriptions.filter((prescription) => ["completed", "expired"].includes(prescription.status));
+  const featured = active[0] ?? prescriptions[0] ?? null;
 
   return (
     <div className="patient-page">
-      <section className="patient-stat-grid patient-stat-grid--three" aria-label="Resumen de recetas">
-        <Metric icon={FileText} label="Recetas registradas" value={String(prescriptions.length)} />
-        <Metric icon={HeartPulse} label="Tratamientos activos" value={String(active.length)} />
-        <Metric icon={CheckCircle2} label="Finalizadas" value={String(completed.length)} />
+      <section className="patient-summary-grid" aria-label="Resumen de recetas">
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--blue"><FileText className="size-4" aria-hidden="true" /></span><div><span>Recetas</span><strong>{prescriptions.length}</strong><small>Registradas</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--green"><HeartPulse className="size-4" aria-hidden="true" /></span><div><span>Activas</span><strong>{active.length}</strong><small>Tratamientos vigentes</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--violet"><Pill className="size-4" aria-hidden="true" /></span><div><span>Finalizadas</span><strong>{completed.length}</strong><small>Completadas o vencidas</small></div></article>
+        <article className="patient-summary-stat"><span className="patient-icon patient-icon--amber"><ShieldCheck className="size-4" aria-hidden="true" /></span><div><span>Fuente</span><strong>Clínica</strong><small>Prescripción registrada</small></div></article>
       </section>
 
-      <div className="patient-premium-layout mt-5">
-        <Card className="patient-list-panel overflow-hidden p-0">
-          <div className="patient-panel-heading">
-            <div><span>TRATAMIENTO INDICADO</span><h2>Mis recetas</h2></div>
-            <strong>{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</strong>
-          </div>
-          <div className="patient-list-panel__body">
-            {prescriptions.length
-              ? prescriptions.map((prescription) => <PrescriptionRow key={prescription.id} prescription={prescription} />)
-              : <EmptyState message="No hay recetas vinculadas a tu perfil." />}
-          </div>
-        </Card>
+      <div className="patient-prescriptions-layout">
+        <main className="patient-prescriptions-main">
+          <section className="patient-card patient-prescriptions-table">
+            <div className="patient-table-toolbar patient-table-toolbar--results"><div className="patient-section-title"><h2>Tratamientos indicados</h2></div><span className="patient-form-tag">{prescriptions.length} {prescriptions.length === 1 ? "receta" : "recetas"}</span></div>
+            {prescriptions.length ? (
+              <div className="patient-table-scroll">
+                <table className="patient-data-table patient-data-table--prescriptions">
+                  <thead><tr><th>Medicamento</th><th>Dosis</th><th>Frecuencia</th><th>Duración</th><th>Profesional</th><th>Emisión</th><th>Estado</th></tr></thead>
+                  <tbody>
+                    {prescriptions.map((prescription) => (
+                      <tr key={prescription.id}>
+                        <td><span className="patient-result-study"><span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span><span><strong>{prescription.medication}</strong><small>{prescription.notes ?? "Sin indicaciones adicionales"}</small></span></span></td>
+                        <td><strong>{prescription.dosage ?? "No registrada"}</strong></td>
+                        <td><strong>{prescription.frequency ?? "No registrada"}</strong></td>
+                        <td>{prescription.durationDays === null ? "No registrada" : prescription.durationDays + " días"}</td>
+                        <td><strong>{prescription.doctor?.name ?? "No registrado"}</strong><small>{prescription.doctor?.specialty ?? "Especialidad no registrada"}</small></td>
+                        <td><strong>{formatDate(prescription.issuedAt)}</strong>{prescription.expiresAt ? <small>Vence {formatDate(prescription.expiresAt)}</small> : null}</td>
+                        <td><StatusBadge label={prescription.statusLabel} value={prescription.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="p-4"><EmptyState message="No hay recetas vinculadas a tu perfil." /></div>}
+          </section>
+        </main>
 
-        <aside className="patient-side-stack">
-          <Card className="patient-side-highlight patient-side-highlight--green">
-            <span className="patient-side-highlight__eyebrow">TRATAMIENTOS ACTIVOS</span>
-            <strong className="patient-side-highlight__metric">{active.length}</strong>
-            <p>Consulta siempre dosis, frecuencia y duración tal como fueron registradas por tu profesional.</p>
-          </Card>
-          <Card className="patient-guidance-card">
-            <span className="patient-guidance-card__icon patient-guidance-card__icon--green"><Info className="size-5" aria-hidden="true" /></span>
-            <div>
-              <h3>Renovaciones y cambios</h3>
-              <p>HIPOCRATIQ no modifica ni renueva recetas automáticamente. Cualquier ajuste corresponde a tu médico.</p>
-              <Link href="/patient/citas">Ver mis citas <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+        <aside className="patient-prescriptions-side">
+          <section className="patient-card patient-featured-prescription">
+            <div className="patient-side-heading"><h2>Tratamiento destacado</h2><span>{featured ? featured.statusLabel : "Sin receta"}</span></div>
+            {featured ? <>
+              <div className="patient-featured-prescription__body"><span className="patient-icon patient-icon--green"><Pill className="size-4" aria-hidden="true" /></span><div><strong>{featured.medication}</strong><span>{featured.dosage ?? "Dosis no registrada"} · {featured.frequency ?? "Frecuencia no registrada"}</span><small>{featured.doctor?.name ?? "Profesional no registrado"}</small></div></div>
+              <div className="patient-featured-prescription__indication"><strong>Indicaciones registradas</strong><p>{featured.notes ?? "Sigue la dosis, frecuencia y duración indicadas por tu profesional."}</p></div>
+            </> : <div className="mt-3"><EmptyState message="Aún no tienes tratamientos registrados." /></div>}
+          </section>
+
+          <section className="patient-card patient-medication-reminders">
+            <div className="patient-side-heading"><h2>Uso seguro de medicamentos</h2><ShieldCheck className="size-4 text-accent" aria-hidden="true" /></div>
+            <div className="patient-medication-reminders__list">
+              <div className="patient-medication-reminder"><span className="patient-icon patient-icon--blue"><Info className="size-4" aria-hidden="true" /></span><span><strong>No modifiques la dosis</strong><small>Consulta con tu médico ante cualquier cambio.</small></span></div>
+              <div className="patient-medication-reminder"><span className="patient-icon patient-icon--amber"><Clock3 className="size-4" aria-hidden="true" /></span><span><strong>Revisa la vigencia</strong><small>Verifica fechas e indicaciones registradas.</small></span></div>
             </div>
-          </Card>
+            <Link className="patient-table-action mt-3" href="/patient/citas">Consultar mis citas</Link>
+          </section>
         </aside>
       </div>
     </div>
