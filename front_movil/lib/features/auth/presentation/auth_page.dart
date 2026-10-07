@@ -29,6 +29,11 @@ class AuthPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return RoleSelectionPage(
       onRoleSelected: (role) {
+        if (config.authBypass) {
+          authController.authenticate(_qaBypassSession(role));
+          return;
+        }
+
         pushAuthRoute(
           context,
           LoginPage(
@@ -112,6 +117,53 @@ void pushAuthRoute(BuildContext context, Widget page) {
         }
         return FadeTransition(opacity: animation, child: child);
       },
+    ),
+  );
+}
+
+
+MobileAuthSession _qaBypassSession(AuthRole role) {
+  final actorContext = switch (role) {
+    AuthRole.healthcare => 'doctor',
+    AuthRole.receptionist => 'receptionist',
+    AuthRole.patient => 'patient',
+    AuthRole.administrator => 'clinic_admin',
+  };
+
+  final roles = <String>[role.requestedRole];
+
+  return MobileAuthSession(
+    accessToken: 'qa-bypass-no-token',
+    tokenType: 'QA',
+    actorContext: actorContext,
+    user: AuthenticatedUser(
+      id: -1,
+      name: 'Usuario QA',
+      email: 'qa@hipocratiq.test',
+      phoneNumber: '',
+      countryCode: 'MX',
+      status: 'qa',
+      onboardingStatus: 'complete',
+      roles: roles,
+      isGlobal: false,
+      patient: actorContext == 'patient' ? const PatientSummary() : null,
+      clinic: actorContext == 'clinic_admin' || actorContext == 'receptionist'
+          ? const ClinicSummary(
+              id: -1,
+              name: 'HIPOCRATIQ QA Clinic',
+              status: 'qa',
+              plan: 'QA',
+            )
+          : null,
+      doctor: actorContext == 'doctor'
+          ? const DoctorSummary(
+              medicalLicense: 'QA-0001',
+              specialty: 'Medicina general',
+              practiceType: 'qa',
+              clinic: null,
+              plan: 'QA',
+            )
+          : null,
     ),
   );
 }
