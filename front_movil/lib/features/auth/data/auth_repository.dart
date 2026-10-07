@@ -507,6 +507,49 @@ class AuthRepository implements AuthGateway {
     return MobilePatientConsent.fromJson(_data(response));
   }
 
+  Future<Map<String, dynamic>> fetchPatientPortalResource(
+    String resource,
+  ) async {
+    final token = await _requireAccessToken();
+    return _apiClient.getJson(
+      '/api/v1/auth/patient/$resource',
+      accessToken: token,
+    );
+  }
+
+  Future<Map<String, dynamic>> savePatientTriage(
+    Map<String, dynamic> payload,
+  ) async {
+    final token = await _requireAccessToken();
+    return _apiClient.postJson(
+      '/api/v1/auth/patient/triage',
+      accessToken: token,
+      body: payload,
+    );
+  }
+
+  Future<Map<String, dynamic>> updatePatientProfile(
+    Map<String, dynamic> payload,
+  ) async {
+    final token = await _requireAccessToken();
+    return _apiClient.patchJson(
+      '/api/v1/auth/patient/profile',
+      accessToken: token,
+      body: payload,
+    );
+  }
+
+  Future<String> _requireAccessToken() async {
+    final token = await _secureStore.readAccessToken();
+    if (token == null || token.trim().isEmpty) {
+      throw const ApiException(
+        message: 'Tu sesión móvil expiró. Vuelve a iniciar sesión.',
+        statusCode: 401,
+      );
+    }
+    return token;
+  }
+
   Future<MobileWorkspaceSnapshot> loadMobileWorkspace(
     AuthenticatedSession session,
   ) async {
@@ -623,6 +666,26 @@ class AuthRepository implements AuthGateway {
           label: 'Resultados',
           helper: 'Laboratorio disponible',
           icon: 'laboratory',
+        ),
+        MobileWorkspaceModule(
+          label: 'Preconsulta',
+          helper: 'Triaje orientativo antes de tu cita',
+          icon: 'triage',
+        ),
+        MobileWorkspaceModule(
+          label: 'IA epidemiológica',
+          helper: 'Tendencias privadas de tu actividad clínica',
+          icon: 'epidemiology',
+        ),
+        MobileWorkspaceModule(
+          label: 'Membresía',
+          helper: 'Cobertura vinculada a tu clínica',
+          icon: 'membership',
+        ),
+        MobileWorkspaceModule(
+          label: 'Mi perfil',
+          helper: 'Datos personales y contacto',
+          icon: 'profile',
         ),
       ],
       generatedAt: DateTime.now(),
