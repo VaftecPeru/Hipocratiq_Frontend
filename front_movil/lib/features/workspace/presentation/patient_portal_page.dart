@@ -671,7 +671,334 @@ class _ProfileFormState extends State<_ProfileForm> {
       });
     } on Object catch (error) {
       if (!mounted) return;
-      setState(()     borderRadius: BorderRadius.circular(16),
+      setState(() {
+        saving = false;
+        message = _friendlyError(error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clinic = _map(widget.data['clinic']);
+    return Column(
+      children: [
+        _Card(
+          icon: Icons.badge_outlined,
+          title: _text(widget.data['name']) ?? 'Paciente HIPOCRATIQ',
+          badge: _text(widget.data['status']),
+          lines: [
+            'Código: ${_text(widget.data['patient_code']) ?? 'No registrado'}',
+            _text(clinic?['name']) ?? 'Sin clínica vinculada',
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _panel(),
+          child: Column(
+            children: [
+              _Field(name, 'Nombre completo'),
+              _Field(email, 'Correo electrónico'),
+              _Field(phone, 'Teléfono', numeric: true),
+              _Field(address, 'Dirección', lines: 2),
+              _Field(emergency, 'Contacto de emergencia'),
+              _Field(insurance, 'Seguro o cobertura'),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Consentimiento WhatsApp'),
+                value: whatsapp,
+                onChanged: saving
+                    ? null
+                    : (value) => setState(() => whatsapp = value),
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: saving ? null : save,
+                  child: Text(saving ? 'Guardando…' : 'Guardar cambios'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (message != null) ...[
+          const SizedBox(height: 10),
+          _Banner(
+            icon: Icons.info_outline_rounded,
+            title: 'Perfil',
+            helper: message!,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  const _Field(
+    this.controller,
+    this.label, {
+    this.numeric = false,
+    this.lines = 1,
+  });
+  final TextEditingController controller;
+  final String label;
+  final bool numeric;
+  final int lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: controller,
+        minLines: lines,
+        maxLines: lines,
+        keyboardType: numeric
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.text,
+        onChanged: (_) => (context as Element).markNeedsBuild(),
+        decoration: InputDecoration(labelText: label),
+      ),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.icon,
+    required this.title,
+    required this.lines,
+    this.badge,
+  });
+  final IconData icon;
+  final String title;
+  final List<String> lines;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(15),
+      decoration: _panel(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: AppColors.accentSoft,
+            child: Icon(icon, color: AppColors.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (badge != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    badge!,
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                ...lines.map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Text(
+                      line,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric(this.label, this.value);
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: _panel(),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$value',
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Banner extends StatelessWidget {
+  const _Banner({
+    required this.icon,
+    required this.title,
+    required this.helper,
+    this.danger = false,
+  });
+  final IconData icon;
+  final String title;
+  final String helper;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? AppColors.danger : AppColors.success;
+    final background = danger ? AppColors.dangerSoft : AppColors.successSoft;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  helper,
+                  style: TextStyle(color: color, fontSize: 11.5, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty({required this.title, required this.helper});
+  final String title;
+  final String helper;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _panel(),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.accent,
+            size: 34,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            helper,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+BoxDecoration _panel() => BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: AppColors.line),
+      borderRadius: BorderRadius.circular(18),
+    );
+
+Map<String, dynamic>? _map(Object? value) {
+  if (value is! Map) return null;
+  return value.map((key, item) => MapEntry(key.toString(), item));
+}
+
+List<Map<String, dynamic>> _list(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
+      .toList(growable: false);
+}
+
+String? _text(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value.trim() : null;
+
+int _int(Object? value) =>
+    value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+
+String _date(Object? value) {
+  final text = _text(value);
+  if (text == null) return 'Fecha no registrada';
+  final parsed = DateTime.tryParse(text)?.toLocal();
+  if (parsed == null) return text;
+  final day = parsed.day.toString().padLeft(2, '0');
+  final month = parsed.month.toString().padLeft(2, '0');
+  final hour = parsed.hour.toString().padLeft(2, '0');
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  return '$day/$month/${parsed.year} · $hour:$minute';
+}
+
+TextEditingController _numController(Object? value) =>
+    TextEditingController(text: value == null ? '' : value.toString());
+
+num? _num(String value) =>
+    value.trim().isEmpty ? null : num.tryParse(value.trim());
+
+int? _integerOrNull(String value) => _num(value)?.toInt();
+
+String _friendlyError(Object error) =>
+    error is ApiException ? error.message : error.toString();
+    borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
