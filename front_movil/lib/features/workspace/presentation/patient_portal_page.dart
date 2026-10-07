@@ -671,4 +671,115 @@ class _ProfileFormState extends State<_ProfileForm> {
       });
     } on Object catch (error) {
       if (!mounted) return;
-      setState(() 
+      setState(()     borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  helper,
+                  style: TextStyle(color: color, fontSize: 11.5, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty({required this.title, required this.helper});
+  final String title;
+  final String helper;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: _panel(),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.accent,
+            size: 34,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            helper,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+BoxDecoration _panel() => BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: AppColors.line),
+      borderRadius: BorderRadius.circular(18),
+    );
+
+Map<String, dynamic>? _map(Object? value) {
+  if (value is! Map) return null;
+  return value.map((key, item) => MapEntry(key.toString(), item));
+}
+
+List<Map<String, dynamic>> _list(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
+      .toList(growable: false);
+}
+
+String? _text(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value.trim() : null;
+
+int _int(Object? value) =>
+    value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+
+String _date(Object? value) {
+  final text = _text(value);
+  if (text == null) return 'Fecha no registrada';
+  final parsed = DateTime.tryParse(text)?.toLocal();
+  if (parsed == null) return text;
+  final day = parsed.day.toString().padLeft(2, '0');
+  final month = parsed.month.toString().padLeft(2, '0');
+  final hour = parsed.hour.toString().padLeft(2, '0');
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  return '$day/$month/${parsed.year} · $hour:$minute';
+}
+
+TextEditingController _numController(Object? value) =>
+    TextEditingController(text: value == null ? '' : value.toString());
+
+num? _num(String value) =>
+    value.trim().isEmpty ? null : num.tryParse(value.trim());
+
+int? _integerOrNull(String value) => _num(value)?.toInt();
+
+String _friendlyError(Object error) =>
+    error is ApiException ? error.message : error.toString();
