@@ -3,6 +3,7 @@ class AppConfig {
     required this.backendUrl,
     required this.supportPortalUrl,
     this.deviceName = 'HIPOCRATIQ Mobile',
+    this.authBypass = false,
     this.isReleaseBuild = const bool.fromEnvironment('dart.vm.product'),
   });
 
@@ -14,12 +15,14 @@ class AppConfig {
         'DEVICE_NAME',
         defaultValue: 'HIPOCRATIQ Mobile',
       ),
+      authBypass: bool.fromEnvironment('AUTH_BYPASS', defaultValue: false),
     );
   }
 
   final String backendUrl;
   final String supportPortalUrl;
   final String deviceName;
+  final bool authBypass;
   final bool isReleaseBuild;
 
   Uri? get backendUri {
