@@ -320,3 +320,180 @@ class _Epidemiology extends StatelessWidget {
       ]));
   }
 }
+on['consent_active'] == true
+              ? 'Participación autorizada'
+              : 'Participación no autorizada',
+          helper:
+              _text(data['message']) ??
+              'La analítica respeta tu consentimiento clínico.',
+        ),
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.55,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          children: [
+            _Metric('Citas', _int(metrics['appointments'])),
+            _Metric('Consultas', _int(metrics['consultations'])),
+            _Metric('Laboratorios', _int(metrics['laboratory_orders'])),
+            _Metric('Recetas activas', _int(metrics['active_prescriptions'])),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _Membership extends StatelessWidget {
+  const _Membership({required this.data});
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    if (data['available'] != true) {
+      return _Empty(
+        title: 'Cobertura no disponible',
+        helper:
+            _text(data['message']) ??
+            'Tu clínica administra la cobertura asociada a tu perfil.',
+      );
+    }
+    final plan = _map(data['plan']) ?? const {};
+    final coverage = _map(data['coverage']) ?? const {};
+    final clinic = _map(data['clinic']);
+    final features = (plan['features'] is List)
+        ? (plan['features'] as List).map((e) => e.toString()).toList()
+        : <String>[];
+    return Column(
+      children: [
+        _Card(
+          icon: Icons.health_and_safety_outlined,
+          title: _text(plan['name']) ?? 'Cobertura institucional',
+          badge: _text(coverage['status']),
+          lines: [
+            _text(clinic?['name']) ?? 'Clínica no registrada',
+            _text(plan['description']) ?? 'Plan administrado por tu clínica.',
+            'Inicio: ${_date(coverage['starts_at'])}',
+            'Vigencia: ${_date(coverage['ends_at'])}',
+          ],
+        ),
+        if (features.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: _panel(),
+            child: Column(
+              children: features
+                  .map(
+                    (feature) => ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                      ),
+                      title: Text(feature),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TriageForm extends StatefulWidget {
+  const _TriageForm({required this.repository, required this.initial});
+  final AuthRepository repository;
+  final Map<String, dynamic>? initial;
+
+  @override
+  State<_TriageForm> createState() => _TriageFormState();
+}
+
+class _TriageFormState extends State<_TriageForm> {
+  late final TextEditingController reason;
+  late final TextEditingController temperature;
+  late final TextEditingController systolic;
+  late final TextEditingController diastolic;
+  late final TextEditingController heartRate;
+  late final TextEditingController respiratoryRate;
+  late final TextEditingController oxygen;
+  late final TextEditingController notes;
+  String level = 'IV';
+  bool saving = false;
+  String? message;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.initial ?? const <String, dynamic>{};
+    reason = TextEditingController(text: _text(data['reason']) ?? '');
+    temperature = _numController(data['temperature_c']);
+    systolic = _numController(data['systolic_bp']);
+    diastolic = _numController(data['diastolic_bp']);
+    heartRate = _numController(data['heart_rate']);
+    respiratoryRate = _numController(data['respiratory_rate']);
+    oxygen = _numController(data['oxygen_saturation']);
+    notes = TextEditingController(text: _text(data['triage_notes']) ?? '');
+    level = _text(data['triage_level']) ?? 'IV';
+  }
+
+  Map<String, String> get errors {
+    final out = <String, String>{};
+    void range(
+      String key,
+      TextEditingController controller,
+      num min,
+      num max,
+    ) {
+      final raw = controller.text.trim();
+      if (raw.isEmpty) return;
+      final value = num.tryParse(raw);
+      if (value == null || value < min || value > max) {
+        out[key] = '$key: $min–$max';
+      }
+    }
+
+    range('Temperatura', temperature, 30, 45);
+    range('Sistólica', systolic, 60, 250);
+    range('Diastólica', diastolic, 30, 160);
+    range('Frecuencia cardiaca', heartRate, 30, 220);
+    range('Frecuencia respiratoria', respiratoryRate, 5, 60);
+    range('SpO₂', oxygen, 70, 100);
+    final sys = num.tryParse(systolic.text);
+    final dia = num.tryParse(diastolic.text);
+    if (sys != null && dia != null && dia >= sys) {
+      out['Presión'] = 'La diastólica debe ser menor que la sistólica.';
+    }
+    return out;
+  }
+
+  Future<void> save(String status) async {
+    final currentErrors = errors;
+    if (reason.text.trim().isEmpty || currentErrors.isNotEmpty) {
+      setState(() {
+        message = reason.text.trim().isEmpty
+            ? 'Describe el motivo de consulta.'
+            : currentErrors.values.join(' · ');
+      });
+      return;
+    }
+    setState(() {
+      saving = true;
+      message = null;
+    });
+    try {
+      await widget.repository.savePatientTriage({
+        'reason': reason.text.trim(),
+        'temperature_c': _num(temperature.text),
+        'systolic_bp': _integerOrNull(systolic.text),
+        'diastolic_bp': _integerOrNull(diastolic.text),
+        'heart_rate': _integerOrNull(heartRate.text),
+        'respiratory_rate': _integerOrNull(respiratoryRate.text),
+        'oxygen_saturation': _integerOrNull(oxygen.text),
+        'triage_level': level,
+        '
