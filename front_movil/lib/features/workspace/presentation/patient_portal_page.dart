@@ -496,4 +496,179 @@ class _TriageFormState extends State<_TriageForm> {
         'respiratory_rate': _integerOrNull(respiratoryRate.text),
         'oxygen_saturation': _integerOrNull(oxygen.text),
         'triage_level': level,
-        '
+        'triage_status': status,
+        'triage_notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+      });
+      if (!mounted) return;
+      setState(() {
+        saving = false;
+        message = status == 'submitted'
+            ? 'Preconsulta enviada correctamente.'
+            : 'Borrador guardado correctamente.';
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        saving = false;
+        message = _friendlyError(error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentErrors = errors;
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _panel(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nivel orientativo I–V',
+                style: TextStyle(
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: ['I', 'II', 'III', 'IV', 'V']
+                    .map(
+                      (value) => ChoiceChip(
+                        label: Text(value),
+                        selected: level == value,
+                        onSelected: (_) => setState(() => level = value),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+              const SizedBox(height: 14),
+              _Field(reason, 'Motivo de consulta', lines: 3),
+              _Field(temperature, 'Temperatura °C', numeric: true),
+              _Field(systolic, 'Presión sistólica mmHg', numeric: true),
+              _Field(diastolic, 'Presión diastólica mmHg', numeric: true),
+              _Field(heartRate, 'Frecuencia cardiaca lpm', numeric: true),
+              _Field(
+                respiratoryRate,
+                'Frecuencia respiratoria rpm',
+                numeric: true,
+              ),
+              _Field(oxygen, 'Saturación de oxígeno %', numeric: true),
+              _Field(notes, 'Notas adicionales', lines: 3),
+            ],
+          ),
+        ),
+        if (currentErrors.isNotEmpty || message != null) ...[
+          const SizedBox(height: 10),
+          _Banner(
+            icon: currentErrors.isNotEmpty
+                ? Icons.warning_amber_rounded
+                : Icons.info_outline_rounded,
+            title: currentErrors.isNotEmpty ? 'Verifica los datos' : 'Estado',
+            helper: currentErrors.isNotEmpty
+                ? currentErrors.values.join(' · ')
+                : message!,
+            danger: currentErrors.isNotEmpty,
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: saving || currentErrors.isNotEmpty
+                    ? null
+                    : () => save('draft'),
+                child: const Text('Guardar borrador'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                onPressed: saving || currentErrors.isNotEmpty
+                    ? null
+                    : () => save('submitted'),
+                child: Text(saving ? 'Guardando…' : 'Enviar'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'El nivel es autorreportado y no reemplaza la valoración profesional.',
+          style: TextStyle(color: AppColors.muted, fontSize: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileForm extends StatefulWidget {
+  const _ProfileForm({required this.repository, required this.data});
+  final AuthRepository repository;
+  final Map<String, dynamic> data;
+
+  @override
+  State<_ProfileForm> createState() => _ProfileFormState();
+}
+
+class _ProfileFormState extends State<_ProfileForm> {
+  late final TextEditingController name;
+  late final TextEditingController email;
+  late final TextEditingController phone;
+  late final TextEditingController address;
+  late final TextEditingController emergency;
+  late final TextEditingController insurance;
+  late bool whatsapp;
+  bool saving = false;
+  String? message;
+
+  @override
+  void initState() {
+    super.initState();
+    name = TextEditingController(text: _text(widget.data['name']) ?? '');
+    email = TextEditingController(text: _text(widget.data['email']) ?? '');
+    phone = TextEditingController(text: _text(widget.data['phone_number']) ?? '');
+    address = TextEditingController(text: _text(widget.data['address']) ?? '');
+    emergency = TextEditingController(
+      text: _text(widget.data['emergency_contact']) ?? '',
+    );
+    insurance = TextEditingController(
+      text: _text(widget.data['insurance']) ?? '',
+    );
+    whatsapp = widget.data['whatsapp_consent'] == true;
+  }
+
+  Future<void> save() async {
+    if (name.text.trim().isEmpty || phone.text.trim().isEmpty) {
+      setState(() => message = 'Nombre y teléfono son obligatorios.');
+      return;
+    }
+    setState(() {
+      saving = true;
+      message = null;
+    });
+    try {
+      await widget.repository.updatePatientProfile({
+        'name': name.text.trim(),
+        'email': email.text.trim().isEmpty ? null : email.text.trim(),
+        'phone_number': phone.text.trim(),
+        'address': address.text.trim().isEmpty ? null : address.text.trim(),
+        'emergency_contact':
+            emergency.text.trim().isEmpty ? null : emergency.text.trim(),
+        'insurance':
+            insurance.text.trim().isEmpty ? null : insurance.text.trim(),
+        'whatsapp_consent': whatsapp,
+      });
+      if (!mounted) return;
+      setState(() {
+        saving = false;
+        message = 'Perfil actualizado correctamente.';
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() 
