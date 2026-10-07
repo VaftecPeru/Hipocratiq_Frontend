@@ -89,16 +89,8 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
       helper:
           'Build de pruebas sin OTP. La autenticación real permanece activa en producción.',
       metrics: const <MobileWorkspaceMetric>[
-        MobileWorkspaceMetric(
-          label: 'Modo',
-          value: 'QA',
-          icon: 'pending',
-        ),
-        MobileWorkspaceMetric(
-          label: 'OTP',
-          value: 'OFF',
-          icon: 'messages',
-        ),
+        MobileWorkspaceMetric(label: 'Modo', value: 'QA', icon: 'pending'),
+        MobileWorkspaceMetric(label: 'OTP', value: 'OFF', icon: 'messages'),
       ],
       items: <MobileWorkspaceItem>[
         MobileWorkspaceItem(
@@ -115,83 +107,83 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
   List<MobileWorkspaceModule> _qaModules(String actorContext) {
     return switch (actorContext) {
       'patient' => const <MobileWorkspaceModule>[
-          MobileWorkspaceModule(
-            label: 'Citas',
-            helper: 'Prueba de navegación del paciente',
-            icon: 'calendar',
-          ),
-          MobileWorkspaceModule(
-            label: 'Historia',
-            helper: 'Vista demostrativa',
-            icon: 'history',
-          ),
-          MobileWorkspaceModule(
-            label: 'Recetas',
-            helper: 'Vista demostrativa',
-            icon: 'prescription',
-          ),
-          MobileWorkspaceModule(
-            label: 'Resultados',
-            helper: 'Vista demostrativa',
-            icon: 'laboratory',
-          ),
-        ],
+        MobileWorkspaceModule(
+          label: 'Citas',
+          helper: 'Prueba de navegación del paciente',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Historia',
+          helper: 'Vista demostrativa',
+          icon: 'history',
+        ),
+        MobileWorkspaceModule(
+          label: 'Recetas',
+          helper: 'Vista demostrativa',
+          icon: 'prescription',
+        ),
+        MobileWorkspaceModule(
+          label: 'Resultados',
+          helper: 'Vista demostrativa',
+          icon: 'laboratory',
+        ),
+      ],
       'doctor' => const <MobileWorkspaceModule>[
-          MobileWorkspaceModule(
-            label: 'Agenda',
-            helper: 'Prueba del flujo médico',
-            icon: 'calendar',
-          ),
-          MobileWorkspaceModule(
-            label: 'Pacientes',
-            helper: 'Vista demostrativa',
-            icon: 'patients',
-          ),
-          MobileWorkspaceModule(
-            label: 'Recetas',
-            helper: 'Vista demostrativa',
-            icon: 'prescription',
-          ),
-          MobileWorkspaceModule(
-            label: 'Laboratorio',
-            helper: 'Vista demostrativa',
-            icon: 'laboratory',
-          ),
-        ],
+        MobileWorkspaceModule(
+          label: 'Agenda',
+          helper: 'Prueba del flujo médico',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Pacientes',
+          helper: 'Vista demostrativa',
+          icon: 'patients',
+        ),
+        MobileWorkspaceModule(
+          label: 'Recetas',
+          helper: 'Vista demostrativa',
+          icon: 'prescription',
+        ),
+        MobileWorkspaceModule(
+          label: 'Laboratorio',
+          helper: 'Vista demostrativa',
+          icon: 'laboratory',
+        ),
+      ],
       'receptionist' => const <MobileWorkspaceModule>[
-          MobileWorkspaceModule(
-            label: 'Agenda',
-            helper: 'Prueba del flujo de recepción',
-            icon: 'calendar',
-          ),
-          MobileWorkspaceModule(
-            label: 'Pacientes',
-            helper: 'Vista demostrativa',
-            icon: 'patients',
-          ),
-          MobileWorkspaceModule(
-            label: 'Caja',
-            helper: 'Vista demostrativa',
-            icon: 'billing',
-          ),
-        ],
+        MobileWorkspaceModule(
+          label: 'Agenda',
+          helper: 'Prueba del flujo de recepción',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Pacientes',
+          helper: 'Vista demostrativa',
+          icon: 'patients',
+        ),
+        MobileWorkspaceModule(
+          label: 'Caja',
+          helper: 'Vista demostrativa',
+          icon: 'billing',
+        ),
+      ],
       'clinic_admin' => const <MobileWorkspaceModule>[
-          MobileWorkspaceModule(
-            label: 'Operación',
-            helper: 'Prueba de administración de clínica',
-            icon: 'patients',
-          ),
-          MobileWorkspaceModule(
-            label: 'Agenda',
-            helper: 'Vista demostrativa',
-            icon: 'calendar',
-          ),
-          MobileWorkspaceModule(
-            label: 'Caja',
-            helper: 'Vista demostrativa',
-            icon: 'billing',
-          ),
-        ],
+        MobileWorkspaceModule(
+          label: 'Operación',
+          helper: 'Prueba de administración de clínica',
+          icon: 'patients',
+        ),
+        MobileWorkspaceModule(
+          label: 'Agenda',
+          helper: 'Vista demostrativa',
+          icon: 'calendar',
+        ),
+        MobileWorkspaceModule(
+          label: 'Caja',
+          helper: 'Vista demostrativa',
+          icon: 'billing',
+        ),
+      ],
       _ => const <MobileWorkspaceModule>[],
     };
   }

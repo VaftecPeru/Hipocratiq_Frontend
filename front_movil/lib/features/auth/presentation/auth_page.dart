@@ -121,7 +121,6 @@ void pushAuthRoute(BuildContext context, Widget page) {
   );
 }
 
-
 MobileAuthSession _qaBypassSession(AuthRole role) {
   final actorContext = switch (role) {
     AuthRole.healthcare => 'doctor',
