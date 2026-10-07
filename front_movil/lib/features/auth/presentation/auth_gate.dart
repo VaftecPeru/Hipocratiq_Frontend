@@ -67,6 +67,7 @@ class _AuthGateState extends State<AuthGate> {
         session: session,
         authGateway: widget.authGateway,
         authController: widget.authController,
+        authBypass: widget.config.authBypass,
       ),
       AuthStartupFailure(:final message) => _StartupFailure(
         key: const ValueKey('startup-failure'),
