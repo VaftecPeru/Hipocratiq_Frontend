@@ -251,6 +251,7 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
               session: widget.session,
               authGateway: widget.authGateway,
               authController: widget.authController,
+              authBypass: widget.authBypass,
             ),
           ],
         ),
@@ -480,11 +481,13 @@ class _AccountTab extends StatelessWidget {
     required this.session,
     required this.authGateway,
     required this.authController,
+    required this.authBypass,
   });
 
   final AuthenticatedSession session;
   final AuthGateway authGateway;
   final AuthController authController;
+  final bool authBypass;
 
   @override
   Widget build(BuildContext context) {
@@ -534,7 +537,7 @@ class _AccountTab extends StatelessWidget {
                     children: [
                       _Tag(label: actorContextLabel(session.actorContext)),
                       _Tag(
-                        label: widget.authBypass
+                        label: authBypass
                             ? 'Modo QA · OTP omitido'
                             : 'Sesión móvil segura',
                       ),
