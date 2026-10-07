@@ -13,12 +13,14 @@ class AuthenticatedShell extends StatefulWidget {
     required this.session,
     required this.authGateway,
     required this.authController,
+    this.authBypass = false,
     super.key,
   });
 
   final AuthenticatedSession session;
   final AuthGateway authGateway;
   final AuthController authController;
+  final bool authBypass;
 
   @override
   State<AuthenticatedShell> createState() => _AuthenticatedShellState();
@@ -44,6 +46,15 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
     });
 
     try {
+      if (widget.authBypass) {
+        if (!mounted) return;
+        setState(() {
+          _snapshot = _qaSnapshot();
+          _loading = false;
+        });
+        return;
+      }
+
       final gateway = widget.authGateway;
       if (gateway is! AuthRepository) {
         if (!mounted) return;
@@ -67,6 +78,122 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
         _loading = false;
       });
     }
+  }
+
+  MobileWorkspaceSnapshot _qaSnapshot() {
+    final role = actorContextLabel(widget.session.actorContext);
+
+    return MobileWorkspaceSnapshot(
+      roleTitle: '$role · Modo QA',
+      headline: 'Acceso directo habilitado',
+      helper:
+          'Build de pruebas sin OTP. La autenticación real permanece activa en producción.',
+      metrics: const <MobileWorkspaceMetric>[
+        MobileWorkspaceMetric(
+          label: 'Modo',
+          value: 'QA',
+          icon: 'pending',
+        ),
+        MobileWorkspaceMetric(
+          label: 'OTP',
+          value: 'OFF',
+          icon: 'messages',
+        ),
+      ],
+      items: <MobileWorkspaceItem>[
+        MobileWorkspaceItem(
+          title: 'Sesión de demostración',
+          subtitle: 'Rol: $role',
+          status: 'Sin credenciales reales',
+        ),
+      ],
+      modules: _qaModules(widget.session.actorContext),
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  List<MobileWorkspaceModule> _qaModules(String actorContext) {
+    return switch (actorContext) {
+      'patient' => const <MobileWorkspaceModule>[
+          MobileWorkspaceModule(
+            label: 'Citas',
+            helper: 'Prueba de navegación del paciente',
+            icon: 'calendar',
+          ),
+          MobileWorkspaceModule(
+            label: 'Historia',
+            helper: 'Vista demostrativa',
+            icon: 'history',
+          ),
+          MobileWorkspaceModule(
+            label: 'Recetas',
+            helper: 'Vista demostrativa',
+            icon: 'prescription',
+          ),
+          MobileWorkspaceModule(
+            label: 'Resultados',
+            helper: 'Vista demostrativa',
+            icon: 'laboratory',
+          ),
+        ],
+      'doctor' => const <MobileWorkspaceModule>[
+          MobileWorkspaceModule(
+            label: 'Agenda',
+            helper: 'Prueba del flujo médico',
+            icon: 'calendar',
+          ),
+          MobileWorkspaceModule(
+            label: 'Pacientes',
+            helper: 'Vista demostrativa',
+            icon: 'patients',
+          ),
+          MobileWorkspaceModule(
+            label: 'Recetas',
+            helper: 'Vista demostrativa',
+            icon: 'prescription',
+          ),
+          MobileWorkspaceModule(
+            label: 'Laboratorio',
+            helper: 'Vista demostrativa',
+            icon: 'laboratory',
+          ),
+        ],
+      'receptionist' => const <MobileWorkspaceModule>[
+          MobileWorkspaceModule(
+            label: 'Agenda',
+            helper: 'Prueba del flujo de recepción',
+            icon: 'calendar',
+          ),
+          MobileWorkspaceModule(
+            label: 'Pacientes',
+            helper: 'Vista demostrativa',
+            icon: 'patients',
+          ),
+          MobileWorkspaceModule(
+            label: 'Caja',
+            helper: 'Vista demostrativa',
+            icon: 'billing',
+          ),
+        ],
+      'clinic_admin' => const <MobileWorkspaceModule>[
+          MobileWorkspaceModule(
+            label: 'Operación',
+            helper: 'Prueba de administración de clínica',
+            icon: 'patients',
+          ),
+          MobileWorkspaceModule(
+            label: 'Agenda',
+            helper: 'Vista demostrativa',
+            icon: 'calendar',
+          ),
+          MobileWorkspaceModule(
+            label: 'Caja',
+            helper: 'Vista demostrativa',
+            icon: 'billing',
+          ),
+        ],
+      _ => const <MobileWorkspaceModule>[],
+    };
   }
 
   MobileWorkspaceSnapshot _fallbackSnapshot() {
@@ -406,7 +533,11 @@ class _AccountTab extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _Tag(label: actorContextLabel(session.actorContext)),
-                      const _Tag(label: 'Sesión móvil segura'),
+                      _Tag(
+                        label: widget.authBypass
+                            ? 'Modo QA · OTP omitido'
+                            : 'Sesión móvil segura',
+                      ),
                     ],
                   ),
                 ],
