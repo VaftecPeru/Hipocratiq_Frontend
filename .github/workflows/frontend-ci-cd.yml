@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - develop
+      - qa/auth-login-visual-v2-20261006
     paths:
       - front_web/**
       - .github/workflows/frontend-ci-cd.yml
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   ci:
     name: Frontend CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/qa/auth-login-visual-v2-20261006' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -81,7 +82,7 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/qa/auth-login-visual-v2-20261006' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
