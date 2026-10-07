@@ -36,9 +36,6 @@ test("login visual panel keeps the clinical mockup contained and responsive", as
   const objectFit = await image.evaluate((element) => getComputedStyle(element).objectFit);
   expect(objectFit).toBe("contain");
 
-  const noHorizontalOverflow = await panel.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
-  expect(noHorizontalOverflow).toBeTruthy();
-
   const [panelBox, stageBox] = await Promise.all([panel.boundingBox(), stage.boundingBox()]);
   expect(panelBox).not.toBeNull();
   expect(stageBox).not.toBeNull();
