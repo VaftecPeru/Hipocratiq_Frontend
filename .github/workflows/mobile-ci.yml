@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - qa/mobile-qa-direct-role-access-20261007
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
@@ -33,7 +34,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/qa/mobile-qa-direct-role-access-20261007' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -89,6 +90,7 @@ jobs:
           flutter build apk --debug
           --dart-define=BACKEND_URL=https://hipocratiq.com/backend
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+          --dart-define=AUTH_BYPASS=true
 
       - name: Build Android AAB
         working-directory: front_movil
@@ -96,11 +98,12 @@ jobs:
           flutter build appbundle --debug
           --dart-define=BACKEND_URL=https://hipocratiq.com/backend
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+          --dart-define=AUTH_BYPASS=true
 
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-android-validation
+          name: HIPOCRATIQ-Android-QA-DirectRole-20261007
           if-no-files-found: error
           path: |
             front_movil/build/app/outputs/flutter-apk/app-debug.apk
@@ -136,6 +139,7 @@ jobs:
           flutter build ios --release --no-codesign
           --dart-define=BACKEND_URL=https://hipocratiq.com/backend
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+          --dart-define=AUTH_BYPASS=true
 
       - name: Upload iOS validation build
         uses: actions/upload-artifact@v4
