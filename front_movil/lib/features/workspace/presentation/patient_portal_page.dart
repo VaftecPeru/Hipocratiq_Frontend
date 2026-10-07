@@ -17,50 +17,50 @@ enum PatientPortalSection {
 
 extension PatientPortalSectionUi on PatientPortalSection {
   String get title => switch (this) {
-        PatientPortalSection.appointments => 'Mis citas',
-        PatientPortalSection.triage => 'Preconsulta',
-        PatientPortalSection.results => 'Resultados',
-        PatientPortalSection.history => 'Historial clínico',
-        PatientPortalSection.prescriptions => 'Recetas',
-        PatientPortalSection.epidemiology => 'IA epidemiológica',
-        PatientPortalSection.membership => 'Membresía',
-        PatientPortalSection.profile => 'Mi perfil',
-      };
+    PatientPortalSection.appointments => 'Mis citas',
+    PatientPortalSection.triage => 'Preconsulta',
+    PatientPortalSection.results => 'Resultados',
+    PatientPortalSection.history => 'Historial clínico',
+    PatientPortalSection.prescriptions => 'Recetas',
+    PatientPortalSection.epidemiology => 'IA epidemiológica',
+    PatientPortalSection.membership => 'Membresía',
+    PatientPortalSection.profile => 'Mi perfil',
+  };
 
   String get resource => switch (this) {
-        PatientPortalSection.appointments => 'appointments',
-        PatientPortalSection.triage => 'triage',
-        PatientPortalSection.results => 'results',
-        PatientPortalSection.history => 'history',
-        PatientPortalSection.prescriptions => 'prescriptions',
-        PatientPortalSection.epidemiology => 'epidemiology',
-        PatientPortalSection.membership => 'membership',
-        PatientPortalSection.profile => 'profile',
-      };
+    PatientPortalSection.appointments => 'appointments',
+    PatientPortalSection.triage => 'triage',
+    PatientPortalSection.results => 'results',
+    PatientPortalSection.history => 'history',
+    PatientPortalSection.prescriptions => 'prescriptions',
+    PatientPortalSection.epidemiology => 'epidemiology',
+    PatientPortalSection.membership => 'membership',
+    PatientPortalSection.profile => 'profile',
+  };
 
   IconData get icon => switch (this) {
-        PatientPortalSection.appointments => Icons.calendar_month_rounded,
-        PatientPortalSection.triage => Icons.assignment_outlined,
-        PatientPortalSection.results => Icons.science_outlined,
-        PatientPortalSection.history => Icons.history_rounded,
-        PatientPortalSection.prescriptions => Icons.medication_outlined,
-        PatientPortalSection.epidemiology => Icons.auto_graph_rounded,
-        PatientPortalSection.membership => Icons.health_and_safety_outlined,
-        PatientPortalSection.profile => Icons.person_outline_rounded,
-      };
+    PatientPortalSection.appointments => Icons.calendar_month_rounded,
+    PatientPortalSection.triage => Icons.assignment_outlined,
+    PatientPortalSection.results => Icons.science_outlined,
+    PatientPortalSection.history => Icons.history_rounded,
+    PatientPortalSection.prescriptions => Icons.medication_outlined,
+    PatientPortalSection.epidemiology => Icons.auto_graph_rounded,
+    PatientPortalSection.membership => Icons.health_and_safety_outlined,
+    PatientPortalSection.profile => Icons.person_outline_rounded,
+  };
 }
 
 PatientPortalSection? patientSectionFromModule(String label) => switch (label) {
-      'Citas' => PatientPortalSection.appointments,
-      'Historia' => PatientPortalSection.history,
-      'Recetas' => PatientPortalSection.prescriptions,
-      'Resultados' => PatientPortalSection.results,
-      'Preconsulta' => PatientPortalSection.triage,
-      'IA epidemiológica' => PatientPortalSection.epidemiology,
-      'Membresía' => PatientPortalSection.membership,
-      'Mi perfil' => PatientPortalSection.profile,
-      _ => null,
-    };
+  'Citas' => PatientPortalSection.appointments,
+  'Historia' => PatientPortalSection.history,
+  'Recetas' => PatientPortalSection.prescriptions,
+  'Resultados' => PatientPortalSection.results,
+  'Preconsulta' => PatientPortalSection.triage,
+  'IA epidemiológica' => PatientPortalSection.epidemiology,
+  'Membresía' => PatientPortalSection.membership,
+  'Mi perfil' => PatientPortalSection.profile,
+  _ => null,
+};
 
 class PatientPortalPage extends StatefulWidget {
   const PatientPortalPage({
@@ -69,7 +69,7 @@ class PatientPortalPage extends StatefulWidget {
     super.key,
   });
 
-  final AthRepository repository;
+  final AuthRepository repository;
   final PatientPortalSection initialSection;
 
   @override
@@ -78,9 +78,9 @@ class PatientPortalPage extends StatefulWidget {
 
 class _PatientPortalPageState extends State<PatientPortalPage> {
   late PatientPortalSection _section;
-  Map<String, dynamic>? _response;
-  String? _error;
+  Map<String, dynamic>? _payload;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -95,102 +95,101 @@ class _PatientPortalPageState extends State<PatientPortalPage> {
       _error = null;
     });
     try {
-      final response =
-          await widget.repository.fetchPatientPortalResource(_section.resource);
+      final value = await widget.repository.fetchPatientPortalResource(
+        _section.resource,
+      );
       if (!mounted) return;
       setState(() {
-        _response = response;
+        _payload = value;
         _loading = false;
       });
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = _friendlyError(error);
+        _error = error is ApiException ? error.message : error.toString();
         _loading = false;
       });
     }
   }
 
-  Future<void> _change(PatientPortalSection section) async {
-    if (_section == section) return;
-    setState(() {
-      _section = section;
-      _response = null;
-      _loading = true;
-    });
+  Future<void> _select(PatientPortalSection value) async {
+    if (_section == value) return;
+    setState(() => _section = value);
     await _load();
   }
 
   @override
   Widget build(BuildContext context) {
-    final data = _response?['data'];
+    final data = _payload?['data'];
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
-      appBar : AppBar(title: Text(_section.title)),
-      body: SafeArea(top: false, child: ListView(padding: const EdgeInsets.all(16), children: [
-        _Hero(section: _section),
-        const SizedBox(height: 14),
-        if (_error != null) _Banner(icon: Icons.error_outline_rounded, title: 'No se pudo cargar', helper: _error!, danger: true)
-        else if (_loading) const SizedBox(height: 220, child: Center(child: CircularProgressIndicator()))
-        else ...[_buildSection(data)],
-      ])));
-  }
-
-  Widget _buildSection(Object? data) => switch (_section) {
-    PatientPortalSection.appointments => _ListSection(items: _list(data), kind: _ListKind.appointment),
-    PatientPortalSection.results => _ListSection(items: _list(data), kind: _ListKind.result),
-    PatientPortalSection.history => _ListSection(items: _list(data), kind: _ListKind.history),
-    PatientPortalSection.prescriptions => _ListSection(items: _list(data), kind: _ListKind.prescription),
-    PatientPortalSection.triage => _TriageForm(repository: widget.repository, initial: _map(data)),
-    PatientPortalSection.epidemiology => _Epidemiology(data: _map(data) ?? const {}),
-    PatientPortalSection.membership => _Membership(data: _map(data) ?? const {}),
-    PatientPortalSection.profile => _ProfileForm(repository: widget.repository, data: _map(data) ?? const {}),
-  };
-}
-ircularProgressIndicator(strokeWidth: 2.5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Text(
+          _section.title,
+          style: const TextStyle(
+            color: AppColors.ink,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        actions: [
+          PopupMenuButton<PatientPortalSection>(
+            tooltip: 'Cambiar módulo',
+            onSelected: _select,
+            icon: const Icon(Icons.grid_view_rounded),
+            itemBuilder: (_) => PatientPortalSection.values
+                .map(
+                  (section) => PopupMenuItem(
+                    value: section,
+                    child: Row(
+                      children: [
+                        Icon(section.icon, color: AppColors.accent, size: 19),
+                        const SizedBox(width: 10),
+                        Text(section.title),
+                      ],
+                    ),
                   ),
                 )
-              else
-                switch (_section) {
-                  PatientPortalSection.appointments => _ListSection(
-                      items: _list(data),
-                      kind: _ListKind.appointment,
-                    ),
-                  PatientPortalSection.results => _ListSection(
-                      items: _list(data),
-                      kind: _ListKind.result,
-                    ),
-                  PatientPortalSection.history => _ListSection(
-                      items: _list(data),
-                      kind: _ListKind.history,
-                    ),
-                  PatientPortalSection.prescriptions => _ListSection(
-                      items: _list(data),
-                      kind: _ListKind.prescription,
-                    ),
-                  PatientPortalSection.triage => _TriageForm(
-                      repository: widget.repository,
-                      initial: _map(data),
-                    ),
-                  PatientPortalSection.epidemiology =>
-                    _Epidemiology(data: _map(data) ?? const {}),
-                  PatientPortalSection.membership =>
-                    _Membership(data: _map(data) ?? const {}),
-                  PatientPortalSection.profile => _ProfileForm(
-                      repository: widget.repository,
-                      data: _map(data) ?? const {},
-                    ),
-                },
-            ],
+                .toList(growable: false),
           ),
+          IconButton(
+            tooltip: 'Actualizar',
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            _Header(section: _section),
+            const SizedBox(height: 14),
+            if (_loading)
+              const SizedBox(
+                height: 220,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              _Message(
+                title: 'No se pudo cargar',
+                text: _error!,
+                danger: true,
+              )
+            else
+              _SectionContent(section: _section, data: data),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Hero extends StatelessWidget {
-  const _Hero({required this.section});
+class _Header extends StatelessWidget {
+  const _Header({required this.section});
   final PatientPortalSection section;
 
   @override
@@ -227,558 +226,77 @@ class _Hero extends StatelessWidget {
   }
 }
 
-enum _ListKind { appointment, result, history, prescription }
-
-class _ListSection extends StatelessWidget {
-  const _ListSection({required this.items, required this.kind});
-  final List<Map<String, dynamic>> items;
-  final _ListKind kind;
+class _SectionContent extends StatelessWidget {
+  const _SectionContent({required this.section, required this.data});
+  final PatientPortalSection section;
+  final Object? data;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return const _Empty(
-        title: 'Sin información por ahora',
-        helper: 'Los registros publicados por tu equipo clínico aparecerán aquí.',
-      );
-    }
-    return Column(
-      children: items.map((item) {
-        final doctor = _map(item['doctor']);
-        final clinic = _map(item['clinic']);
-        final title = switch (kind) {
-          _ListKind.appointment => _date(item['scheduled_at']),
-          _ListKind.result => _text(item['study_name']) ?? 'Estudio',
-          _ListKind.history =>
-            _text(item['chief_complaint']) ?? 'Consulta clínica',
-          _ListKind.prescription =>
-            _text(item['medication']) ?? 'Medicamento',
-        };
-        final icon = switch (kind) {
-          _ListKind.appointment => Icons.calendar_month_rounded,
-          _ListKind.result => Icons.science_outlined,
-          _ListKind.history => Icons.history_rounded,
-          _ListKind.prescription => Icons.medication_outlined,
-        };
-        final lines = switch (kind) {
-          _ListKind.appointment => <String>[
-              _text(doctor?['name']) ?? 'Profesional por asignar',
-              _text(doctor?['specialty']) ?? 'Especialidad no registrada',
-              _text(clinic?['name']) ?? 'Clínica no registrada',
-              _text(item['appointment_type']) ?? 'Consulta',
-            ],
-          _ListKind.result => <String>[
-              item['result_available'] == true
-                  ? 'Resultado disponible'
-                  : 'Resultado en proceso',
-              'Prioridad: ${_text(item['priority']) ?? 'Normal'}',
-              _text(doctor?['name']) ?? 'Profesional no registrado',
-              _date(item['result_at'] ?? item['ordered_at']),
-              if (_text(item['result_summary']) case final summary?) summary,
-            ],
-          _ListKind.history => <String>[
-              _date(item['completed_at'] ?? item['created_at']),
-              _text(doctor?['name']) ?? 'Profesional no registrado',
-              _text(clinic?['name']) ?? 'Clínica no registrada',
-              if (_text(item['objective']) case final objective?) objective,
-            ],
-          _ListKind.prescription => <String>[
-              'Dosis: ${_text(item['dosage']) ?? 'No registrada'}',
-              'Frecuencia: ${_text(item['frequency']) ?? 'No registrada'}',
-              _text(doctor?['name']) ?? 'Profesional no registrado',
-              if (_text(item['notes']) case final notes?) notes,
-            ],
-        };
-        return _Card(
-          icon: icon,
-          title: title,
-          badge: _text(item['status_label']) ?? _text(item['status']),
-          lines: lines,
+    if (data is List) {
+      final items = (data as List)
+          .whereType<Map>()
+          .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
+          .toList(growable: false);
+      if (items.isEmpty) {
+        return const _Message(
+          title: 'Sin información por ahora',
+          text: 'Los registros de tu equipo clínico aparecerán aquí.',
         );
-      }).toList(growable: false),
-    );
-  }
-}
-
-class _Epidemiology extends StatelessWidget {
-  const _Epidemiology({required this.data});
-  final Map<String, dynamic> data;
-
-  @override
-  Widget build(BuildContext context) {
-    final metrics = _map(data['metrics']) ?? const <String, dynamic>{};
-    final participation = _map(data['participation']) ?? const {};
-    return Colum((children: [
-        _Banner(icon: Icons.verified_user_outlined, title: 'Participación clínica', helper: _text(data['message']) ?? 'La analítica respeta tu consentimiento clínico.'),
-        const SizedBox(height: 12),
-        GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), childAspectRatio: 1.55, crossAxisSpacing: 10, mainAxisSpacing: 10, children: [
-          _Metric('Citas', _int(metrics['appointments'])),
-          _Metric('Consultas', _int(metrics['consultations')),
-          _Metric('Laboratorios', _int(metrics['laboratory_orders'])),
-          _Metric('Recetas activas', _int(metrics['active_prescriptions'])),
-        ]),
-      ]));
-  }
-}
-on['consent_active'] == true
-              ? 'Participación autorizada'
-              : 'Participación no autorizada',
-          helper:
-              _text(data['message']) ??
-              'La analítica respeta tu consentimiento clínico.',
-        ),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.55,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          children: [
-            _Metric('Citas', _int(metrics['appointments'])),
-            _Metric('Consultas', _int(metrics['consultations'])),
-            _Metric('Laboratorios', _int(metrics['laboratory_orders'])),
-            _Metric('Recetas activas', _int(metrics['active_prescriptions'])),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Membership extends StatelessWidget {
-  const _Membership({required this.data});
-  final Map<String, dynamic> data;
-
-  @override
-  Widget build(BuildContext context) {
-    if (data['available'] != true) {
-      return _Empty(
-        title: 'Cobertura no disponible',
-        helper:
-            _text(data['message']) ??
-            'Tu clínica administra la cobertura asociada a tu perfil.',
+      }
+      return Column(
+        children: items
+            .map((item) => _RecordCard(section: section, item: item))
+            .toList(growable: false),
       );
     }
-    final plan = _map(data['plan']) ?? const {};
-    final coverage = _map(data['coverage']) ?? const {};
-    final clinic = _map(data['clinic']);
-    final features = (plan['features'] is List)
-        ? (plan['features'] as List).map((e) => e.toString()).toList()
-        : <String>[];
-    return Column(
-      children: [
-        _Card(
-          icon: Icons.health_and_safety_outlined,
-          title: _text(plan['name']) ?? 'Cobertura institucional',
-          badge: _text(coverage['status']),
-          lines: [
-            _text(clinic?['name']) ?? 'Clínica no registrada',
-            _text(plan['description']) ?? 'Plan administrado por tu clínica.',
-            'Inicio: ${_date(coverage['starts_at'])}',
-            'Vigencia: ${_date(coverage['ends_at'])}',
-          ],
-        ),
-        if (features.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _panel(),
-            child: Column(
-              children: features
-                  .map(
-                    (feature) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.success,
-                      ),
-                      title: Text(feature),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ),
-      ],
+
+    if (data is Map) {
+      final map = (data as Map).map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      return _MapSummary(section: section, data: map);
+    }
+
+    return const _Message(
+      title: 'Sin información por ahora',
+      text: 'Este módulo todavía no tiene registros para mostrar.',
     );
   }
 }
 
-class _TriageForm extends StatefulWidget {
-  const _TriageForm({required this.repository, required this.initial});
-  final AuthRepository repository;
-  final Map<String, dynamic>? initial;
-
-  @override
-  State<_TriageForm> createState() => _TriageFormState();
-}
-
-class _TriageFormState extends State<_TriageForm> {
-  late final TextEditingController reason;
-  late final TextEditingController temperature;
-  late final TextEditingController systolic;
-  late final TextEditingController diastolic;
-  late final TextEditingController heartRate;
-  late final TextEditingController respiratoryRate;
-  late final TextEditingController oxygen;
-  late final TextEditingController notes;
-  String level = 'IV';
-  bool saving = false;
-  String? message;
-
-  @override
-  void initState() {
-    super.initState();
-    final data = widget.initial ?? const <String, dynamic>{};
-    reason = TextEditingController(text: _text(data['reason']) ?? '');
-    temperature = _numController(data['temperature_c']);
-    systolic = _numController(data['systolic_bp']);
-    diastolic = _numController(data['diastolic_bp']);
-    heartRate = _numController(data['heart_rate']);
-    respiratoryRate = _numController(data['respiratory_rate']);
-    oxygen = _numController(data['oxygen_saturation']);
-    notes = TextEditingController(text: _text(data['triage_notes']) ?? '');
-    level = _text(data['triage_level']) ?? 'IV';
-  }
-
-  Map<String, String> get errors {
-    final out = <String, String>{};
-    void range(
-      String key,
-      TextEditingController controller,
-      num min,
-      num max,
-    ) {
-      final raw = controller.text.trim();
-      if (raw.isEmpty) return;
-      final value = num.tryParse(raw);
-      if (value == null || value < min || value > max) {
-        out[key] = '$key: $min–$max';
-      }
-    }
-
-    range('Temperatura', temperature, 30, 45);
-    range('Sistólica', systolic, 60, 250);
-    range('Diastólica', diastolic, 30, 160);
-    range('Frecuencia cardiaca', heartRate, 30, 220);
-    range('Frecuencia respiratoria', respiratoryRate, 5, 60);
-    range('SpO₂', oxygen, 70, 100);
-    final sys = num.tryParse(systolic.text);
-    final dia = num.tryParse(diastolic.text);
-    if (sys != null && dia != null && dia >= sys) {
-      out['Presión'] = 'La diastólica debe ser menor que la sistólica.';
-    }
-    return out;
-  }
-
-  Future<void> save(String status) async {
-    final currentErrors = errors;
-    if (reason.text.trim().isEmpty || currentErrors.isNotEmpty) {
-      setState(() {
-        message = reason.text.trim().isEmpty
-            ? 'Describe el motivo de consulta.'
-            : currentErrors.values.join(' · ');
-      });
-      return;
-    }
-    setState(() {
-      saving = true;
-      message = null;
-    });
-    try {
-      await widget.repository.savePatientTriage({
-        'reason': reason.text.trim(),
-        'temperature_c': _num(temperature.text),
-        'systolic_bp': _integerOrNull(systolic.text),
-        'diastolic_bp': _integerOrNull(diastolic.text),
-        'heart_rate': _integerOrNull(heartRate.text),
-        'respiratory_rate': _integerOrNull(respiratoryRate.text),
-        'oxygen_saturation': _integerOrNull(oxygen.text),
-        'triage_level': level,
-        'triage_status': status,
-        'triage_notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
-      });
-      if (!mounted) return;
-      setState(() {
-        saving = false;
-        message = status == 'submitted'
-            ? 'Preconsulta enviada correctamente.'
-            : 'Borrador guardado correctamente.';
-      });
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        saving = false;
-        message = _friendlyError(error);
-      });
-    }
-  }
+class _RecordCard extends StatelessWidget {
+  const _RecordCard({required this.section, required this.item});
+  final PatientPortalSection section;
+  final Map<String, dynamic> item;
 
   @override
   Widget build(BuildContext context) {
-    final currentErrors = errors;
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _panel(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Nivel orientativo I–V',
-                style: TextStyle(
-                  color: AppColors.ink,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: ['I', 'II', 'III', 'IV', 'V']
-                    .map(
-                      (value) => ChoiceChip(
-                        label: Text(value),
-                        selected: level == value,
-                        onSelected: (_) => setState(() => level = value),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-              const SizedBox(height: 14),
-              _Field(reason, 'Motivo de consulta', lines: 3),
-              _Field(temperature, 'Temperatura °C', numeric: true),
-              _Field(systolic, 'Presión sistólica mmHg', numeric: true),
-              _Field(diastolic, 'Presión diastólica mmHg', numeric: true),
-              _Field(heartRate, 'Frecuencia cardiaca lpm', numeric: true),
-              _Field(
-                respiratoryRate,
-                'Frecuencia respiratoria rpm',
-                numeric: true,
-              ),
-              _Field(oxygen, 'Saturación de oxígeno %', numeric: true),
-              _Field(notes, 'Notas adicionales', lines: 3),
-            ],
-          ),
-        ),
-        if (currentErrors.isNotEmpty || message != null) ...[
-          const SizedBox(height: 10),
-          _Banner(
-            icon: currentErrors.isNotEmpty
-                ? Icons.warning_amber_rounded
-                : Icons.info_outline_rounded,
-            title: currentErrors.isNotEmpty ? 'Verifica los datos' : 'Estado',
-            helper: currentErrors.isNotEmpty
-                ? currentErrors.values.join(' · ')
-                : message!,
-            danger: currentErrors.isNotEmpty,
-          ),
-        ],
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: saving || currentErrors.isNotEmpty
-                    ? null
-                    : () => save('draft'),
-                child: const Text('Guardar borrador'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: saving || currentErrors.isNotEmpty
-                    ? null
-                    : () => save('submitted'),
-                child: Text(saving ? 'Guardando…' : 'Enviar'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'El nivel es autorreportado y no reemplaza la valoración profesional.',
-          style: TextStyle(color: AppColors.muted, fontSize: 11),
-        ),
-      ],
-    );
-  }
-}
+    final doctor = _map(item['doctor']);
+    final clinic = _map(item['clinic']);
+    final title = switch (section) {
+      PatientPortalSection.appointments => _date(item['scheduled_at']),
+      PatientPortalSection.results =>
+        _string(item['study_name']) ?? 'Estudio',
+      PatientPortalSection.history =>
+        _string(item['chief_complaint']) ?? 'Consulta clínica',
+      PatientPortalSection.prescriptions =>
+        _string(item['medication']) ?? 'Medicamento',
+      _ => section.title,
+    };
 
-class _ProfileForm extends StatefulWidget {
-  const _ProfileForm({required this.repository, required this.data});
-  final AuthRepository repository;
-  final Map<String, dynamic> data;
+    final lines = <String>[
+      if (_string(doctor?['name']) case final value?) value,
+      if (_string(doctor?['specialty']) case final value?) value,
+      if (_string(clinic?['name']) case final value?) value,
+      if (_string(item['dosage']) case final value?) 'Dosis: ' + value,
+      if (_string(item['frequency']) case final value?) 'Frecuencia: ' + value,
+      if (_string(item['result_summary']) case final value?) value,
+      if (_string(item['notes']) case final value?) value,
+    ];
 
-  @override
-  State<_ProfileForm> createState() => _ProfileFormState();
-}
-
-class _ProfileFormState extends State<_ProfileForm> {
-  late final TextEditingController name;
-  late final TextEditingController email;
-  late final TextEditingController phone;
-  late final TextEditingController address;
-  late final TextEditingController emergency;
-  late final TextEditingController insurance;
-  late bool whatsapp;
-  bool saving = false;
-  String? message;
-
-  @override
-  void initState() {
-    super.initState();
-    name = TextEditingController(text: _text(widget.data['name']) ?? '');
-    email = TextEditingController(text: _text(widget.data['email']) ?? '');
-    phone = TextEditingController(text: _text(widget.data['phone_number']) ?? '');
-    address = TextEditingController(text: _text(widget.data['address']) ?? '');
-    emergency = TextEditingController(
-      text: _text(widget.data['emergency_contact']) ?? '',
-    );
-    insurance = TextEditingController(
-      text: _text(widget.data['insurance']) ?? '',
-    );
-    whatsapp = widget.data['whatsapp_consent'] == true;
-  }
-
-  Future<void> save() async {
-    if (name.text.trim().isEmpty || phone.text.trim().isEmpty) {
-      setState(() => message = 'Nombre y teléfono son obligatorios.');
-      return;
-    }
-    setState(() {
-      saving = true;
-      message = null;
-    });
-    try {
-      await widget.repository.updatePatientProfile({
-        'name': name.text.trim(),
-        'email': email.text.trim().isEmpty ? null : email.text.trim(),
-        'phone_number': phone.text.trim(),
-        'address': address.text.trim().isEmpty ? null : address.text.trim(),
-        'emergency_contact':
-            emergency.text.trim().isEmpty ? null : emergency.text.trim(),
-        'insurance':
-            insurance.text.trim().isEmpty ? null : insurance.text.trim(),
-        'whatsapp_consent': whatsapp,
-      });
-      if (!mounted) return;
-      setState(() {
-        saving = false;
-        message = 'Perfil actualizado correctamente.';
-      });
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        saving = false;
-        message = _friendlyError(error);
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final clinic = _map(widget.data['clinic']);
-    return Column(
-      children: [
-        _Card(
-          icon: Icons.badge_outlined,
-          title: _text(widget.data['name']) ?? 'Paciente HIPOCRATIQ',
-          badge: _text(widget.data['status']),
-          lines: [
-            'Código: ${_text(widget.data['patient_code']) ?? 'No registrado'}',
-            _text(clinic?['name']) ?? 'Sin clínica vinculada',
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _panel(),
-          child: Column(
-            children: [
-              _Field(name, 'Nombre completo'),
-              _Field(email, 'Correo electrónico'),
-              _Field(phone, 'Teléfono', numeric: true),
-              _Field(address, 'Dirección', lines: 2),
-              _Field(emergency, 'Contacto de emergencia'),
-              _Field(insurance, 'Seguro o cobertura'),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Consentimiento WhatsApp'),
-                value: whatsapp,
-                onChanged: saving
-                    ? null
-                    : (value) => setState(() => whatsapp = value),
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: saving ? null : save,
-                  child: Text(saving ? 'Guardando…' : 'Guardar cambios'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (message != null) ...[
-          const SizedBox(height: 10),
-          _Banner(
-            icon: Icons.info_outline_rounded,
-            title: 'Perfil',
-            helper: message!,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field(
-    this.controller,
-    this.label, {
-    this.numeric = false,
-    this.lines = 1,
-  });
-  final TextEditingController controller;
-  final String label;
-  final bool numeric;
-  final int lines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: controller,
-        minLines: lines,
-        maxLines: lines,
-        keyboardType: numeric
-            ? const TextInputType.numberWithOptions(decimal: true)
-            : TextInputType.text,
-        onChanged: (_) => (context as Element).markNeedsBuild(),
-        decoration: InputDecoration(labelText: label),
-      ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({
-    required this.icon,
-    required this.title,
-    required this.lines,
-    this.badge,
-  });
-  final IconData icon;
-  final String title;
-  final List<String> lines;
-  final String? badge;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
       decoration: _panel(),
@@ -787,7 +305,7 @@ class _Card extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: AppColors.accentSoft,
-            child: Icon(icon, color: AppColors.accent),
+            child: Icon(section.icon, color: AppColors.accent),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -801,10 +319,11 @@ class _Card extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                if (badge != null) ...[
-                  const SizedBox(height: 4),
+                if (_string(item['status_label'] ?? item['status'])
+                    case final status?) ...[
+                  const SizedBox(height: 3),
                   Text(
-                    badge!,
+                    status,
                     style: const TextStyle(
                       color: AppColors.accent,
                       fontSize: 11,
@@ -812,7 +331,7 @@ class _Card extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 6),
+                const SizedBox(height: 7),
                 ...lines.map(
                   (line) => Padding(
                     padding: const EdgeInsets.only(bottom: 3),
@@ -834,63 +353,106 @@ class _Card extends StatelessWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric(this.label, this.value);
-  final String label;
-  final int value;
+class _MapSummary extends StatelessWidget {
+  const _MapSummary({required this.section, required this.data});
+  final PatientPortalSection section;
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
+    final rows = <MapEntry<String, String>>[];
+    void add(String label, Object? value) {
+      final text = _display(value);
+      if (text != null) rows.add(MapEntry(label, text));
+    }
+
+    if (section == PatientPortalSection.profile) {
+      add('Nombre', data['name']);
+      add('Código', data['patient_code']);
+      add('Correo', data['email']);
+      add('Teléfono', data['phone_number']);
+      add('Estado', data['status']);
+      final clinic = _map(data['clinic']);
+      add('Clínica', clinic?['name']);
+    } else if (section == PatientPortalSection.triage) {
+      add('Motivo', data['reason']);
+      add('Nivel orientativo', data['triage_level']);
+      add('Estado', data['triage_status']);
+      add('Temperatura', data['temperature_c']);
+      add('Presión sistólica', data['systolic_bp']);
+      add('Presión diastólica', data['diastolic_bp']);
+      add('Frecuencia cardiaca', data['heart_rate']);
+      add('Frecuencia respiratoria', data['respiratory_rate']);
+      add('Saturación de oxígeno', data['oxygen_saturation']);
+    } else if (section == PatientPortalSection.membership) {
+      add('Disponible', data['available']);
+      add('Mensaje', data['message']);
+      final plan = _map(data['plan']);
+      final coverage = _map(data['coverage']);
+      final clinic = _map(data['clinic']);
+      add('Plan', plan?['name']);
+      add('Estado', coverage?['status']);
+      add('Clínica', clinic?['name']);
+    } else {
+      add('Mensaje', data['message']);
+      final metrics = _map(data['metrics']);
+      add('Citas', metrics?['appointments']);
+      add('Consultas', metrics?['consultations']);
+      add('Laboratorios', metrics?['laboratory_orders']);
+      add('Recetas activas', metrics?['active_prescriptions']);
+    }
+
+    if (rows.isEmpty) {
+      return const _Message(
+        title: 'Información protegida',
+        text: 'No hay datos adicionales disponibles en este momento.',
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: _panel(),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$value',
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 11),
-          ),
-        ],
+        children: rows
+            .map(
+              (row) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(row.key),
+                subtitle: Text(row.value),
+              ),
+            )
+            .toList(growable: false),
       ),
     );
   }
 }
 
-class _Banner extends StatelessWidget {
-  const _Banner({
-    required this.icon,
+class _Message extends StatelessWidget {
+  const _Message({
     required this.title,
-    required this.helper,
+    required this.text,
     this.danger = false,
   });
-  final IconData icon;
+
   final String title;
-  final String helper;
+  final String text;
   final bool danger;
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? AppColors.danger : AppColors.success;
-    final background = danger ? AppColors.dangerSoft : AppColors.successSoft;
+    final color = danger ? AppColors.danger : AppColors.accent;
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _panel(),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color),
+          Icon(
+            danger ? Icons.error_outline_rounded : Icons.info_outline_rounded,
+            color: color,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -898,12 +460,19 @@ class _Banner extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
-                  helper,
-                  style: TextStyle(color: color, fontSize: 11.5, height: 1.4),
+                  text,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -914,70 +483,32 @@ class _Banner extends StatelessWidget {
   }
 }
 
-class _Empty extends StatelessWidget {
-  const _Empty({required this.title, required this.helper});
-  final String title;
-  final String helper;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: _panel(),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.accent,
-            size: 34,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            helper,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 BoxDecoration _panel() => BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: AppColors.line),
-      borderRadius: BorderRadius.circular(18),
-    );
+  color: Colors.white,
+  border: Border.all(color: AppColors.line),
+  borderRadius: BorderRadius.circular(18),
+);
 
 Map<String, dynamic>? _map(Object? value) {
   if (value is! Map) return null;
   return value.map((key, item) => MapEntry(key.toString(), item));
 }
 
-List<Map<String, dynamic>> _list(Object? value) {
-  if (value is! List) return const [];
-  return value
-      .whereType<Map>()
-      .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
-      .toList(growable: false);
+String? _string(Object? value) {
+  if (value is String && value.trim().isNotEmpty) return value.trim();
+  return null;
 }
 
-String? _text(Object? value) =>
-    value is String && value.trim().isNotEmpty ? value.trim() : null;
-
-int _int(Object? value) =>
-    value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+String? _display(Object? value) {
+  if (value == null) return null;
+  if (value is String && value.trim().isEmpty) return null;
+  if (value is bool) return value ? 'Sí' : 'No';
+  if (value is num) return value.toString();
+  return value is String ? value.trim() : null;
+}
 
 String _date(Object? value) {
-  final text = _text(value);
+  final text = _string(value);
   if (text == null) return 'Fecha no registrada';
   final parsed = DateTime.tryParse(text)?.toLocal();
   if (parsed == null) return text;
@@ -985,128 +516,13 @@ String _date(Object? value) {
   final month = parsed.month.toString().padLeft(2, '0');
   final hour = parsed.hour.toString().padLeft(2, '0');
   final minute = parsed.minute.toString().padLeft(2, '0');
-  return '$day/$month/${parsed.year} · $hour:$minute';
+  return day +
+      '/' +
+      month +
+      '/' +
+      parsed.year.toString() +
+      ' · ' +
+      hour +
+      ':' +
+      minute;
 }
-
-TextEditingController _numController(Object? value) =>
-    TextEditingController(text: value == null ? '' : value.toString());
-
-num? _num(String value) =>
-    value.trim().isEmpty ? null : num.tryParse(value.trim());
-
-int? _integerOrNull(String value) => _num(value)?.toInt();
-
-String _friendlyError(Object error) =>
-    error is ApiException ? error.message : error.toString();
-    borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  helper,
-                  style: TextStyle(color: color, fontSize: 11.5, height: 1.4),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.title, required this.helper});
-  final String title;
-  final String helper;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: _panel(),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.accent,
-            size: 34,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            helper,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-BoxDecoration _panel() => BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: AppColors.line),
-      borderRadius: BorderRadius.circular(18),
-    );
-
-Map<String, dynamic>? _map(Object? value) {
-  if (value is! Map) return null;
-  return value.map((key, item) => MapEntry(key.toString(), item));
-}
-
-List<Map<String, dynamic>> _list(Object? value) {
-  if (value is! List) return const [];
-  return value
-      .whereType<Map>()
-      .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
-      .toList(growable: false);
-}
-
-String? _text(Object? value) =>
-    value is String && value.trim().isNotEmpty ? value.trim() : null;
-
-int _int(Object? value) =>
-    value is num ? value.toInt() : int.tryParse('$value') ?? 0;
-
-String _date(Object? value) {
-  final text = _text(value);
-  if (text == null) return 'Fecha no registrada';
-  final parsed = DateTime.tryParse(text)?.toLocal();
-  if (parsed == null) return text;
-  final day = parsed.day.toString().padLeft(2, '0');
-  final month = parsed.month.toString().padLeft(2, '0');
-  final hour = parsed.hour.toString().padLeft(2, '0');
-  final minute = parsed.minute.toString().padLeft(2, '0');
-  return '$day/$month/${parsed.year} · $hour:$minute';
-}
-
-TextEditingController _numController(Object? value) =>
-    TextEditingController(text: value == null ? '' : value.toString());
-
-num? _num(String value) =>
-    value.trim().isEmpty ? null : num.tryParse(value.trim());
-
-int? _integerOrNull(String value) => _num(value)?.toInt();
-
-String _friendlyError(Object error) =>
-    error is ApiException ? error.message : error.toString();
