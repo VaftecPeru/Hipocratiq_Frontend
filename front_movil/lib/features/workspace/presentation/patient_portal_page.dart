@@ -147,3 +147,176 @@ class _PatientPortalPageState extends State<PatientPortalPage> {
     PatientPortalSection.profile => _ProfileForm(repository: widget.repository, data: _map(data) ?? const {}),
   };
 }
+ircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                )
+              else
+                switch (_section) {
+                  PatientPortalSection.appointments => _ListSection(
+                      items: _list(data),
+                      kind: _ListKind.appointment,
+                    ),
+                  PatientPortalSection.results => _ListSection(
+                      items: _list(data),
+                      kind: _ListKind.result,
+                    ),
+                  PatientPortalSection.history => _ListSection(
+                      items: _list(data),
+                      kind: _ListKind.history,
+                    ),
+                  PatientPortalSection.prescriptions => _ListSection(
+                      items: _list(data),
+                      kind: _ListKind.prescription,
+                    ),
+                  PatientPortalSection.triage => _TriageForm(
+                      repository: widget.repository,
+                      initial: _map(data),
+                    ),
+                  PatientPortalSection.epidemiology =>
+                    _Epidemiology(data: _map(data) ?? const {}),
+                  PatientPortalSection.membership =>
+                    _Membership(data: _map(data) ?? const {}),
+                  PatientPortalSection.profile => _ProfileForm(
+                      repository: widget.repository,
+                      data: _map(data) ?? const {},
+                    ),
+                },
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero({required this.section});
+  final PatientPortalSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0862DD), Color(0xFF064BB6)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0x22FFFFFF),
+            child: Icon(section.icon, color: Colors.white),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              section.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _ListKind { appointment, result, history, prescription }
+
+class _ListSection extends StatelessWidget {
+  const _ListSection({required this.items, required this.kind});
+  final List<Map<String, dynamic>> items;
+  final _ListKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const _Empty(
+        title: 'Sin información por ahora',
+        helper: 'Los registros publicados por tu equipo clínico aparecerán aquí.',
+      );
+    }
+    return Column(
+      children: items.map((item) {
+        final doctor = _map(item['doctor']);
+        final clinic = _map(item['clinic']);
+        final title = switch (kind) {
+          _ListKind.appointment => _date(item['scheduled_at']),
+          _ListKind.result => _text(item['study_name']) ?? 'Estudio',
+          _ListKind.history =>
+            _text(item['chief_complaint']) ?? 'Consulta clínica',
+          _ListKind.prescription =>
+            _text(item['medication']) ?? 'Medicamento',
+        };
+        final icon = switch (kind) {
+          _ListKind.appointment => Icons.calendar_month_rounded,
+          _ListKind.result => Icons.science_outlined,
+          _ListKind.history => Icons.history_rounded,
+          _ListKind.prescription => Icons.medication_outlined,
+        };
+        final lines = switch (kind) {
+          _ListKind.appointment => <String>[
+              _text(doctor?['name']) ?? 'Profesional por asignar',
+              _text(doctor?['specialty']) ?? 'Especialidad no registrada',
+              _text(clinic?['name']) ?? 'Clínica no registrada',
+              _text(item['appointment_type']) ?? 'Consulta',
+            ],
+          _ListKind.result => <String>[
+              item['result_available'] == true
+                  ? 'Resultado disponible'
+                  : 'Resultado en proceso',
+              'Prioridad: ${_text(item['priority']) ?? 'Normal'}',
+              _text(doctor?['name']) ?? 'Profesional no registrado',
+              _date(item['result_at'] ?? item['ordered_at']),
+              if (_text(item['result_summary']) case final summary?) summary,
+            ],
+          _ListKind.history => <String>[
+              _date(item['completed_at'] ?? item['created_at']),
+              _text(doctor?['name']) ?? 'Profesional no registrado',
+              _text(clinic?['name']) ?? 'Clínica no registrada',
+              if (_text(item['objective']) case final objective?) objective,
+            ],
+          _ListKind.prescription => <String>[
+              'Dosis: ${_text(item['dosage']) ?? 'No registrada'}',
+              'Frecuencia: ${_text(item['frequency']) ?? 'No registrada'}',
+              _text(doctor?['name']) ?? 'Profesional no registrado',
+              if (_text(item['notes']) case final notes?) notes,
+            ],
+        };
+        return _Card(
+          icon: icon,
+          title: title,
+          badge: _text(item['status_label']) ?? _text(item['status']),
+          lines: lines,
+        );
+      }).toList(growable: false),
+    );
+  }
+}
+
+class _Epidemiology extends StatelessWidget {
+  const _Epidemiology({required this.data});
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = _map(data['metrics']) ?? const <String, dynamic>{};
+    final participation = _map(data['participation']) ?? const {};
+    return Colum((children: [
+        _Banner(icon: Icons.verified_user_outlined, title: 'Participación clínica', helper: _text(data['message']) ?? 'La analítica respeta tu consentimiento clínico.'),
+        const SizedBox(height: 12),
+        GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), childAspectRatio: 1.55, crossAxisSpacing: 10, mainAxisSpacing: 10, children: [
+          _Metric('Citas', _int(metrics['appointments'])),
+          _Metric('Consultas', _int(metrics['consultations')),
+          _Metric('Laboratorios', _int(metrics['laboratory_orders'])),
+          _Metric('Recetas activas', _int(metrics['active_prescriptions'])),
+        ]),
+      ]));
+  }
+}
