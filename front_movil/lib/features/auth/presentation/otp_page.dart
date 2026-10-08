@@ -7,6 +7,7 @@ import '../../../core/widgets/error_banner.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
+import '../uat_demo.dart';
 import 'widgets/otp_countdown.dart';
 import 'widgets/auth_fields.dart';
 
@@ -16,6 +17,7 @@ class OtpPage extends StatefulWidget {
     required this.challenge,
     required this.destination,
     required this.purpose,
+    this.uatRole,
     super.key,
   });
 
@@ -23,6 +25,7 @@ class OtpPage extends StatefulWidget {
   final OtpChallenge challenge;
   final String destination;
   final OtpPurpose purpose;
+  final AuthRole? uatRole;
 
   @override
   State<OtpPage> createState() => _OtpPageState();
@@ -79,7 +82,9 @@ class _OtpPageState extends State<OtpPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Enviamos un código de 6 dígitos a $destinationDescription.',
+            uatDemoEnabled
+                ? 'Ingresa el código de prueba de ${uatDemoCode.length} dígitos para $destinationDescription.'
+                : 'Enviamos un código de 6 dígitos a $destinationDescription.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: AppColors.muted,
               height: 1.5,
@@ -95,6 +100,7 @@ class _OtpPageState extends State<OtpPage> {
             valueListenable: _countdown,
             builder: (context, state, child) => OtpCodeInput(
               value: _code,
+              codeLength: uatDemoEnabled ? uatDemoCode.length : 6,
               enabled: !_isSubmitting && !state.isExpired,
               hasError: _codeError != null,
               errorText: _codeError,
@@ -133,13 +139,15 @@ class _OtpPageState extends State<OtpPage> {
               isLoading: _isSubmitting,
             ),
           ),
-          const SizedBox(height: 18),
-          OtpResendActions(
-            controller: _countdown,
-            isSubmitting: _isSubmitting,
-            onResend: _resend,
-            resendsRemaining: _resendsRemaining,
-          ),
+          if (!uatDemoEnabled) ...[
+            const SizedBox(height: 18),
+            OtpResendActions(
+              controller: _countdown,
+              isSubmitting: _isSubmitting,
+              onResend: _resend,
+              resendsRemaining: _resendsRemaining,
+            ),
+          ],
         ],
       ),
     );
@@ -186,8 +194,9 @@ class _OtpPageState extends State<OtpPage> {
   String get destinationDescription => widget.destination;
 
   Future<void> _verify() async {
-    if (_code.length != 6) {
-      setState(() => _codeError = 'Completa los seis dígitos del código.');
+    final expectedLength = uatDemoEnabled ? uatDemoCode.length : 6;
+    if (_code.length != expectedLength) {
+      setState(() => _codeError = 'Completa los $expectedLength dígitos del código.');
       return;
     }
     if (_countdown.expiresIn == 0) {
@@ -201,6 +210,19 @@ class _OtpPageState extends State<OtpPage> {
       _codeError = null;
     });
     try {
+      if (uatDemoEnabled) {
+        if (_code != uatDemoCode || widget.uatRole == null) {
+          setState(() => _codeError = 'Código de prueba incorrecto. Usa 1234.');
+          return;
+        }
+        final session = createUatDemoSession(widget.uatRole!);
+        if (mounted) {
+          _countdown.stop();
+          setState(() => _session = session);
+        }
+        return;
+      }
+
       final session = await widget.authGateway.verifyAuthenticationOtp(
         purpose: widget.purpose,
         challengeId: _challengeId,
