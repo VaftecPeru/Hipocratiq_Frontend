@@ -29,6 +29,31 @@ for (const { cookieRole, expectedPath } of landingCases) {
   });
 }
 
+test("verified OTP continues automatically to each role dashboard", async ({ page }) => {
+  const cases = [
+    ["Administrador de clínica", "admin@example.test", "/clinic/dashboard", true],
+    ["Profesional de salud", "doctor@example.test", "/doctor/dashboard", true],
+    ["Recepción", "reception@example.test", "/clinic/dashboard", true],
+    ["Paciente", "patient@example.test", "/patient/dashboard", false],
+  ] as const;
+
+  for (const [label, email, expected, staff] of cases) {
+    await page.context().clearCookies();
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: new RegExp(label, "i") }).click();
+    await page.getByRole("button", { name: /Correo/i }).click();
+    await page.getByLabel("Correo electrónico").fill(email);
+    if (staff) await page.getByLabel("Contraseña").fill("x");
+    await page.getByRole("button", { name: "Iniciar sesión" }).click();
+    await expect(page.getByRole("heading", { name: "Verifica tu identidad" })).toBeVisible();
+    for (let index = 0; index < 6; index += 1) {
+      await page.getByLabel("Dígito " + (index + 1)).fill(String(index + 1));
+    }
+    await page.getByRole("button", { name: "Verificar código" }).click();
+    await expect(page).toHaveURL(new RegExp(expected.replaceAll("/", "\\/") + "(?:\\?.*)?$"), { timeout: 10000 });
+  }
+});
+
 test("cross-role protected routes return the user to the coherent dashboard", async ({ page }) => {
   const cases = [
     { role: "patient", requested: "/doctor/dashboard", expected: "/patient/dashboard" },
