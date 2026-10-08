@@ -294,6 +294,9 @@ class _LoginPageState extends State<LoginPage> {
         );
         if (session != null) {
           await widget.authController.authenticate(session);
+          if (mounted) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
         }
       } finally {
         if (mounted) {
