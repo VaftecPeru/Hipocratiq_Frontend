@@ -8,6 +8,7 @@ import '../../../core/widgets/loading_button.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
 import '../domain/phone_number.dart';
+import '../uat_demo.dart';
 import 'auth_controller.dart';
 import 'auth_page.dart';
 import 'otp_page.dart';
@@ -75,16 +76,46 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              isPatient
-                  ? 'Usaremos tu celular para verificar tu identidad y abrir tu espacio de paciente.'
-                  : 'Ingresa tus credenciales. Después recibirás un código en el teléfono asociado a tu cuenta.',
+              uatDemoEnabled
+                  ? 'Modo UAT habilitado. Selecciona el rol y usa el código 1234 para ingresar a una sesión de prueba local.'
+                  : (isPatient
+                      ? 'Usaremos tu celular para verificar tu identidad y abrir tu espacio de paciente.'
+                      : 'Ingresa tus credenciales. Después recibirás un código en el teléfono asociado a tu cuenta.'),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.muted,
                 height: 1.5,
               ),
             ),
+            if (uatDemoEnabled) ...[
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.science_outlined, color: AppColors.accent),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Acceso de prueba UAT · Código 1234 · No utiliza datos productivos.',
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 26),
-            IdentifierMethodToggle(
+            if (!uatDemoEnabled) IdentifierMethodToggle(
               value: _identifierType,
               onChanged: (value) {
                 setState(() {
@@ -94,8 +125,8 @@ class _LoginPageState extends State<LoginPage> {
                 });
               },
             ),
-            const SizedBox(height: 20),
-            if (_identifierType == AuthIdentifierType.phone)
+            if (!uatDemoEnabled) const SizedBox(height: 20),
+            if (!uatDemoEnabled && _identifierType == AuthIdentifierType.phone)
               CountryPhoneField(
                 country: _country,
                 controller: _phoneController,
@@ -112,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
                 },
                 onSubmitted: (_) => _submit(),
               )
-            else
+            else if (!uatDemoEnabled)
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -140,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                 },
                 validator: (_) => null,
               ),
-            if (widget.role.requiresPassword) ...[
+            if (!uatDemoEnabled && widget.role.requiresPassword) ...[
               const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -202,7 +233,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
             const SizedBox(height: 24),
             PrimaryButton(
-              label: 'Enviar código de acceso',
+              label: uatDemoEnabled ? 'Continuar a código de prueba' : 'Enviar código de acceso',
               onPressed: _submit,
               isLoading: _isSubmitting,
             ),
@@ -238,6 +269,32 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     if (_isSubmitting) {
+      return;
+    }
+
+    if (uatDemoEnabled) {
+      setState(() {
+        _isSubmitting = true;
+        _globalError = null;
+        _fieldErrors.clear();
+      });
+      try {
+        final session = await Navigator.of(context).push<MobileAuthSession>(
+          _otpRoute(
+            challenge: createUatDemoChallenge(),
+            destination: 'sesión UAT · ${widget.role.label}',
+            purpose: OtpPurpose.login,
+            uatRole: widget.role,
+          ),
+        );
+        if (session != null) {
+          await widget.authController.authenticate(session);
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+        }
+      }
       return;
     }
 
@@ -356,6 +413,7 @@ class _LoginPageState extends State<LoginPage> {
     required OtpChallenge challenge,
     required String destination,
     required OtpPurpose purpose,
+    AuthRole? uatRole,
   }) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
@@ -368,6 +426,7 @@ class _LoginPageState extends State<LoginPage> {
         challenge: challenge,
         destination: destination,
         purpose: purpose,
+        uatRole: uatRole,
       ),
       transitionDuration: duration,
       reverseTransitionDuration: duration,
