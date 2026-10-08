@@ -79,8 +79,8 @@ class _LoginPageState extends State<LoginPage> {
               uatDemoEnabled
                   ? 'Modo UAT habilitado. Selecciona el rol y usa el código 1234 para ingresar a una sesión de prueba local.'
                   : (isPatient
-                      ? 'Usaremos tu celular para verificar tu identidad y abrir tu espacio de paciente.'
-                      : 'Ingresa tus credenciales. Después recibirás un código en el teléfono asociado a tu cuenta.'),
+                        ? 'Usaremos tu celular para verificar tu identidad y abrir tu espacio de paciente.'
+                        : 'Ingresa tus credenciales. Después recibirás un código en el teléfono asociado a tu cuenta.'),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.muted,
                 height: 1.5,
@@ -93,7 +93,9 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,16 +117,17 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ],
             const SizedBox(height: 26),
-            if (!uatDemoEnabled) IdentifierMethodToggle(
-              value: _identifierType,
-              onChanged: (value) {
-                setState(() {
-                  _identifierType = value;
-                  _fieldErrors.remove('identifier');
-                  _globalError = null;
-                });
-              },
-            ),
+            if (!uatDemoEnabled)
+              IdentifierMethodToggle(
+                value: _identifierType,
+                onChanged: (value) {
+                  setState(() {
+                    _identifierType = value;
+                    _fieldErrors.remove('identifier');
+                    _globalError = null;
+                  });
+                },
+              ),
             if (!uatDemoEnabled) const SizedBox(height: 20),
             if (!uatDemoEnabled && _identifierType == AuthIdentifierType.phone)
               CountryPhoneField(
@@ -233,7 +236,9 @@ class _LoginPageState extends State<LoginPage> {
             ],
             const SizedBox(height: 24),
             PrimaryButton(
-              label: uatDemoEnabled ? 'Continuar a código de prueba' : 'Enviar código de acceso',
+              label: uatDemoEnabled
+                  ? 'Continuar a código de prueba'
+                  : 'Enviar código de acceso',
               onPressed: _submit,
               isLoading: _isSubmitting,
             ),

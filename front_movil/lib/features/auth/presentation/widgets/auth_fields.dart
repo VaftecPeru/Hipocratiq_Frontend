@@ -239,7 +239,10 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
       widget.codeLength,
       (index) => TextEditingController(text: _digitAt(index, widget.value)),
     );
-    _focusNodes = List<FocusNode>.generate(widget.codeLength, (_) => FocusNode());
+    _focusNodes = List<FocusNode>.generate(
+      widget.codeLength,
+      (_) => FocusNode(),
+    );
   }
 
   @override
@@ -295,7 +298,8 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
                     .clamp(1.0, 7.0)
                     .toDouble();
             final cellWidth =
-                (availableWidth - gap * (widget.codeLength - 1)) / widget.codeLength;
+                (availableWidth - gap * (widget.codeLength - 1)) /
+                widget.codeLength;
             return Row(
               children: List<Widget>.generate(widget.codeLength, (index) {
                 return Padding(

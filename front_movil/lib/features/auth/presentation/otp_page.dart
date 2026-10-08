@@ -196,7 +196,9 @@ class _OtpPageState extends State<OtpPage> {
   Future<void> _verify() async {
     final expectedLength = uatDemoEnabled ? uatDemoCode.length : 6;
     if (_code.length != expectedLength) {
-      setState(() => _codeError = 'Completa los $expectedLength dígitos del código.');
+      setState(
+        () => _codeError = 'Completa los $expectedLength dígitos del código.',
+      );
       return;
     }
     if (_countdown.expiresIn == 0) {

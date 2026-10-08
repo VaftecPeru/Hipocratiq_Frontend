@@ -453,7 +453,8 @@ class _AccountTab extends StatelessWidget {
               const SizedBox(height: 14),
               PatientConsentsPanel(authGateway: authGateway),
             ],
-            if (!isUatDemoSession(session) && session.actorContext == 'clinic_admin') ...[
+            if (!isUatDemoSession(session) &&
+                session.actorContext == 'clinic_admin') ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: () async {
