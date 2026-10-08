@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: mobile-uat-apk-${{ github.ref }}
@@ -42,11 +42,20 @@ jobs:
         working-directory: front_movil
         run: flutter pub get
 
-      - name: Check formatting
+      - name: Format UAT mobile sources
         working-directory: front_movil
+        run: dart format lib test
+
+      - name: Persist formatting
         shell: bash
         run: |
-          dart format --output=none --set-exit-if-changed lib test
+          if ! git diff --quiet -- front_movil/lib front_movil/test; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add front_movil/lib front_movil/test
+            git commit -m "[skip ci] style(mobile): aplicar dart format"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
 
       - name: Analyze
         working-directory: front_movil
