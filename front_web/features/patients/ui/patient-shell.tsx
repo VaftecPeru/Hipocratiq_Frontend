@@ -116,12 +116,21 @@ export function PatientShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [routeTransition, setRouteTransition] = useState<"idle" | "loading" | "complete">("idle");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const pendingPathRef = useRef<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuWasOpenRef = useRef(false);
   const pathname = usePathname();
   const meta = pageMeta(pathname, userName, t);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 920px)");
+    const updateViewport = () => setIsMobileViewport(media.matches);
+    updateViewport();
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -231,7 +240,7 @@ export function PatientShell({
   }
 
   function handleSidebarToggle() {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 920px)").matches) {
+    if (isMobileViewport) {
       setMenuOpen((open) => !open);
       return;
     }
@@ -329,8 +338,12 @@ export function PatientShell({
             ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
-             aria-label="Alternar menú lateral"
-            aria-expanded={menuOpen || !sidebarCollapsed}
+             aria-label={
+              isMobileViewport
+                ? (menuOpen ? t("closeMenu") : t("openMenu"))
+                : (sidebarCollapsed ? "Mostrar menú lateral" : "Ocultar menú lateral")
+            }
+            aria-expanded={isMobileViewport ? menuOpen : !sidebarCollapsed}
             aria-controls="patient-mobile-navigation"
             onClick={handleSidebarToggle}
           >
