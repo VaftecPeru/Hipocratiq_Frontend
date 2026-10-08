@@ -43,7 +43,7 @@ test("verified OTP continues automatically to each role dashboard", async ({ pag
     await page.getByRole("button", { name: new RegExp(label, "i") }).click();
     await page.getByRole("button", { name: /Correo/i }).click();
     await page.getByLabel("Correo electrónico").fill(email);
-    if (staff) await page.getByLabel("Contraseña").fill("x");
+    if (staff) await page.getByRole("textbox", { name: "Contraseña" }).fill("x");
     await page.getByRole("button", { name: "Iniciar sesión" }).click();
     await expect(page.getByRole("heading", { name: "Verifica tu identidad" })).toBeVisible();
     for (let index = 0; index < 6; index += 1) {
