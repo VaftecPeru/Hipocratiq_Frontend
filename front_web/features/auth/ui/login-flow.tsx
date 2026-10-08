@@ -292,6 +292,11 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
         setPassword("");
         dashboardPath.current = destination;
         dispatch({ type: "verified" });
+        setIsNavigating(true);
+
+        window.setTimeout(() => {
+          window.location.replace(destination);
+        }, 250);
       } catch (caughtError) {
         handleError(caughtError);
       } finally {
@@ -327,7 +332,7 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
     }
 
     setIsNavigating(true);
-    startTransition(() => router.replace(dashboardPath.current));
+    window.location.replace(dashboardPath.current);
   }
 
   function returnToRoleSelection() {
