@@ -1,0 +1,87 @@
+name: Mobile UAT APK 1234
+
+on:
+  push:
+    branches:
+      - feature/mobile-uat-apk-1234-20261007
+    paths:
+      - front_movil/**
+      - .github/workflows/mobile-uat-apk.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-uat-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-uat:
+    name: Build HIPOCRATIQ Android UAT
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Flutter 3.44.4
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: front_movil
+        run: flutter pub get
+
+      - name: Check formatting
+        working-directory: front_movil
+        shell: bash
+        run: |
+          dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        working-directory: front_movil
+        run: flutter analyze
+
+      - name: Run tests
+        working-directory: front_movil
+        run: flutter test
+
+      - name: Generate HIPOCRATIQ launcher icons
+        working-directory: front_movil
+        run: dart run flutter_launcher_icons
+
+      - name: Build Android UAT APK
+        working-directory: front_movil
+        run: >-
+          flutter build apk --debug
+          --build-name=1.0.0
+          --build-number=1007
+          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+          --dart-define=UAT_DEMO_MODE=true
+          --dart-define=UAT_OTP_CODE=1234
+
+      - name: Rename APK
+        working-directory: front_movil
+        run: cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/HIPOCRATIQ-UAT-Android-1234.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HIPOCRATIQ-UAT-Android-1234
+          if-no-files-found: error
+          retention-days: 14
+          path: front_movil/build/app/outputs/flutter-apk/HIPOCRATIQ-UAT-Android-1234.apk
