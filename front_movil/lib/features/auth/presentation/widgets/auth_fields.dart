@@ -209,14 +209,16 @@ class OtpCodeInput extends StatefulWidget {
   const OtpCodeInput({
     required this.value,
     required this.onChanged,
+    this.widget.codeLength = 6,
     this.enabled = true,
     this.hasError = false,
     this.errorText,
     super.key,
-  });
+  }) : assert(widget.codeLength >= 4 && widget.codeLength <= 8);
 
   final String value;
   final ValueChanged<String> onChanged;
+  final int widget.codeLength;
   final bool enabled;
   final bool hasError;
   final String? errorText;
@@ -226,7 +228,6 @@ class OtpCodeInput extends StatefulWidget {
 }
 
 class _OtpCodeInputState extends State<OtpCodeInput> {
-  static const codeLength = 6;
   late final List<TextEditingController> _controllers;
   late final List<FocusNode> _focusNodes;
   bool _isUpdatingControllers = false;
@@ -235,10 +236,10 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
   void initState() {
     super.initState();
     _controllers = List<TextEditingController>.generate(
-      codeLength,
+      widget.codeLength,
       (index) => TextEditingController(text: _digitAt(index, widget.value)),
     );
-    _focusNodes = List<FocusNode>.generate(codeLength, (_) => FocusNode());
+    _focusNodes = List<FocusNode>.generate(widget.codeLength, (_) => FocusNode());
   }
 
   @override
@@ -247,7 +248,7 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
     if (widget.value != oldWidget.value) {
       _isUpdatingControllers = true;
       try {
-        for (var index = 0; index < codeLength; index++) {
+        for (var index = 0; index < widget.codeLength; index++) {
           final digit = _digitAt(index, widget.value);
           if (_controllers[index].text != digit) {
             _controllers[index].value = TextEditingValue(
@@ -279,8 +280,8 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
       container: true,
       liveRegion: widget.errorText != null,
       label: widget.errorText == null
-          ? 'Código de seguridad de seis dígitos'
-          : 'Código de seguridad de seis dígitos. Error: ${widget.errorText}',
+          ? 'Código de seguridad de ${widget.codeLength} dígitos'
+          : 'Código de seguridad de ${widget.codeLength} dígitos. Error: ${widget.errorText}',
       child: AutofillGroup(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -289,22 +290,22 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
                 : 288.0;
             final minimumCellWidth = 44.0;
             final gap =
-                ((availableWidth - codeLength * minimumCellWidth) /
-                        (codeLength - 1))
+                ((availableWidth - widget.codeLength * minimumCellWidth) /
+                        (widget.codeLength - 1))
                     .clamp(1.0, 7.0)
                     .toDouble();
             final cellWidth =
-                (availableWidth - gap * (codeLength - 1)) / codeLength;
+                (availableWidth - gap * (widget.codeLength - 1)) / widget.codeLength;
             return Row(
-              children: List<Widget>.generate(codeLength, (index) {
+              children: List<Widget>.generate(widget.codeLength, (index) {
                 return Padding(
                   padding: EdgeInsets.only(
-                    right: index == codeLength - 1 ? 0 : gap,
+                    right: index == widget.codeLength - 1 ? 0 : gap,
                   ),
                   child: SizedBox(
                     width: cellWidth,
                     child: Semantics(
-                      label: 'Dígito ${index + 1} de $codeLength',
+                      label: 'Dígito ${index + 1} de $widget.codeLength',
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 44),
                         child: TextField(
@@ -313,7 +314,7 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
                           enabled: widget.enabled,
                           textAlign: TextAlign.center,
                           keyboardType: TextInputType.number,
-                          textInputAction: index == codeLength - 1
+                          textInputAction: index == widget.codeLength - 1
                               ? TextInputAction.done
                               : TextInputAction.next,
                           autofillHints: index == 0
@@ -338,7 +339,7 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
                           onChanged: (rawValue) =>
                               _handleChanged(index, rawValue),
                           onSubmitted: (_) {
-                            if (index < codeLength - 1) {
+                            if (index < widget.codeLength - 1) {
                               _focusNodes[index + 1].requestFocus();
                             }
                           },
@@ -362,12 +363,12 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
 
     final digits = rawValue.replaceAll(RegExp(r'\D'), '');
     if (digits.length > 1) {
-      final next = widget.value.padRight(codeLength).split('');
+      final next = widget.value.padRight(widget.codeLength).split('');
       _isUpdatingControllers = true;
       try {
         for (
           var offset = 0;
-          offset < digits.length && index + offset < codeLength;
+          offset < digits.length && index + offset < widget.codeLength;
           offset++
         ) {
           next[index + offset] = digits[offset];
@@ -378,16 +379,16 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
       }
       widget.onChanged(next.join().replaceAll(' ', ''));
       final focusIndex = (index + digits.length)
-          .clamp(0, codeLength - 1)
+          .clamp(0, widget.codeLength - 1)
           .toInt();
       _focusNodes[focusIndex].requestFocus();
       return;
     }
 
-    final next = widget.value.padRight(codeLength).split('');
+    final next = widget.value.padRight(widget.codeLength).split('');
     next[index] = digits;
     widget.onChanged(next.join().replaceAll(' ', ''));
-    if (digits.isNotEmpty && index < codeLength - 1) {
+    if (digits.isNotEmpty && index < widget.codeLength - 1) {
       _focusNodes[index + 1].requestFocus();
     } else if (digits.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
