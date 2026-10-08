@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
+import '../uat_demo.dart';
 import '../../workspace/domain/mobile_workspace.dart';
 import '../../workspace/presentation/patient_consents_panel.dart';
 import 'auth_controller.dart';
@@ -44,6 +45,15 @@ class _AuthenticatedShellState extends State<AuthenticatedShell> {
     });
 
     try {
+      if (isUatDemoSession(widget.session)) {
+        if (!mounted) return;
+        setState(() {
+          _snapshot = uatDemoWorkspace(widget.session);
+          _loading = false;
+        });
+        return;
+      }
+
       final gateway = widget.authGateway;
       if (gateway is! AuthRepository) {
         if (!mounted) return;
@@ -412,11 +422,38 @@ class _AccountTab extends StatelessWidget {
                 ],
               ),
             ),
-            if (session.actorContext == 'patient') ...[
+            if (isUatDemoSession(session)) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.science_outlined, color: AppColors.accent),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Sesión UAT local. Los datos mostrados son sintéticos y no modifican producción.',
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (session.actorContext == 'patient') ...[
               const SizedBox(height: 14),
               PatientConsentsPanel(authGateway: authGateway),
             ],
-            if (session.actorContext == 'clinic_admin') ...[
+            if (!isUatDemoSession(session) && session.actorContext == 'clinic_admin') ...[
               const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: () async {
