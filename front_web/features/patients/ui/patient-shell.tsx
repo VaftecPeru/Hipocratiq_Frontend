@@ -197,14 +197,13 @@ export function PatientShell({
   }, [menuOpen]);
 
   useEffect(() => {
-    if (routeTransition !== "loading") return;
     if (pendingPathRef.current === null || pendingPathRef.current !== pathname) return;
 
     pendingPathRef.current = null;
     setRouteTransition("complete");
     const timeout = window.setTimeout(() => setRouteTransition("idle"), 420);
     return () => window.clearTimeout(timeout);
-  }, [pathname, routeTransition]);
+  }, [pathname]);
 
   function handlePatientNavigation(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target;
