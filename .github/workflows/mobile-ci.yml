@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - qa/mobile-uat-dashboard-redirect-20261007
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
@@ -33,7 +34,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/qa/mobile-uat-dashboard-redirect-20261007' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
