@@ -209,16 +209,16 @@ class OtpCodeInput extends StatefulWidget {
   const OtpCodeInput({
     required this.value,
     required this.onChanged,
-    this.widget.codeLength = 6,
+    this.codeLength = 6,
     this.enabled = true,
     this.hasError = false,
     this.errorText,
     super.key,
-  }) : assert(widget.codeLength >= 4 && widget.codeLength <= 8);
+  }) : assert(codeLength >= 4 && codeLength <= 8);
 
   final String value;
   final ValueChanged<String> onChanged;
-  final int widget.codeLength;
+  final int codeLength;
   final bool enabled;
   final bool hasError;
   final String? errorText;
@@ -305,7 +305,7 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
                   child: SizedBox(
                     width: cellWidth,
                     child: Semantics(
-                      label: 'Dígito ${index + 1} de $widget.codeLength',
+                      label: 'Dígito ${index + 1} de ${widget.codeLength}',
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 44),
                         child: TextField(
