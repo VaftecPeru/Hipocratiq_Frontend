@@ -112,6 +112,7 @@ export function PatientShell({
 }) {
   const t = useTranslations("patient");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuWasOpenRef = useRef(false);
@@ -197,12 +198,21 @@ export function PatientShell({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  function handleSidebarToggle() {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 920px)").matches) {
+      setMenuOpen((open) => !open);
+      return;
+    }
+
+    setSidebarCollapsed((collapsed) => !collapsed);
+  }
+
   return (
-    <div className="patient-shell">
+    <div className={`patient-shell ${sidebarCollapsed ? "patient-shell--sidebar-collapsed" : ""}`}>
       <aside
         ref={sidebarRef}
         id="patient-mobile-navigation"
-        className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
+        className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""} ${sidebarCollapsed ? "patient-sidebar--collapsed" : ""}`}
         tabIndex={-1}
       >
         <Link className="patient-brand" href="/patient/dashboard" aria-label="HIPOCRATIQ">
@@ -284,10 +294,14 @@ export function PatientShell({
             ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
-             aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
-            aria-expanded={menuOpen}
+             aria-label={
+              typeof window !== "undefined" && window.matchMedia("(max-width: 920px)").matches
+                ? (menuOpen ? t("closeMenu") : t("openMenu"))
+                : (sidebarCollapsed ? "Mostrar menú lateral" : "Ocultar menú lateral")
+            }
+            aria-expanded={!sidebarCollapsed}
             aria-controls="patient-mobile-navigation"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={handleSidebarToggle}
           >
             {menuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
           </button>
