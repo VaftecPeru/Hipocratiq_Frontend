@@ -220,7 +220,7 @@ class _OtpPageState extends State<OtpPage> {
         final session = createUatDemoSession(widget.uatRole!);
         if (mounted) {
           _countdown.stop();
-          setState(() => _session = session);
+          Navigator.of(context).pop(session);
         }
         return;
       }
