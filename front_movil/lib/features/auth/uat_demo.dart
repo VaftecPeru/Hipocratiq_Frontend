@@ -30,7 +30,7 @@ MobileAuthSession createUatDemoSession(AuthRole role) {
   };
 
   final roleKey = role.requestedRole;
-  final clinic = const ClinicSummary(
+  const clinic = ClinicSummary(
     id: 9001,
     name: 'HIPOCRATIQ Clínica UAT',
     status: 'active',
