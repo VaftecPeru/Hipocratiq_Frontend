@@ -118,6 +118,17 @@ function sessionFor(role) {
 }
 
 
+const otpChallenges = new Map();
+let otpSequence = 0;
+
+const requestedRoleToSessionRole = {
+  clinic_admin: "clinic_admin",
+  doctor: "doctor",
+  receptionist: "receptionist",
+  patient: "patient",
+  super_admin: "super_admin",
+};
+
 let patientTriage = null;
 
 const patientProfile = {
@@ -205,6 +216,56 @@ const server = http.createServer(async (request, response) => {
     response.setHeader("Set-Cookie", "XSRF-TOKEN=e2e-token; Path=/; SameSite=Lax");
     response.writeHead(204);
     response.end();
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/v1/auth/otp/request") {
+    const payload = await jsonBody(request);
+    const sessionRole = requestedRoleToSessionRole[payload.requested_role];
+
+    if (!sessionRole) {
+      json(response, 422, { message: "Rol de acceso no válido.", errors: { requested_role: ["Rol de acceso no válido."] } });
+      return;
+    }
+
+    const challengeId = `e2e-challenge-${++otpSequence}`;
+    otpChallenges.set(challengeId, sessionRole);
+    json(response, 202, {
+      success: true,
+      data: {
+        challenge_id: challengeId,
+        next_step: "verify_otp",
+        expires_in: 300,
+        resend_after: 0,
+        resends_remaining: 5,
+      },
+    });
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/v1/auth/otp/verify") {
+    const payload = await jsonBody(request);
+    const sessionRole = otpChallenges.get(payload.challenge_id);
+
+    if (!sessionRole || payload.code !== "123456") {
+      json(response, 422, { message: "El código no es válido.", errors: { code: ["El código no es válido."] } });
+      return;
+    }
+
+    const verifiedSession = sessionFor(sessionRole);
+    otpChallenges.delete(payload.challenge_id);
+    response.setHeader("Set-Cookie", [
+      `e2e-role=${sessionRole}; Path=/; SameSite=Lax`,
+      "hipocratiq_e2e_session=active; Path=/; SameSite=Lax",
+    ]);
+    json(response, 200, {
+      success: true,
+      data: {
+        user: verifiedSession.user,
+        actor_context: verifiedSession.actor_context,
+        next_step: null,
+      },
+    });
     return;
   }
 
