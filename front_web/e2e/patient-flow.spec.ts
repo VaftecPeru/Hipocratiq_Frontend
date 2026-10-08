@@ -39,11 +39,12 @@ test("patient sidebar collapses on desktop and route transitions show loading an
   const shell = page.locator(".patient-shell");
   const sidebar = page.locator(".patient-sidebar");
   const content = page.locator(".patient-content");
-  const toggle = page.getByRole("button", { name: "Alternar menú lateral" });
+  const toggle = page.getByRole("button", { name: "Ocultar menú lateral" });
 
   await expect(toggle).toBeVisible();
   await toggle.click();
   await expect(shell).toHaveClass(/patient-shell--sidebar-collapsed/);
+  await expect(page.getByRole("button", { name: "Mostrar menú lateral" })).toBeVisible();
 
   const [collapsedWidth, collapsedMargin] = await Promise.all([
     sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
@@ -52,7 +53,7 @@ test("patient sidebar collapses on desktop and route transitions show loading an
   expect(collapsedWidth).toBeLessThanOrEqual(80);
   expect(Math.abs(collapsedMargin - collapsedWidth)).toBeLessThanOrEqual(2);
 
-  await toggle.click();
+  await page.getByRole("button", { name: "Mostrar menú lateral" }).click();
   await expect(shell).not.toHaveClass(/patient-shell--sidebar-collapsed/);
 
   const citasLink = page.getByRole("navigation", { name: "Navegación del paciente" }).getByRole("link", { name: "Mis citas" });
