@@ -294,12 +294,8 @@ export function PatientShell({
             ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
-             aria-label={
-              typeof window !== "undefined" && window.matchMedia("(max-width: 920px)").matches
-                ? (menuOpen ? t("closeMenu") : t("openMenu"))
-                : (sidebarCollapsed ? "Mostrar menú lateral" : "Ocultar menú lateral")
-            }
-            aria-expanded={!sidebarCollapsed}
+             aria-label="Alternar menú lateral"
+            aria-expanded={menuOpen || !sidebarCollapsed}
             aria-controls="patient-mobile-navigation"
             onClick={handleSidebarToggle}
           >
