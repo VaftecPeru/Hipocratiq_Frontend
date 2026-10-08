@@ -3,12 +3,14 @@
 import {
   BrainCircuit,
   CalendarDays,
+  CheckCircle2,
   ClipboardCheck,
   CreditCard,
   FileText,
   FlaskConical,
   HeartPulse,
   LayoutDashboard,
+  LoaderCircle,
   Menu,
   UserRound,
   X,
@@ -112,11 +114,23 @@ export function PatientShell({
 }) {
   const t = useTranslations("patient");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [routeTransition, setRouteTransition] = useState<"idle" | "loading" | "complete">("idle");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const pendingPathRef = useRef<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuWasOpenRef = useRef(false);
   const pathname = usePathname();
   const meta = pageMeta(pathname, userName, t);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 920px)");
+    const updateViewport = () => setIsMobileViewport(media.matches);
+    updateViewport();
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -182,6 +196,33 @@ export function PatientShell({
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (pendingPathRef.current === null || pendingPathRef.current !== pathname) return;
+
+    pendingPathRef.current = null;
+    setRouteTransition("complete");
+    const timeout = window.setTimeout(() => setRouteTransition("idle"), 420);
+    return () => window.clearTimeout(timeout);
+  }, [pathname]);
+
+  function handlePatientNavigation(event: React.MouseEvent<HTMLDivElement>) {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const anchor = target.closest<HTMLAnchorElement>("a[href]");
+    if (!anchor) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (anchor.target === "_blank") return;
+
+    const url = new URL(anchor.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    if (!url.pathname.startsWith("/patient/")) return;
+    if (url.pathname === pathname) return;
+
+    pendingPathRef.current = url.pathname;
+    setRouteTransition("loading");
+  }
+
   const navigation: NavigationItem[] = [
     { labelKey: "dashboard", href: "/patient/dashboard", icon: LayoutDashboard, enabled: true },
     { labelKey: "appointments", href: "/patient/citas", icon: CalendarDays, enabled: true },
@@ -197,12 +238,24 @@ export function PatientShell({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  function handleSidebarToggle() {
+    if (isMobileViewport) {
+      setMenuOpen((open) => !open);
+      return;
+    }
+
+    setSidebarCollapsed((collapsed) => !collapsed);
+  }
+
   return (
-    <div className="patient-shell">
+    <div
+      className={`patient-shell ${sidebarCollapsed ? "patient-shell--sidebar-collapsed" : ""}`}
+      onClickCapture={handlePatientNavigation}
+    >
       <aside
         ref={sidebarRef}
         id="patient-mobile-navigation"
-        className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""}`}
+        className={`patient-sidebar ${menuOpen ? "patient-sidebar--open" : ""} ${sidebarCollapsed ? "patient-sidebar--collapsed" : ""}`}
         tabIndex={-1}
       >
         <Link className="patient-brand" href="/patient/dashboard" aria-label="HIPOCRATIQ">
@@ -284,10 +337,14 @@ export function PatientShell({
             ref={menuButtonRef}
             className="patient-mobile-menu"
             type="button"
-             aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
-            aria-expanded={menuOpen}
+             aria-label={
+              isMobileViewport
+                ? (menuOpen ? t("closeMenu") : t("openMenu"))
+                : (sidebarCollapsed ? "Mostrar menú lateral" : "Ocultar menú lateral")
+            }
+            aria-expanded={isMobileViewport ? menuOpen : !sidebarCollapsed}
             aria-controls="patient-mobile-navigation"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={handleSidebarToggle}
           >
             {menuOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
           </button>
@@ -309,6 +366,35 @@ export function PatientShell({
 
         <main id="main-content" className="patient-main">{children}</main>
       </div>
+
+      {routeTransition !== "idle" ? (
+        <div
+          className={`patient-route-transition patient-route-transition--${routeTransition}`}
+          role="status"
+          aria-live="polite"
+          aria-busy={routeTransition === "loading"}
+          data-testid="patient-route-transition"
+        >
+          <div className="patient-route-transition__card">
+            <span className="patient-route-transition__logo" aria-hidden="true">
+              <Image src="/logo_hipocratiq.webp" alt="" width={50} height={50} priority />
+            </span>
+            <div className="patient-route-transition__brand">HIPOCRATIQ</div>
+            <div className="patient-route-transition__status">
+              {routeTransition === "loading" ? (
+                <LoaderCircle className="size-5 patient-route-transition__spinner" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="size-5" aria-hidden="true" />
+              )}
+              <strong>{routeTransition === "loading" ? "Cargando..." : "Completado"}</strong>
+            </div>
+            <div className="patient-route-transition__track" aria-hidden="true">
+              <span />
+            </div>
+            <p>{routeTransition === "loading" ? "Preparando tu información de salud" : "Vista lista"}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

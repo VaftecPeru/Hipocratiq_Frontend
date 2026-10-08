@@ -3880,3 +3880,258 @@ input {
     font-size: 0.6rem;
   }
 }
+
+
+/* Patient collapsible sidebar + route preload — 2026-10-07 */
+:root {
+  --patient-sidebar-collapsed-width: 76px;
+}
+
+.patient-sidebar,
+.patient-content {
+  transition:
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-left 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.patient-mobile-menu {
+  display: grid;
+  flex: 0 0 auto;
+}
+
+.patient-shell--sidebar-collapsed .patient-sidebar {
+  width: var(--patient-sidebar-collapsed-width);
+}
+
+.patient-shell--sidebar-collapsed .patient-content {
+  margin-left: var(--patient-sidebar-collapsed-width);
+}
+
+.patient-sidebar--collapsed .patient-brand {
+  justify-content: center;
+  padding-inline: 0.65rem;
+}
+
+.patient-sidebar--collapsed .patient-brand__wordmark,
+.patient-sidebar--collapsed .patient-user-card__copy,
+.patient-sidebar--collapsed .patient-nav__item span,
+.patient-sidebar--collapsed .patient-sidebar__footer button span {
+  display: none;
+}
+
+.patient-sidebar--collapsed .patient-user-card {
+  justify-content: center;
+  margin-inline: 0.55rem;
+  padding-inline: 0.45rem;
+}
+
+.patient-sidebar--collapsed .patient-avatar {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.patient-sidebar--collapsed .patient-nav {
+  padding-inline: 0.5rem;
+}
+
+.patient-sidebar--collapsed .patient-nav__item {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+
+.patient-sidebar--collapsed .patient-nav__item svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.patient-sidebar--collapsed .patient-sidebar__footer {
+  padding-inline: 0.5rem;
+}
+
+.patient-sidebar--collapsed .patient-sidebar__footer button {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.patient-route-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 34%, rgb(80 155 255 / 18%), transparent 22rem),
+    linear-gradient(135deg, rgb(3 63 165 / 96%), rgb(7 87 215 / 97%) 46%, rgb(9 71 185 / 97%));
+  padding: 1rem;
+  backdrop-filter: blur(8px);
+  animation: patient-route-overlay-in 180ms ease both;
+}
+
+.patient-route-transition__card {
+  display: grid;
+  width: min(92vw, 24rem);
+  justify-items: center;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 1.35rem;
+  background: rgb(255 255 255 / 10%);
+  padding: 1.5rem 1.6rem 1.35rem;
+  color: white;
+  text-align: center;
+  box-shadow:
+    0 1.4rem 3.5rem rgb(0 27 83 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 18%);
+  backdrop-filter: blur(16px);
+}
+
+.patient-route-transition__logo {
+  display: grid;
+  width: 4.1rem;
+  height: 4.1rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1.1rem;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 0.8rem 2rem rgb(0 25 80 / 24%);
+}
+
+.patient-route-transition__logo img {
+  width: 2.85rem;
+  height: 2.85rem;
+  object-fit: contain;
+}
+
+.patient-route-transition__brand {
+  margin-top: 0.85rem;
+  font-size: 1.05rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.patient-route-transition__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.05rem;
+  font-size: 0.78rem;
+}
+
+.patient-route-transition__status strong {
+  font-weight: 900;
+}
+
+.patient-route-transition__spinner {
+  animation: patient-route-spin 0.8s linear infinite;
+}
+
+.patient-route-transition__track {
+  width: min(100%, 16rem);
+  height: 0.36rem;
+  margin-top: 0.95rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.patient-route-transition__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffffff, #9bc8ff);
+}
+
+.patient-route-transition--loading .patient-route-transition__track span {
+  width: 72%;
+  animation: patient-route-progress 1.1s ease-in-out infinite;
+}
+
+.patient-route-transition--complete .patient-route-transition__track span {
+  width: 100%;
+  transition: width 180ms ease;
+}
+
+.patient-route-transition p {
+  margin: 0.65rem 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.patient-route-transition--complete .patient-route-transition__status {
+  color: #dfffee;
+}
+
+@keyframes patient-route-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes patient-route-progress {
+  0% { transform: translateX(-55%); }
+  50% { transform: translateX(35%); }
+  100% { transform: translateX(105%); }
+}
+
+@keyframes patient-route-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 920px) {
+  .patient-shell--sidebar-collapsed .patient-sidebar {
+    width: min(17rem, 86vw);
+  }
+
+  .patient-shell--sidebar-collapsed .patient-content {
+    margin-left: 0;
+  }
+
+  .patient-sidebar--collapsed .patient-brand {
+    justify-content: flex-start;
+    padding-inline: 1rem;
+  }
+
+  .patient-sidebar--collapsed .patient-brand__wordmark,
+  .patient-sidebar--collapsed .patient-user-card__copy,
+  .patient-sidebar--collapsed .patient-nav__item span,
+  .patient-sidebar--collapsed .patient-sidebar__footer button span {
+    display: initial;
+  }
+
+  .patient-sidebar--collapsed .patient-user-card {
+    justify-content: flex-start;
+    margin-inline: 0.7rem;
+    padding-inline: 0.7rem;
+  }
+
+  .patient-sidebar--collapsed .patient-nav {
+    padding-inline: 0.72rem;
+  }
+
+  .patient-sidebar--collapsed .patient-nav__item {
+    justify-content: flex-start;
+    gap: 0.7rem;
+    padding-inline: 0.8rem;
+  }
+
+  .patient-sidebar--collapsed .patient-sidebar__footer {
+    padding-inline: 0.75rem;
+  }
+
+  .patient-sidebar--collapsed .patient-sidebar__footer button {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .patient-sidebar,
+  .patient-content,
+  .patient-route-transition,
+  .patient-route-transition__spinner,
+  .patient-route-transition--loading .patient-route-transition__track span {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
