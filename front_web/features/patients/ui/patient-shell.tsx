@@ -116,6 +116,7 @@ export function PatientShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [routeTransition, setRouteTransition] = useState<"idle" | "loading" | "complete">("idle");
+  const pendingPathRef = useRef<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const menuWasOpenRef = useRef(false);
@@ -188,7 +189,9 @@ export function PatientShell({
 
   useEffect(() => {
     if (routeTransition !== "loading") return;
+    if (pendingPathRef.current === null || pendingPathRef.current !== pathname) return;
 
+    pendingPathRef.current = null;
     setRouteTransition("complete");
     const timeout = window.setTimeout(() => setRouteTransition("idle"), 420);
     return () => window.clearTimeout(timeout);
@@ -208,6 +211,7 @@ export function PatientShell({
     if (!url.pathname.startsWith("/patient/")) return;
     if (url.pathname === pathname) return;
 
+    pendingPathRef.current = url.pathname;
     setRouteTransition("loading");
   }
 
