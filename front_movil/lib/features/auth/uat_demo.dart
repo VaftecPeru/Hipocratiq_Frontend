@@ -1,5 +1,5 @@
-import '../domain/auth_models.dart';
-import '../../workspace/domain/mobile_workspace.dart';
+import 'domain/auth_models.dart';
+import '../workspace/domain/mobile_workspace.dart';
 
 const bool uatDemoEnabled = bool.fromEnvironment(
   'UAT_DEMO_MODE',
@@ -73,7 +73,7 @@ MobileAuthSession createUatDemoSession(AuthRole role) {
   );
 
   return MobileAuthSession(
-    accessToken: 'uat-demo-local-token-${role.requestedRole}',
+    accessToken: 'uat-demo-local-token-$role.requestedRole',
     tokenType: 'UAT',
     user: user,
     actorContext: actorContext,
