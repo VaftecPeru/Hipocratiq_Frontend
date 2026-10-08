@@ -50,7 +50,7 @@ MobileAuthSession createUatDemoSession(AuthRole role) {
       AuthRole.receptionist => 'Recepción UAT',
       AuthRole.administrator => 'Administrador UAT',
     },
-    email: '${roleKey}@$_uatDomain',
+    email: '$roleKey@$_uatDomain',
     phoneNumber: '+525500001234',
     countryCode: 'MX',
     status: 'active',
@@ -73,7 +73,7 @@ MobileAuthSession createUatDemoSession(AuthRole role) {
   );
 
   return MobileAuthSession(
-    accessToken: 'uat-demo-local-token-$role.requestedRole',
+    accessToken: 'uat-demo-local-token-${role.requestedRole}',
     tokenType: 'UAT',
     user: user,
     actorContext: actorContext,
