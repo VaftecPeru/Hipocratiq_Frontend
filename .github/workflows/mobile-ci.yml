@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - qa/mobile-android-uat-20261009
     paths:
       - front_movil/**
       - .github/workflows/mobile-ci.yml
@@ -33,7 +34,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/qa/mobile-android-uat-20261009' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -100,7 +101,7 @@ jobs:
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-android-validation
+          name: HIPOCRATIQ-UAT-Android-20261009
           if-no-files-found: error
           path: |
             front_movil/build/app/outputs/flutter-apk/app-debug.apk
