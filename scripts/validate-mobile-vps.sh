@@ -100,8 +100,8 @@ docker create --network host --name "$BUILD_CONTAINER" \
     --dart-define=BACKEND_URL="$BACKEND_URL" \
     --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
   flutter build appbundle --debug \
-    --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
-    --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+    --dart-define=BACKEND_URL="$BACKEND_URL" \
+    --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
 ' >/dev/null
 
 docker start -a "$BUILD_CONTAINER"
