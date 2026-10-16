@@ -31,6 +31,7 @@ export type DoctorRegistrationDraft = {
   password: string;
   password_confirmation: string;
   terms_accepted: boolean;
+  google_registration_token?: string;
 };
 
 type ChallengeData = { challenge_id: string; expires_in: number; resend_after: number; resends_remaining: number; next_step: "verify_otp" };

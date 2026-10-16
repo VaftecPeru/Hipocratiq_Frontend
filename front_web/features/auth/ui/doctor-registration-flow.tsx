@@ -16,7 +16,7 @@ import {
 } from "@/features/auth/api/doctor-registration";
 import type { ClinicPlan } from "@/features/auth/api/clinic-registration";
 import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
-import type { CountryCode } from "@/features/auth/model/auth.types";
+import type { CountryCode, GoogleIdentityProfile } from "@/features/auth/model/auth.types";
 import { DoctorRegistrationForm } from "@/features/auth/ui/doctor-registration-form";
 import { ClinicOtpStep, PlanStep, RegistrationSuccessStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/auth/ui/clinic-registration-ui";
@@ -53,10 +53,25 @@ function validateDraft(draft: DoctorRegistrationDraft, catalogStatus: "loading" 
   return errors;
 }
 
-export function DoctorRegistrationFlow({ onBack }: { onBack: () => void }) {
+type DoctorRegistrationFlowProps = {
+  onBack: () => void;
+  googleIdentity?: GoogleIdentityProfile;
+  googleRegistrationToken?: string;
+};
+
+export function DoctorRegistrationFlow({
+  onBack,
+  googleIdentity,
+  googleRegistrationToken,
+}: DoctorRegistrationFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<DoctorStep>("details");
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState<DoctorRegistrationDraft>({
+    ...initialDraft,
+    doctor_name: googleIdentity?.name ?? "",
+    doctor_email: googleIdentity?.email ?? "",
+    google_registration_token: googleRegistrationToken,
+  });
   const [clinics, setClinics] = useState<RegistrationClinic[]>([]);
   const [specialties, setSpecialties] = useState<RegistrationSpecialty[]>([]);
   const [catalogStatus, setCatalogStatus] = useState<"loading" | "available" | "unavailable">("loading");

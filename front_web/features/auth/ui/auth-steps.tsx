@@ -67,6 +67,7 @@ type CredentialsStepProps = {
   onPasswordChange: (value: string) => void;
   onIdentifierBlur: () => void;
   onPasswordBlur: () => void;
+  onGoogleSignIn: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
@@ -101,6 +102,7 @@ export function CredentialsStep({
   onPasswordChange,
   onIdentifierBlur,
   onPasswordBlur,
+  onGoogleSignIn,
   onSubmit,
 }: CredentialsStepProps) {
   const locale = useLocale();
@@ -176,6 +178,16 @@ export function CredentialsStep({
          <span>{t("continueWith")}</span>
         <span className="h-px flex-1 bg-line" aria-hidden="true" />
       </div>
+
+      <button
+        type="button"
+        className={`mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-xs font-extrabold text-ink transition-colors hover:border-accent/40 hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING_CLASSES}`}
+        onClick={onGoogleSignIn}
+        disabled={isPending}
+      >
+        <span className="grid size-5 place-items-center rounded-full border border-line bg-white text-[0.72rem] font-black text-[#4285F4]" aria-hidden="true">G</span>
+        Continuar con Google
+      </button>
 
        <div className="mt-4 grid grid-cols-2 rounded-[0.7rem] border border-line bg-surface-subtle p-1" role="group" aria-label={t("accessMethod")}>
         <button type="button" className={`flex min-h-8 items-center justify-center gap-2 rounded-md border-0 text-2xs font-bold transition-[background-color,color,box-shadow] hover:text-accent ${identifierType === "phone" ? "bg-surface text-accent shadow-[0_0.2rem_0.8rem_rgb(50_73_108/10%)]" : "bg-transparent text-muted"} ${FOCUS_RING_CLASSES}`} onClick={() => onIdentifierTypeChange("phone")} aria-pressed={identifierType === "phone"}>
