@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, CircleAlert, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { requestPasswordResetOtp, resendOtp, verifyPasswordResetOtp } from "@/features/auth/api/browser-auth";
-import { COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { PRIMARY_COUNTRY_CODE, COUNTRY_OPTIONS, maskPhoneNumber, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
@@ -290,7 +290,7 @@ export function PasswordResetFlow() {
   const verifiedCode = useRef("");
   const phoneInput = useRef<HTMLInputElement>(null);
   const [flow, dispatch] = useReducer(reducer, INITIAL);
-  const [country, setCountry] = useState<CountryCode>("MX");
+  const [country, setCountry] = useState<CountryCode>(PRIMARY_COUNTRY_CODE);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
