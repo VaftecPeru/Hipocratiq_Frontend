@@ -11,7 +11,7 @@ import {
   type PatientRegistrationClinic,
   type PatientRegistrationDraft,
 } from "@/features/auth/api/patient-registration";
-import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { PRIMARY_COUNTRY_CODE, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { ClinicOtpStep, RegistrationSuccessStep } from "@/features/auth/ui/clinic-registration-steps";
 import type { RegistrationFieldErrors, RegistrationFieldName } from "@/features/auth/ui/clinic-registration-ui";
@@ -22,7 +22,7 @@ import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 const initialDraft: PatientRegistrationDraft = {
   name: "",
   email: "",
-  country_code: "MX",
+  country_code: PRIMARY_COUNTRY_CODE,
   phone_number: "",
   clinic_id: null,
   terms_accepted: false,
