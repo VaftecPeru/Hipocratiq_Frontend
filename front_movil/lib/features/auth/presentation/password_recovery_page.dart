@@ -22,7 +22,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   final _passwordController = TextEditingController();
   final _confirmationController = TextEditingController();
   AuthIdentifierType _identifierType = AuthIdentifierType.phone;
-  CountryCode _country = CountryCode.mx;
+  CountryCode _country = primaryCountry;
   RecoveryStep _step = RecoveryStep.identifier;
   String _challengeId = '';
   String _code = '';
