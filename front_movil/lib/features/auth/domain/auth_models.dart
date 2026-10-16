@@ -38,7 +38,7 @@ enum CountryCode {
   static CountryCode fromCode(String value) {
     return values.firstWhere(
       (country) => country.code == value.toUpperCase(),
-      orElse: () => CountryCode.pe,
+      orElse: () => CountryCode.mx,
     );
   }
 }
