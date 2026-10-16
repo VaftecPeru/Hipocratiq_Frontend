@@ -3991,9 +3991,9 @@ input {
   height: 4.1rem;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 20%);
+  border: 1px solid rgb(255 255 255 / 24%);
   border-radius: 1.1rem;
-  background: rgb(255 255 255 / 94%);
+  background: #0b64dd;
   box-shadow: 0 0.8rem 2rem rgb(0 25 80 / 24%);
 }
 
@@ -4001,6 +4001,7 @@ input {
   width: 2.85rem;
   height: 2.85rem;
   object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .patient-route-transition__brand {
