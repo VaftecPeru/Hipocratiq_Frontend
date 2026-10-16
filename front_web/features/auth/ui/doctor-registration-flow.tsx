@@ -24,7 +24,7 @@ import { ApiError } from "@/shared/api/http-client";
 import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 
 const initialDraft: DoctorRegistrationDraft = {
-  doctor_name: "", doctor_email: "", country_code: "PE", doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
+  doctor_name: "", doctor_email: "", country_code: "MX", doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
 };
 
 type DoctorStep = "details" | "plan" | "otp" | "success";
