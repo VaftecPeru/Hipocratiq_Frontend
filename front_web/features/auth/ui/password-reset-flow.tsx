@@ -290,7 +290,7 @@ export function PasswordResetFlow() {
   const verifiedCode = useRef("");
   const phoneInput = useRef<HTMLInputElement>(null);
   const [flow, dispatch] = useReducer(reducer, INITIAL);
-  const [country, setCountry] = useState<CountryCode>("PE");
+  const [country, setCountry] = useState<CountryCode>("MX");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
