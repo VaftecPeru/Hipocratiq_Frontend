@@ -47,10 +47,23 @@ if ! cmp -s front_web/public/logo_hipogratiq_1.png front_movil/assets/branding/l
   exit 1
 fi
 
-if ! cmp -s front_web/public/logo_hipocratiq.webp front_movil/assets/branding/logo-app-web.webp; then
-  echo "ERROR: el isotipo del launcher Mobile no coincide con el asset oficial Web." >&2
+test -s front_movil/assets/branding/app-icon.png || {
+  echo "ERROR: falta app-icon.png del branding móvil aprobado." >&2
   exit 1
-fi
+}
+
+test -s front_movil/assets/branding/app-icon-foreground.png || {
+  echo "ERROR: falta app-icon-foreground.png del branding móvil aprobado." >&2
+  exit 1
+}
+
+grep -Fq 'image_path: "assets/branding/app-icon.png"' front_movil/pubspec.yaml
+grep -Fq 'adaptive_icon_background: "#0B64DD"' front_movil/pubspec.yaml
+grep -Fq 'adaptive_icon_foreground: "assets/branding/app-icon-foreground.png"' front_movil/pubspec.yaml
+grep -Fq '<color name="hipocratiq_blue">#0B64DD</color>' front_movil/android/app/src/main/res/values/colors.xml
+grep -Fq '@color/hipocratiq_blue' front_movil/android/app/src/main/res/drawable/launch_background.xml
+grep -Fq '@color/hipocratiq_blue' front_movil/android/app/src/main/res/drawable-v21/launch_background.xml
+grep -Fq 'red="0.0431372549" green="0.3921568627" blue="0.8666666667"' front_movil/ios/Runner/Base.lproj/LaunchScreen.storyboard
 
 echo "[2/7] Build toolchain Flutter/Android"
 docker build --pull -f front_movil/Dockerfile.android-ci -t "$IMAGE" front_movil
