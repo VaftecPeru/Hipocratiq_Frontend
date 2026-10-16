@@ -84,22 +84,48 @@ class _StartupLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BrandLockup(compact: true),
-            const SizedBox(height: 28),
-            Semantics(
-              liveRegion: true,
-              label: 'Comprobando sesión',
-              child: const SizedBox.square(
-                dimension: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              ),
+      backgroundColor: const Color(0xFF0B64DD),
+      body: SafeArea(
+        child: Center(
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: 'HIPOCRATIQ. Comprobando sesión',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/branding/app-icon.png',
+                    width: 112,
+                    height: 112,
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'HIPOCRATIQ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3.2,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const SizedBox.square(
+                  dimension: 26,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                    backgroundColor: Color(0x40FFFFFF),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
