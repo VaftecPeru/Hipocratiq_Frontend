@@ -35,7 +35,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  CountryCode _country = CountryCode.pe;
+  CountryCode _country = CountryCode.mx;
   int? _clinicId;
   bool _termsAccepted = false;
   bool _isLoadingClinics = false;
