@@ -10,6 +10,8 @@ BUILD_CONTAINER="hipocratiq-mobile-build-${RUN_ID}"
 LOG_DIR="${VALIDATION_LOG_DIR:-/tmp/hipocratiq-validation}"
 LOG_FILE="${LOG_DIR}/mobile-${RUN_ID}.log"
 ARTIFACT_DIR="${LOG_DIR}/android-${RUN_ID}"
+BACKEND_URL="${BACKEND_URL:-https://hipocratiq.com/backend}"
+SUPPORT_PORTAL_URL="${SUPPORT_PORTAL_URL:-https://hipocratiq.com}"
 
 mkdir -p "$LOG_DIR" "$ARTIFACT_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -33,6 +35,7 @@ docker info >/dev/null
 echo "== HIPOCRATIQ Android VPS validation =="
 echo "SHA: $(git rev-parse HEAD)"
 echo "Branch: $(git branch --show-current)"
+echo "Backend URL: $BACKEND_URL"
 echo "Log: $LOG_FILE"
 
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -47,10 +50,23 @@ if ! cmp -s front_web/public/logo_hipogratiq_1.png front_movil/assets/branding/l
   exit 1
 fi
 
-if ! cmp -s front_web/public/logo_hipocratiq.webp front_movil/assets/branding/logo-app-web.webp; then
-  echo "ERROR: el isotipo del launcher Mobile no coincide con el asset oficial Web." >&2
+test -s front_movil/assets/branding/app-icon.png || {
+  echo "ERROR: falta app-icon.png del branding móvil aprobado." >&2
   exit 1
-fi
+}
+
+test -s front_movil/assets/branding/app-icon-foreground.png || {
+  echo "ERROR: falta app-icon-foreground.png del branding móvil aprobado." >&2
+  exit 1
+}
+
+grep -Fq 'image_path: "assets/branding/app-icon.png"' front_movil/pubspec.yaml
+grep -Fq 'adaptive_icon_background: "#0B64DD"' front_movil/pubspec.yaml
+grep -Fq 'adaptive_icon_foreground: "assets/branding/app-icon-foreground.png"' front_movil/pubspec.yaml
+grep -Fq '<color name="hipocratiq_blue">#0B64DD</color>' front_movil/android/app/src/main/res/values/colors.xml
+grep -Fq '@color/hipocratiq_blue' front_movil/android/app/src/main/res/drawable/launch_background.xml
+grep -Fq '@color/hipocratiq_blue' front_movil/android/app/src/main/res/drawable-v21/launch_background.xml
+grep -Fq 'red="0.0431372549" green="0.3921568627" blue="0.8666666667"' front_movil/ios/Runner/Base.lproj/LaunchScreen.storyboard
 
 echo "[2/7] Build toolchain Flutter/Android"
 docker build --pull -f front_movil/Dockerfile.android-ci -t "$IMAGE" front_movil
@@ -74,15 +90,18 @@ docker run --rm --network host "$IMAGE" bash -lc '
   done
 '
 
-docker create --network host --name "$BUILD_CONTAINER" "$IMAGE" bash -lc '
+docker create --network host --name "$BUILD_CONTAINER" \
+  -e BACKEND_URL="$BACKEND_URL" \
+  -e SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL" \
+  "$IMAGE" bash -lc '
   set -Eeuo pipefail
   dart run flutter_launcher_icons
   flutter build apk --debug \
-    --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
-    --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+    --dart-define=BACKEND_URL="$BACKEND_URL" \
+    --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
   flutter build appbundle --debug \
-    --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
-    --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+    --dart-define=BACKEND_URL="$BACKEND_URL" \
+    --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
 ' >/dev/null
 
 docker start -a "$BUILD_CONTAINER"

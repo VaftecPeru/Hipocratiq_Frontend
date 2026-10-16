@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  CountryCode _country = CountryCode.pe;
+  CountryCode _country = CountryCode.mx;
   AuthIdentifierType _identifierType = AuthIdentifierType.phone;
   bool _isPasswordVisible = false;
   bool _isSubmitting = false;

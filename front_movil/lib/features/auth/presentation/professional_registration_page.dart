@@ -51,7 +51,7 @@ class _ProfessionalRegistrationPageState
   final _passwordController = TextEditingController();
   final _confirmationController = TextEditingController();
 
-  CountryCode _country = CountryCode.pe;
+  CountryCode _country = CountryCode.mx;
   String _practiceType = 'independent';
   int? _clinicId;
   List<ClinicOption> _clinics = const <ClinicOption>[];
