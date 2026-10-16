@@ -15,7 +15,7 @@ import {
   type RegistrationSpecialty,
 } from "@/features/auth/api/doctor-registration";
 import type { ClinicPlan } from "@/features/auth/api/clinic-registration";
-import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { PRIMARY_COUNTRY_CODE, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { DoctorRegistrationForm } from "@/features/auth/ui/doctor-registration-form";
 import { ClinicOtpStep, PlanStep, RegistrationSuccessStep } from "@/features/auth/ui/clinic-registration-steps";
@@ -24,7 +24,7 @@ import { ApiError } from "@/shared/api/http-client";
 import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 
 const initialDraft: DoctorRegistrationDraft = {
-  doctor_name: "", doctor_email: "", country_code: "PE", doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
+  doctor_name: "", doctor_email: "", country_code: PRIMARY_COUNTRY_CODE, doctor_phone_number: "", medical_license: "", specialty: "", specialty_id: null, subspecialty_id: null, practice_type: "clinic", clinic_id: null, password: "", password_confirmation: "", terms_accepted: false,
 };
 
 type DoctorStep = "details" | "plan" | "otp" | "success";
