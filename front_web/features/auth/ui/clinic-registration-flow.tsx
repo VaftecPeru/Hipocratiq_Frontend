@@ -24,7 +24,7 @@ import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 const initialDraft: ClinicRegistrationDraft = {
   clinic_name: "",
   tax_id: "",
-  country_code: "PE",
+  country_code: "MX",
   contact_phone: "",
   address: "",
   admin_name: "",
