@@ -22,7 +22,7 @@ import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 const initialDraft: PatientRegistrationDraft = {
   name: "",
   email: "",
-  country_code: "PE",
+  country_code: "MX",
   phone_number: "",
   clinic_id: null,
   terms_accepted: false,
