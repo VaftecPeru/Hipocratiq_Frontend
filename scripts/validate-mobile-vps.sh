@@ -10,6 +10,8 @@ BUILD_CONTAINER="hipocratiq-mobile-build-${RUN_ID}"
 LOG_DIR="${VALIDATION_LOG_DIR:-/tmp/hipocratiq-validation}"
 LOG_FILE="${LOG_DIR}/mobile-${RUN_ID}.log"
 ARTIFACT_DIR="${LOG_DIR}/android-${RUN_ID}"
+BACKEND_URL="${BACKEND_URL:-https://hipocratiq.com/backend}"
+SUPPORT_PORTAL_URL="${SUPPORT_PORTAL_URL:-https://hipocratiq.com}"
 
 mkdir -p "$LOG_DIR" "$ARTIFACT_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -33,6 +35,7 @@ docker info >/dev/null
 echo "== HIPOCRATIQ Android VPS validation =="
 echo "SHA: $(git rev-parse HEAD)"
 echo "Branch: $(git branch --show-current)"
+echo "Backend URL: $BACKEND_URL"
 echo "Log: $LOG_FILE"
 
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -87,12 +90,15 @@ docker run --rm --network host "$IMAGE" bash -lc '
   done
 '
 
-docker create --network host --name "$BUILD_CONTAINER" "$IMAGE" bash -lc '
+docker create --network host --name "$BUILD_CONTAINER" \
+  -e BACKEND_URL="$BACKEND_URL" \
+  -e SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL" \
+  "$IMAGE" bash -lc '
   set -Eeuo pipefail
   dart run flutter_launcher_icons
   flutter build apk --debug \
-    --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
-    --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+    --dart-define=BACKEND_URL="$BACKEND_URL" \
+    --dart-define=SUPPORT_PORTAL_URL="$SUPPORT_PORTAL_URL"
   flutter build appbundle --debug \
     --dart-define=BACKEND_URL=https://hipocratiq.com/backend \
     --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
