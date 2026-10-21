@@ -124,7 +124,7 @@ jobs:
                   sys.exit(1)
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write(f"backend_url={target}\\n")
+              out.write(f"backend_url={target}\n")
           PY
 
       - name: Build Android APK
@@ -210,7 +210,7 @@ jobs:
                   sys.exit(1)
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write(f"backend_url={target}\\n")
+              out.write(f"backend_url={target}\n")
           PY
 
       - name: Build iOS without code signing
