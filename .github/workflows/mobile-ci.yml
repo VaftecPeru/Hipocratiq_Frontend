@@ -170,6 +170,21 @@ jobs:
         working-directory: front_movil
         run: flutter pub get
 
+      - name: Read Xcode toolchain
+        run: xcodebuild -version
+
+      - name: Check Dart format (without modifying sources)
+        working-directory: front_movil
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Flutter analyze
+        working-directory: front_movil
+        run: flutter analyze
+
+      - name: Flutter unit/widget tests
+        working-directory: front_movil
+        run: flutter test
+
       - name: Generate HIPOCRATIQ launcher icons
         working-directory: front_movil
         run: dart run flutter_launcher_icons
