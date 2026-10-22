@@ -3,6 +3,8 @@
 import { FormEvent, startTransition, useEffect, useReducer, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useReducedMotion } from "motion/react";
+import { DashboardIrisTransition } from "@/features/auth/ui/dashboard-iris-transition";
 import { requestLoginOtp, verifyLoginOtp } from "@/features/auth/api/browser-auth";
 import { COUNTRY_OPTIONS, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { AuthStep, CountryCode, LoginActorContext, LoginIdentifierType, LoginRequestedRole, LoginRole } from "@/features/auth/model/auth.types";
@@ -139,6 +141,8 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
   const locale = useLocale();
   const t = useTranslations("auth");
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const navigationTriggered = useRef(false);
   const { defaultCountryCode } = useAuthPlatformSettings();
   const challengeId = useRef("");
   const emailInput = useRef<HTMLInputElement>(null);
@@ -321,29 +325,29 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
       : { type: "fieldCleared", field: "identifier" });
   }
 
-  function continueToDashboard() {
-    if (isNavigating) {
-      return;
-    }
-
-    setIsNavigating(true);
+  function finishDashboardNavigation() {
+    if (navigationTriggered.current) return;
+    navigationTriggered.current = true;
     startTransition(() => router.replace(dashboardPath.current));
   }
 
-  function returnToRoleSelection() {
-    challengeId.current = "";
-    setLoginRole("healthcare");
-    setIdentifierType("phone");
-    setSelectedCountry(null);
-    setEmail("");
-    setPhone("");
-    setPassword("");
-    dispatch({ type: "back" });
-    router.replace("/");
+  function continueToDashboard() {
+    if (isNavigating || flow.step !== "success") return;
+
+    // Las animaciones nunca retrasan el acceso si el usuario solicita movimiento reducido.
+    setIsNavigating(true);
+    if (reducedMotion) finishDashboardNavigation();
   }
 
   if (flow.step === "success") {
-    return <SuccessStep onContinue={continueToDashboard} isNavigating={isNavigating} />;
+    return (
+      <>
+        <SuccessStep onContinue={continueToDashboard} isNavigating={isNavigating} />
+        {isNavigating && !reducedMotion ? (
+          <DashboardIrisTransition onComplete={finishDashboardNavigation} />
+        ) : null}
+      </>
+    );
   }
 
   if (flow.step === "otp") {
@@ -385,7 +389,6 @@ export function LoginFlow({ initialRole = "healthcare" }: LoginFlowProps) {
         setPassword("");
         dispatch({ type: "fieldCleared", field: "password" });
       }}
-      onBackToRoleSelection={returnToRoleSelection}
       onIdentifierTypeChange={(type) => { setIdentifierType(type); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onCountryChange={(value) => { setSelectedCountry(value); setPhone(""); dispatch({ type: "fieldCleared", field: "identifier" }); }}
       onEmailChange={(value) => { setEmail(value); dispatch({ type: "fieldCleared", field: "identifier" }); }}
