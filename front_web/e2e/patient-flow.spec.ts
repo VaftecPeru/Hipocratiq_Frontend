@@ -111,6 +111,16 @@ test("patient triage blocks improbable vital signs until corrected", async ({ pa
   await page.getByLabel(/Presión diastólica/).fill("76");
   await page.getByLabel(/Saturación de oxígeno/).fill("98");
 
+  // Laravel exige enteros en presión, pulso, frecuencia respiratoria y SpO2.
+  // Ningún valor decimal debe habilitar el envío antes de corregirse.
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78.5");
+  await page.getByLabel(/Presión sistólica/).fill("118.5");
+  await expect(alert.getByText(/ingresa un número entero/i)).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeDisabled();
+
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78");
+  await page.getByLabel(/Presión sistólica/).fill("118");
+
   await expect(alert).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Guardar borrador" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeEnabled();
