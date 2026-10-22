@@ -15,13 +15,13 @@ type LoginRoleOption = {
 const ROLE_OPTIONS: readonly LoginRoleOption[] = [
   {
     value: "support",
-    label: { es: "Superadministrador", en: "Superadministrator" },
+    label: { es: "Super Admin", en: "Super Admin" },
     description: { es: "Administración de la plataforma", en: "Platform management" },
     icon: ShieldCheck,
   },
   {
     value: "administrator",
-    label: { es: "Administrador de clínica", en: "Clinic administrator" },
+    label: { es: "Admin. de clínica", en: "Clinic admin" },
     description: { es: "Gestión de clínica", en: "Clinic management" },
     icon: Building2,
   },
@@ -84,6 +84,7 @@ export function LoginRolePicker({
               disabled={cardDisabled}
               aria-pressed={unavailable ? undefined : selected}
               title={unavailable ? description[lang] : `${label[lang]} · ${description[lang]}`}
+              aria-label={`${label[lang]}. ${description[lang]}`}
               data-testid={`login-role-${value}`}
               data-selected={selected ? "true" : "false"}
               className={`login-role-card group relative isolate flex min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl border px-2 py-3 text-center focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${selected ? "border-accent text-accent" : "border-line text-ink"} ${unavailable ? "cursor-not-allowed opacity-65" : ""}`}
