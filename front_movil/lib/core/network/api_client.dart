@@ -52,6 +52,21 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    Map<String, dynamic>? body,
+    String? accessToken,
+    Map<String, String>? headers,
+  }) {
+    return _request(
+      'PATCH',
+      path,
+      body: body,
+      accessToken: accessToken,
+      extraHeaders: headers,
+    );
+  }
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
@@ -84,15 +99,17 @@ class ApiClient {
     final uri = _resolve(baseUri, path);
     late http.Response response;
     try {
-      response = method == 'GET'
-          ? await _client.get(uri, headers: headers).timeout(timeout)
-          : await _client
-                .post(
-                  uri,
-                  headers: headers,
-                  body: body == null ? null : jsonEncode(body),
-                )
-                .timeout(timeout);
+      final encodedBody = body == null ? null : jsonEncode(body);
+      response = switch (method) {
+        'GET' => await _client.get(uri, headers: headers).timeout(timeout),
+        'PATCH' => await _client
+            .patch(uri, headers: headers, body: encodedBody)
+            .timeout(timeout),
+        'POST' => await _client
+            .post(uri, headers: headers, body: encodedBody)
+            .timeout(timeout),
+        _ => throw UnsupportedError('Unsupported API method'),
+      };
     } on TimeoutException {
       throw ApiException.network();
     } on http.ClientException {
