@@ -113,8 +113,8 @@ void main() {
         apiClient: api,
         secureStore: _TokenStore('uat-token'),
       );
-      expect(
-        () => repository.updateProfile(<String, dynamic>{'clinic_id': 7}),
+      await expectLater(
+        repository.updateProfile(<String, dynamic>{'clinic_id': 7}),
         throwsArgumentError,
       );
     });
@@ -129,8 +129,8 @@ void main() {
         apiClient: api,
         secureStore: _TokenStore(null),
       );
-      expect(
-        () => repository.fetchProfile(),
+      await expectLater(
+        repository.fetchProfile(),
         throwsA(isA<ApiException>().having(
           (exception) => exception.statusCode,
           'status',
@@ -163,7 +163,7 @@ void main() {
       );
       final appointments = await repository.fetchAppointments();
       expect(appointments.single['status'], 'confirmed');
-      expect(() => repository.fetchHistory(), throwsFormatException);
+      await expectLater(repository.fetchHistory(), throwsFormatException);
     });
   });
 }
