@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      uat_backend_url:
+        description: "URL HTTPS del backend UAT (obligatoria para builds manuales; nunca producción)"
+        required: false
+        type: string
+        default: ""
   push:
     branches:
       - main
@@ -33,7 +38,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -83,24 +88,63 @@ jobs:
         working-directory: front_movil
         run: dart run flutter_launcher_icons
 
+      - name: Resolve isolated backend for validation build
+        id: backend_target
+        shell: bash
+        env:
+          UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          from urllib.parse import urlsplit
+
+          is_manual = os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
+          target = os.environ.get("UAT_BACKEND_URL", "").strip()
+          if not is_manual:
+              target = "https://hipocratiq-ci.invalid/backend"
+          else:
+              parsed = urlsplit(target)
+              hostname = parsed.hostname or ""
+              marker = re.search(r"(^|[.-])(uat|staging|qa)([.-]|$)", hostname, re.I)
+              if (
+                  parsed.scheme != "https"
+                  or not hostname
+                  or parsed.username
+                  or parsed.password
+                  or parsed.query
+                  or parsed.fragment
+                  or not marker
+              ):
+                  print(
+                      "::error::La build manual requiere HTTPS en un host identificado como UAT, staging o QA; se rechaza producción.",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"backend_url={target}\n")
+          PY
+
       - name: Build Android APK
         working-directory: front_movil
         run: >-
           flutter build apk --debug
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Build Android AAB
         working-directory: front_movil
         run: >-
           flutter build appbundle --debug
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-android-validation
+          name: hipocratiq-android-ci-build-not-uat
           if-no-files-found: error
           path: |
             front_movil/build/app/outputs/flutter-apk/app-debug.apk
@@ -126,20 +170,74 @@ jobs:
         working-directory: front_movil
         run: flutter pub get
 
+      - name: Read Xcode toolchain
+        run: xcodebuild -version
+
+      - name: Check Dart format (without modifying sources)
+        working-directory: front_movil
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Flutter analyze
+        working-directory: front_movil
+        run: flutter analyze
+
+      - name: Flutter unit/widget tests
+        working-directory: front_movil
+        run: flutter test
+
       - name: Generate HIPOCRATIQ launcher icons
         working-directory: front_movil
         run: dart run flutter_launcher_icons
+
+      - name: Resolve isolated backend for validation build
+        id: backend_target
+        shell: bash
+        env:
+          UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          from urllib.parse import urlsplit
+
+          is_manual = os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
+          target = os.environ.get("UAT_BACKEND_URL", "").strip()
+          if not is_manual:
+              target = "https://hipocratiq-ci.invalid/backend"
+          else:
+              parsed = urlsplit(target)
+              hostname = parsed.hostname or ""
+              marker = re.search(r"(^|[.-])(uat|staging|qa)([.-]|$)", hostname, re.I)
+              if (
+                  parsed.scheme != "https"
+                  or not hostname
+                  or parsed.username
+                  or parsed.password
+                  or parsed.query
+                  or parsed.fragment
+                  or not marker
+              ):
+                  print(
+                      "::error::La build manual requiere HTTPS en un host identificado como UAT, staging o QA; se rechaza producción.",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"backend_url={target}\n")
+          PY
 
       - name: Build iOS without code signing
         working-directory: front_movil
         run: >-
           flutter build ios --release --no-codesign
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Upload iOS validation build
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-ios-validation
+          name: hipocratiq-ios-ci-build-not-uat
           if-no-files-found: error
           path: front_movil/build/ios/iphoneos/Runner.app

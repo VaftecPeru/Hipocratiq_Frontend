@@ -10,8 +10,21 @@ BUILD_CONTAINER="hipocratiq-mobile-build-${RUN_ID}"
 LOG_DIR="${VALIDATION_LOG_DIR:-/tmp/hipocratiq-validation}"
 LOG_FILE="${LOG_DIR}/mobile-${RUN_ID}.log"
 ARTIFACT_DIR="${LOG_DIR}/android-${RUN_ID}"
-BACKEND_URL="${BACKEND_URL:-https://hipocratiq.com/backend}"
+BACKEND_URL="${BACKEND_URL:-}"
 SUPPORT_PORTAL_URL="${SUPPORT_PORTAL_URL:-https://hipocratiq.com}"
+
+# Un APK/AAB de validación nunca debe interactuar con datos clínicos en producción.
+if [[ ! "$BACKEND_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[^?#[:space:]]*)?$ ]]; then
+  echo "ERROR: indica BACKEND_URL HTTPS de un entorno UAT/QA/staging aislado." >&2
+  exit 1
+fi
+_backend_host="${BACKEND_URL#https://}"
+_backend_host="${_backend_host%%/*}"
+_backend_host="${_backend_host%%:*}"
+if [[ ! "${_backend_host,,}" =~ (^|[.-])(uat|qa|staging)([.-]|$) ]]; then
+  echo "ERROR: el hostname del backend debe identificar UAT, QA o staging; se bloquea producción." >&2
+  exit 1
+fi
 
 mkdir -p "$LOG_DIR" "$ARTIFACT_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
