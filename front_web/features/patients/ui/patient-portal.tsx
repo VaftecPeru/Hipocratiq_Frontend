@@ -570,12 +570,12 @@ function nullableNumber(value: string): number | null {
 }
 
 const TRIAGE_VITAL_RULES = {
-  temperatureC: { label: "Temperatura", min: 30, max: 45, suffix: "°C", step: "0.1" },
-  systolicBp: { label: "Presión sistólica", min: 60, max: 250, suffix: "mmHg", step: "1" },
-  diastolicBp: { label: "Presión diastólica", min: 30, max: 160, suffix: "mmHg", step: "1" },
-  heartRate: { label: "Frecuencia cardiaca", min: 30, max: 220, suffix: "lpm", step: "1" },
-  respiratoryRate: { label: "Frecuencia respiratoria", min: 5, max: 60, suffix: "rpm", step: "1" },
-  oxygenSaturation: { label: "Saturación de oxígeno", min: 70, max: 100, suffix: "%", step: "1" },
+  temperatureC: { label: "Temperatura", min: 30, max: 45, suffix: "°C", step: "0.1", integerOnly: false },
+  systolicBp: { label: "Presión sistólica", min: 60, max: 250, suffix: "mmHg", step: "1", integerOnly: true },
+  diastolicBp: { label: "Presión diastólica", min: 30, max: 160, suffix: "mmHg", step: "1", integerOnly: true },
+  heartRate: { label: "Frecuencia cardiaca", min: 30, max: 220, suffix: "lpm", step: "1", integerOnly: true },
+  respiratoryRate: { label: "Frecuencia respiratoria", min: 5, max: 60, suffix: "rpm", step: "1", integerOnly: true },
+  oxygenSaturation: { label: "Saturación de oxígeno", min: 70, max: 100, suffix: "%", step: "1", integerOnly: true },
 } as const;
 
 type TriageVitalField = keyof typeof TRIAGE_VITAL_RULES;
@@ -590,6 +590,11 @@ function validateTriageVitals(form: TriageForm): Record<string, string> {
     const value = Number(raw);
     if (!Number.isFinite(value)) {
       errors[field] = "Ingresa un valor numérico válido.";
+      continue;
+    }
+
+    if (rule.integerOnly && !Number.isInteger(value)) {
+      errors[field] = rule.label + ": ingresa un número entero.";
       continue;
     }
 
