@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEventHandler, type RefObject } from "react";
-import { Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
 import { BrandLogo } from "@/shared/ui/brand-logo";
