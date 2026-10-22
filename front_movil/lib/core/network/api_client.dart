@@ -102,12 +102,14 @@ class ApiClient {
       final encodedBody = body == null ? null : jsonEncode(body);
       response = switch (method) {
         'GET' => await _client.get(uri, headers: headers).timeout(timeout),
-        'PATCH' => await _client
-            .patch(uri, headers: headers, body: encodedBody)
-            .timeout(timeout),
-        'POST' => await _client
-            .post(uri, headers: headers, body: encodedBody)
-            .timeout(timeout),
+        'PATCH' =>
+          await _client
+              .patch(uri, headers: headers, body: encodedBody)
+              .timeout(timeout),
+        'POST' =>
+          await _client
+              .post(uri, headers: headers, body: encodedBody)
+              .timeout(timeout),
         _ => throw UnsupportedError('Unsupported API method'),
       };
     } on TimeoutException {

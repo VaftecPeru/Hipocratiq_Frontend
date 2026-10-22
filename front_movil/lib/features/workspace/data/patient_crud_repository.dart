@@ -1,3 +1,6 @@
+// Mantiene los nombres públicos del constructor para la integración móvil.
+// ignore_for_file: prefer_initializing_formals
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_store.dart';
@@ -42,7 +45,8 @@ class PatientCrudRepository {
   Future<MobilePatientProfile> updateProfile(
     Map<String, dynamic> changes,
   ) async {
-    if (changes.isEmpty || changes.keys.any((key) => !_profileFields.contains(key))) {
+    if (changes.isEmpty ||
+        changes.keys.any((key) => !_profileFields.contains(key))) {
       throw ArgumentError.value(
         changes.keys.toList(),
         'changes',
@@ -61,21 +65,16 @@ class PatientCrudRepository {
   Future<List<Map<String, dynamic>>> fetchAppointments() =>
       _fetchList('appointments');
 
-  Future<List<Map<String, dynamic>>> fetchHistory() =>
-      _fetchList('history');
+  Future<List<Map<String, dynamic>>> fetchHistory() => _fetchList('history');
 
   Future<List<Map<String, dynamic>>> fetchPrescriptions() =>
       _fetchList('prescriptions');
 
-  Future<List<Map<String, dynamic>>> fetchResults() =>
-      _fetchList('results');
+  Future<List<Map<String, dynamic>>> fetchResults() => _fetchList('results');
 
-  Future<Map<String, dynamic>?> fetchTriage() =>
-      _fetchNullableObject('triage');
+  Future<Map<String, dynamic>?> fetchTriage() => _fetchNullableObject('triage');
 
-  Future<Map<String, dynamic>> saveTriage(
-    Map<String, dynamic> form,
-  ) async {
+  Future<Map<String, dynamic>> saveTriage(Map<String, dynamic> form) async {
     final payload = await _apiClient.postJson(
       '$_prefix/triage',
       body: form,
@@ -112,14 +111,10 @@ class PatientCrudRepository {
     if (data is! List) {
       throw const FormatException('Lista de paciente no válida.');
     }
-    return List<Map<String, dynamic>>.unmodifiable(
-      data.map(_object),
-    );
+    return List<Map<String, dynamic>>.unmodifiable(data.map(_object));
   }
 
-  Future<Map<String, dynamic>?> _fetchNullableObject(
-    String resource,
-  ) async {
+  Future<Map<String, dynamic>?> _fetchNullableObject(String resource) async {
     final payload = await _apiClient.getJson(
       '$_prefix/$resource',
       accessToken: await _accessToken(),

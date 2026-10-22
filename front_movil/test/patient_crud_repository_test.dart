@@ -52,9 +52,10 @@ void main() {
           'https://api.example.test/api/v1/auth/patient/profile',
         );
         expect(request.headers['authorization'], 'Bearer uat-token');
-        return http.Response(jsonEncode(<String, dynamic>{
-          'data': profileJson,
-        }), 200);
+        return http.Response(
+          jsonEncode(<String, dynamic>{'data': profileJson}),
+          200,
+        );
       });
       final api = ApiClient(
         baseUri: Uri.parse('https://api.example.test'),
@@ -76,10 +77,9 @@ void main() {
       final client = MockClient((request) async {
         expect(request.method, 'PATCH');
         expect(request.headers['authorization'], 'Bearer uat-token');
-        expect(
-          jsonDecode(request.body),
-          <String, dynamic>{'name': 'Paciente Actualizado'},
-        );
+        expect(jsonDecode(request.body), <String, dynamic>{
+          'name': 'Paciente Actualizado',
+        });
         return http.Response(
           jsonEncode(<String, dynamic>{
             'data': {...profileJson, 'name': 'Paciente Actualizado'},
@@ -97,32 +97,39 @@ void main() {
         secureStore: _TokenStore('uat-token'),
       );
 
-      final updated = await repository.updateProfile(
-        <String, dynamic>{'name': 'Paciente Actualizado'},
-      );
+      final updated = await repository.updateProfile(<String, dynamic>{
+        'name': 'Paciente Actualizado',
+      });
       expect(updated.name, 'Paciente Actualizado');
     });
 
-    test('rejects unauthorized profile fields without hitting network', () async {
-      final api = ApiClient(
-        baseUri: Uri.parse('https://api.example.test'),
-        client: MockClient((request) async => throw StateError('Network not allowed')),
-      );
-      addTearDown(api.close);
-      final repository = PatientCrudRepository(
-        apiClient: api,
-        secureStore: _TokenStore('uat-token'),
-      );
-      await expectLater(
-        repository.updateProfile(<String, dynamic>{'clinic_id': 7}),
-        throwsArgumentError,
-      );
-    });
+    test(
+      'rejects unauthorized profile fields without hitting network',
+      () async {
+        final api = ApiClient(
+          baseUri: Uri.parse('https://api.example.test'),
+          client: MockClient(
+            (request) async => throw StateError('Network not allowed'),
+          ),
+        );
+        addTearDown(api.close);
+        final repository = PatientCrudRepository(
+          apiClient: api,
+          secureStore: _TokenStore('uat-token'),
+        );
+        await expectLater(
+          repository.updateProfile(<String, dynamic>{'clinic_id': 7}),
+          throwsArgumentError,
+        );
+      },
+    );
 
     test('fails closed without a stored access token', () async {
       final api = ApiClient(
         baseUri: Uri.parse('https://api.example.test'),
-        client: MockClient((request) async => throw StateError('Network not allowed')),
+        client: MockClient(
+          (request) async => throw StateError('Network not allowed'),
+        ),
       );
       addTearDown(api.close);
       final repository = PatientCrudRepository(
@@ -131,39 +138,50 @@ void main() {
       );
       await expectLater(
         repository.fetchProfile(),
-        throwsA(isA<ApiException>().having(
-          (exception) => exception.statusCode,
-          'status',
-          401,
-        )),
+        throwsA(
+          isA<ApiException>().having(
+            (exception) => exception.statusCode,
+            'status',
+            401,
+          ),
+        ),
       );
     });
 
-    test('parses collections and rejects non-list clinical responses', () async {
-      final client = MockClient((request) async {
-        if (request.url.path.endsWith('/appointments')) {
-          return http.Response(jsonEncode(<String, dynamic>{
-            'data': <Map<String, dynamic>>[
-              <String, dynamic>{'id': 1, 'status': 'confirmed'},
-            ],
-          }), 200);
-        }
-        return http.Response(jsonEncode(<String, dynamic>{
-          'data': <String, dynamic>{'id': 5},
-        }), 200);
-      });
-      final api = ApiClient(
-        baseUri: Uri.parse('https://api.example.test'),
-        client: client,
-      );
-      addTearDown(api.close);
-      final repository = PatientCrudRepository(
-        apiClient: api,
-        secureStore: _TokenStore('uat-token'),
-      );
-      final appointments = await repository.fetchAppointments();
-      expect(appointments.single['status'], 'confirmed');
-      await expectLater(repository.fetchHistory(), throwsFormatException);
-    });
+    test(
+      'parses collections and rejects non-list clinical responses',
+      () async {
+        final client = MockClient((request) async {
+          if (request.url.path.endsWith('/appointments')) {
+            return http.Response(
+              jsonEncode(<String, dynamic>{
+                'data': <Map<String, dynamic>>[
+                  <String, dynamic>{'id': 1, 'status': 'confirmed'},
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'data': <String, dynamic>{'id': 5},
+            }),
+            200,
+          );
+        });
+        final api = ApiClient(
+          baseUri: Uri.parse('https://api.example.test'),
+          client: client,
+        );
+        addTearDown(api.close);
+        final repository = PatientCrudRepository(
+          apiClient: api,
+          secureStore: _TokenStore('uat-token'),
+        );
+        final appointments = await repository.fetchAppointments();
+        expect(appointments.single['status'], 'confirmed');
+        await expectLater(repository.fetchHistory(), throwsFormatException);
+      },
+    );
   });
 }
