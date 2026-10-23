@@ -33,6 +33,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: TypeScript typecheck
         run: npm run typecheck
+      - name: Node regression tests (authentication and clinical consultation)
+        run: node --test tests/*.test.mjs
       - name: ESLint
         run: npm run lint
       - name: Build Next.js
