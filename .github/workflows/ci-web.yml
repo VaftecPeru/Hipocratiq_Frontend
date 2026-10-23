@@ -29,6 +29,8 @@ jobs:
           cache-dependency-path: front_web/package-lock.json
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: ESLint
