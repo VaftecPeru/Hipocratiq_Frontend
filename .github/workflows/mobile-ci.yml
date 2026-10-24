@@ -51,8 +51,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify preinstalled Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_home="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -d "$android_home"
+          test -d "$android_home/platform-tools"
+          echo "Using runner Android SDK at $android_home"
 
       - name: Set up Flutter 3.44.4
         uses: subosito/flutter-action@v2
@@ -141,6 +147,18 @@ jobs:
           --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
+      - name: Calculate APK and AAB SHA-256
+        working-directory: front_movil
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          test -s build/app/outputs/bundle/debug/app-debug.aab
+          sha256sum \
+            build/app/outputs/flutter-apk/app-debug.apk \
+            build/app/outputs/bundle/debug/app-debug.aab \
+            | tee build/android-validation-sha256.txt
+
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
@@ -149,6 +167,7 @@ jobs:
           path: |
             front_movil/build/app/outputs/flutter-apk/app-debug.apk
             front_movil/build/app/outputs/bundle/debug/app-debug.aab
+            front_movil/build/android-validation-sha256.txt
 
   ios:
     name: Flutter iOS CI
