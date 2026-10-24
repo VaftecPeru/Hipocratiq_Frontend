@@ -46,12 +46,19 @@ test("patient sidebar collapses on desktop and route transitions show loading an
   await expect(shell).toHaveClass(/patient-shell--sidebar-collapsed/);
   await expect(page.getByRole("button", { name: "Mostrar menú lateral" })).toBeVisible();
 
-  const [collapsedWidth, collapsedMargin] = await Promise.all([
-    sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
-    content.evaluate((element) => Number.parseFloat(getComputedStyle(element).marginLeft)),
-  ]);
-  expect(collapsedWidth).toBeLessThanOrEqual(80);
-  expect(Math.abs(collapsedMargin - collapsedWidth)).toBeLessThanOrEqual(2);
+  // The sidebar and content animate independently: assert their settled
+  // layout rather than sampling a transitional subpixel width in one frame.
+  await expect.poll(
+    () => sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
+    { timeout: 3000 },
+  ).toBeLessThanOrEqual(80);
+  await expect.poll(async () => {
+    const [collapsedWidth, collapsedMargin] = await Promise.all([
+      sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
+      content.evaluate((element) => Number.parseFloat(getComputedStyle(element).marginLeft)),
+    ]);
+    return Math.abs(collapsedMargin - collapsedWidth);
+  }, { timeout: 3000 }).toBeLessThanOrEqual(2);
 
   await page.getByRole("button", { name: "Mostrar menú lateral" }).click();
   await expect(shell).not.toHaveClass(/patient-shell--sidebar-collapsed/);
