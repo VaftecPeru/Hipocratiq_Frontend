@@ -1,5 +1,25 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
+
+# Fail CLOSED before any repository, Docker, network or filesystem operation.
+# Approvals attest externally verified UAT/restore; env flags alone are NOT evidence.
+RELEASE_APPROVAL="${RELEASE_APPROVAL:-}"
+RELEASE_APPROVED_SHA="${RELEASE_APPROVED_SHA:-}"
+RELEASE_CHANGE_ID="${RELEASE_CHANGE_ID:-}"
+UAT_RESTORE_EVIDENCE="${UAT_RESTORE_EVIDENCE:-}"
+BACKUP_AT_REST_VERIFIED="${BACKUP_AT_REST_VERIFIED:-}"
+WEB_UAT_EVIDENCE="${WEB_UAT_EVIDENCE:-}"
+
+if [[ "$RELEASE_APPROVAL" != "APPROVED_FOR_PRODUCTION" ||
+      ! "$RELEASE_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ||
+      -z "$RELEASE_CHANGE_ID" ||
+      -z "$UAT_RESTORE_EVIDENCE" ||
+      "$BACKUP_AT_REST_VERIFIED" != "true" ||
+      -z "$WEB_UAT_EVIDENCE" ]]; then
+  echo "ERROR NO-GO: Frontend requires approved SHA, change ID, UAT restore evidence, backup encryption and Web UAT evidence." >&2
+  exit 1
+fi
 
 PRODUCTION_DIR="${PRODUCTION_DIR:-/srv/hipocratiq/frontend}"
 COMPOSE_PROJECT="${COMPOSE_PROJECT:-}"
@@ -67,6 +87,11 @@ echo "Proyecto Compose detectado: $COMPOSE_PROJECT"
 
 git fetch --prune origin "$TARGET_BRANCH"
 TARGET_SHA="$(git rev-parse "origin/$TARGET_BRANCH")"
+
+if [[ "$TARGET_SHA" != "$RELEASE_APPROVED_SHA" ]]; then
+  echo "ERROR NO-GO: origin/main SHA differs from approved release SHA." >&2
+  exit 1
+fi
 
 if ! git merge-base --is-ancestor "$OLD_SHA" "$TARGET_SHA"; then
   echo "ERROR: origin/main no es fast-forward respecto al estado productivo actual." >&2
