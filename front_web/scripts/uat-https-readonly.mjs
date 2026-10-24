@@ -141,10 +141,16 @@ async function run() {
       Origin: "https://unauthorized-origin.invalid",
     },
   });
-  if (denied.headers.has("access-control-allow-origin")) {
-    throw new Error("API unexpectedly allows an untrusted origin");
+  const deniedAllowOrigin = denied.headers.get("access-control-allow-origin");
+  // With a single allowlisted origin, Laravel may send that fixed origin
+  // even for a different requesting site. Browsers still deny it because
+  // the header does not match that site's Origin.
+  if (deniedAllowOrigin === "*" ||
+      deniedAllowOrigin === "https://unauthorized-origin.invalid" ||
+      (deniedAllowOrigin !== null && deniedAllowOrigin !== frontend.origin)) {
+    throw new Error("API reflected the unauthorized CORS origin or sent wildcard");
   }
-  console.log("Untrusted CORS origin denied: PASS");
+  console.log("Untrusted CORS origin is not reflected or wildcard: PASS");
   console.log("UAT_HTTPS_READONLY_GATE=PASS");
   console.log("This check does NOT certify SMS OTP, authenticated tenant access or clinical E2E.");
 }
