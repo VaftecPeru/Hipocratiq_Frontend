@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: ""
+      uat_acknowledgement:
+        description: "Escribir APPROVED_MOBILE_UAT_NO_PRODUCTION"
+        required: true
+        type: string
   push:
     branches:
       - main
@@ -94,44 +98,17 @@ jobs:
         working-directory: front_movil
         run: dart run flutter_launcher_icons
 
-      - name: Resolve isolated backend for validation build
+      - name: Verify Mobile UAT backend policy offline
+        run: python3 -m unittest discover -s front_movil/tool -p 'test_resolve_backend.py' -v
+
+      - name: Resolve approved UAT backend without external requests
         id: backend_target
-        shell: bash
         env:
           UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import re
-          import sys
-          from urllib.parse import urlsplit
-
-          is_manual = os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
-          target = os.environ.get("UAT_BACKEND_URL", "").strip()
-          if not is_manual:
-              target = "https://hipocratiq-ci.invalid/backend"
-          else:
-              parsed = urlsplit(target)
-              hostname = parsed.hostname or ""
-              marker = re.search(r"(^|[.-])(uat|staging|qa)([.-]|$)", hostname, re.I)
-              if (
-                  parsed.scheme != "https"
-                  or not hostname
-                  or parsed.username
-                  or parsed.password
-                  or parsed.query
-                  or parsed.fragment
-                  or not marker
-              ):
-                  print(
-                      "::error::La build manual requiere HTTPS en un host identificado como UAT, staging o QA; se rechaza producción.",
-                      file=sys.stderr,
-                  )
-                  sys.exit(1)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write(f"backend_url={target}\n")
-          PY
+          UAT_ACKNOWLEDGEMENT: ${{ inputs.uat_acknowledgement || '' }}
+          APPROVED_UAT_BACKEND_URL: ${{ vars.HIPOCRATIQ_UAT_API_URL }}
+          UAT_MOBILE_BUILD_ENABLED: ${{ vars.HIPOCRATIQ_UAT_MOBILE_BUILD_ENABLED }}
+        run: python3 front_movil/tool/resolve_backend.py
 
       - name: Build Android APK
         working-directory: front_movil
@@ -208,44 +185,17 @@ jobs:
         working-directory: front_movil
         run: dart run flutter_launcher_icons
 
-      - name: Resolve isolated backend for validation build
+      - name: Verify Mobile UAT backend policy offline
+        run: python3 -m unittest discover -s front_movil/tool -p 'test_resolve_backend.py' -v
+
+      - name: Resolve approved UAT backend without external requests
         id: backend_target
-        shell: bash
         env:
           UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import re
-          import sys
-          from urllib.parse import urlsplit
-
-          is_manual = os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch"
-          target = os.environ.get("UAT_BACKEND_URL", "").strip()
-          if not is_manual:
-              target = "https://hipocratiq-ci.invalid/backend"
-          else:
-              parsed = urlsplit(target)
-              hostname = parsed.hostname or ""
-              marker = re.search(r"(^|[.-])(uat|staging|qa)([.-]|$)", hostname, re.I)
-              if (
-                  parsed.scheme != "https"
-                  or not hostname
-                  or parsed.username
-                  or parsed.password
-                  or parsed.query
-                  or parsed.fragment
-                  or not marker
-              ):
-                  print(
-                      "::error::La build manual requiere HTTPS en un host identificado como UAT, staging o QA; se rechaza producción.",
-                      file=sys.stderr,
-                  )
-                  sys.exit(1)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write(f"backend_url={target}\n")
-          PY
+          UAT_ACKNOWLEDGEMENT: ${{ inputs.uat_acknowledgement || '' }}
+          APPROVED_UAT_BACKEND_URL: ${{ vars.HIPOCRATIQ_UAT_API_URL }}
+          UAT_MOBILE_BUILD_ENABLED: ${{ vars.HIPOCRATIQ_UAT_MOBILE_BUILD_ENABLED }}
+        run: python3 front_movil/tool/resolve_backend.py
 
       - name: Build iOS without code signing
         working-directory: front_movil
