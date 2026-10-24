@@ -2,7 +2,7 @@
 # Safety-negative tests: NEVER supply a complete production approval.
 # No Docker, AWS, Git fetch, migrations or real filesystem write should execute.
 set -Eeuo pipefail
-ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG="$(mktemp)"
 trap 'rm -f "$LOG"' EXIT
 
