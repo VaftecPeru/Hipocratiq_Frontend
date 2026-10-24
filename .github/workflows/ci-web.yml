@@ -42,8 +42,11 @@ jobs:
           BACKEND_URL: http://127.0.0.1:8000
           APP_URL: http://127.0.0.1:3000
         run: npm run build
-      - name: Validate deployment shell syntax
+      - name: Validate deployment shell syntax and negative approval gate
         working-directory: .
-        run: bash -n scripts/deploy-production.sh
+        run: |
+          bash -n scripts/deploy-production.sh
+          bash -n scripts/test-deploy-preflight-failclosed.sh
+          bash scripts/test-deploy-preflight-failclosed.sh
       - name: Validate Docker Compose syntax
         run: docker compose -f compose.yaml config --quiet
