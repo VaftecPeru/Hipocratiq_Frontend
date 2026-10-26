@@ -36,6 +36,7 @@ export function normalizeAwsRun(run, jobs, artifacts) {
   return {
     created_at: run?.created_at,
     head_branch: run?.head_branch,
+    head_sha: run?.head_sha,
     event: run?.event,
     run_conclusion: run?.conclusion,
     job_conclusion: active?.conclusion,
@@ -71,12 +72,15 @@ export function evaluateRelease({ frontendPR, backendPR, feMain, feDev, beMain, 
     const age = nowMs - Date.parse(run.created_at ?? "");
     return Number.isFinite(age) && age >= 0 && age <= AGE_MS &&
       run.head_branch === "develop" &&
+      // An old but recently successful AWS inventory is not evidence for the
+      // current Backend release SHA. Fail closed until AWS re-inventories it.
+      run.head_sha === beDev?.commit?.sha &&
       ["push", "workflow_dispatch"].includes(run.event) &&
       run.run_conclusion === "success" && run.job_conclusion === "success" &&
       run.artifact_valid === true;
   });
   if (!hasRealInventory) {
-    failures.push("No recent real AWS UAT inventory: job SUCCESS and non-empty retained artifact required (not SKIPPED).");
+    failures.push("No recent real AWS UAT inventory for current Backend develop SHA: job SUCCESS and non-empty retained artifact required (not SKIPPED).");
   }
   return failures;
 }
@@ -120,7 +124,9 @@ export async function collectEvidence(token, get = githubGet) {
       ? (await get(be + "/actions/runs/" + run.id + "/artifacts?per_page=100", token)).artifacts ?? []
       : [];
     inventory.push(normalizeAwsRun(run, jobs, artifacts));
-    if (inventory.at(-1).artifact_valid && awsSucceeded) break;
+    // Do not stop at an artifact from an older Backend develop commit.
+    if (inventory.at(-1).artifact_valid && awsSucceeded &&
+        inventory.at(-1).head_sha === beDev?.commit?.sha) break;
   }
   return { frontendPR, backendPR, feMain, feDev, beMain, beDev, issue, inventory };
 }
