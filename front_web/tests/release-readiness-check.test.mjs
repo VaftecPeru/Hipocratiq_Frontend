@@ -26,7 +26,8 @@ function fixtures() {
     issue: { state: "closed" },
     inventory: [{
       created_at: "2026-10-25T17:00:00Z",
-      head_branch: "develop", event: "workflow_dispatch",
+      head_branch: "develop", head_sha: SHA_BE,
+      event: "workflow_dispatch",
       run_conclusion: "success", job_conclusion: "success", artifact_valid: true,
     }],
     now: NOW,
@@ -79,6 +80,32 @@ test("blocks open P0 issue and fake/offline/skipped AWS inventory", () => {
   data.inventory[0].created_at = "2026-10-01T00:00:00Z";
   blockers = evaluateRelease(data);
   assert.ok(blockers.some(x => x.includes("real AWS UAT inventory")));
+});
+
+test("rejects real AWS success evidence from an older Backend develop SHA", () => {
+  const data = fixtures();
+  data.inventory[0].head_sha = "f".repeat(40);
+  const blockers = evaluateRelease(data);
+  assert.ok(blockers.some(x => x.includes("current Backend develop SHA")));
+});
+
+test("rejects AWS artifacts with missing commit SHA even if fresh", () => {
+  const data = fixtures();
+  delete data.inventory[0].head_sha;
+  assert.ok(evaluateRelease(data).some(x => x.includes("real AWS UAT inventory")));
+});
+
+test("normalizer carries AWS inventory head_sha for release verification", () => {
+  const run = {
+    created_at: "2026-10-25T17:00:00Z", head_branch: "develop",
+    head_sha: SHA_BE, event: "workflow_dispatch", conclusion: "success",
+  };
+  const jobs = [{ name: "Approved AWS UAT instance metadata ONLY", conclusion: "success" }];
+  const artifacts = [{ name: "hipocratiq-uat-aws-readonly-metadata",
+                       expired: false, size_in_bytes: 1024 }];
+  const normalized = normalizeAwsRun(run, jobs, artifacts);
+  assert.equal(normalized.head_sha, SHA_BE);
+  assert.equal(normalized.artifact_valid, true);
 });
 
 test("normalizer rejects expired/empty artifacts even for SUCCESS AWS job", () => {
