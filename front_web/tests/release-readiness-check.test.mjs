@@ -26,7 +26,8 @@ function fixtures() {
     issue: { state: "closed" },
     inventory: [{
       created_at: "2026-10-25T17:00:00Z",
-      head_branch: "develop", event: "workflow_dispatch",
+      head_branch: "develop", head_sha: SHA_BE,
+      event: "workflow_dispatch",
       run_conclusion: "success", job_conclusion: "success", artifact_valid: true,
     }],
     now: NOW,
@@ -81,6 +82,32 @@ test("blocks open P0 issue and fake/offline/skipped AWS inventory", () => {
   assert.ok(blockers.some(x => x.includes("real AWS UAT inventory")));
 });
 
+test("rejects real AWS success evidence from an older Backend develop SHA", () => {
+  const data = fixtures();
+  data.inventory[0].head_sha = "f".repeat(40);
+  const blockers = evaluateRelease(data);
+  assert.ok(blockers.some(x => x.includes("current Backend develop SHA")));
+});
+
+test("rejects AWS artifacts with missing commit SHA even if fresh", () => {
+  const data = fixtures();
+  delete data.inventory[0].head_sha;
+  assert.ok(evaluateRelease(data).some(x => x.includes("real AWS UAT inventory")));
+});
+
+test("normalizer carries AWS inventory head_sha for release verification", () => {
+  const run = {
+    created_at: "2026-10-25T17:00:00Z", head_branch: "develop",
+    head_sha: SHA_BE, event: "workflow_dispatch", conclusion: "success",
+  };
+  const jobs = [{ name: "Approved AWS UAT instance metadata ONLY", conclusion: "success" }];
+  const artifacts = [{ name: "hipocratiq-uat-aws-readonly-metadata",
+                       expired: false, size_in_bytes: 1024 }];
+  const normalized = normalizeAwsRun(run, jobs, artifacts);
+  assert.equal(normalized.head_sha, SHA_BE);
+  assert.equal(normalized.artifact_valid, true);
+});
+
 test("normalizer rejects expired/empty artifacts even for SUCCESS AWS job", () => {
   const run = { created_at: "2026-10-25T17:00:00Z", head_branch: "develop", event: "push", conclusion: "success" };
   const jobs = [{ name: "Approved AWS UAT instance metadata ONLY", conclusion: "success" }];
@@ -99,6 +126,38 @@ test("GitHub API endpoint allowlist rejects external repositories and writes", (
   assert.equal(allowGitHubReadPath("/repos/" + FRONTEND + "/issues/92"), false);
   assert.equal(allowGitHubReadPath("/repos/other/repository/pulls/80"), false);
   assert.equal(allowGitHubReadPath("/repos/" + BACKEND + "/actions/runs/1234/jobs?per_page=100&foo=1"), false);
+});
+
+test("collector does not stop at a valid artifact for an obsolete Backend SHA", async () => {
+  const d = fixtures();
+  const old = { id: 31, created_at: "2026-10-25T16:00:00Z",
+                head_branch: "develop", head_sha: "c".repeat(40),
+                event: "workflow_dispatch", conclusion: "success" };
+  const current = { ...old, id: 32, head_sha: SHA_BE };
+  const artifacts = [{ name: "hipocratiq-uat-aws-readonly-metadata",
+                       expired: false, size_in_bytes: 1024 }];
+  const fakeGet = async path => {
+    if (path.endsWith("/pulls/80")) return d.frontendPR;
+    if (path.endsWith("/pulls/90")) return d.backendPR;
+    if (path.endsWith("/branches/main")) return { protected: true };
+    if (path.endsWith("/branches/develop")) {
+      return { protected: true, commit: {
+        sha: path.startsWith("/repos/" + BACKEND) ? SHA_BE : SHA_FE,
+      } };
+    }
+    if (path.endsWith("/issues/92")) return d.issue;
+    if (path.includes("/actions/workflows/")) return { workflow_runs: [old, current] };
+    if (path.includes("/jobs?")) return {
+      jobs: [{ name: "Approved AWS UAT instance metadata ONLY", conclusion: "success" }],
+    };
+    if (path.includes("/artifacts?")) return { artifacts };
+    throw new Error("Unexpected mocked endpoint " + path);
+  };
+  const evidence = await collectEvidence("synthetic", fakeGet);
+  assert.equal(evidence.inventory.length, 2);
+  assert.equal(evidence.inventory[0].head_sha, old.head_sha);
+  assert.equal(evidence.inventory[1].head_sha, SHA_BE);
+  assert.deepEqual(evaluateRelease(evidence), []);
 });
 
 test("live inventory collection ignores skipped AWS despite a green offline job", async () => {
