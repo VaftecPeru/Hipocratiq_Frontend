@@ -128,6 +128,38 @@ test("GitHub API endpoint allowlist rejects external repositories and writes", (
   assert.equal(allowGitHubReadPath("/repos/" + BACKEND + "/actions/runs/1234/jobs?per_page=100&foo=1"), false);
 });
 
+test("collector does not stop at a valid artifact for an obsolete Backend SHA", async () => {
+  const d = fixtures();
+  const old = { id: 31, created_at: "2026-10-25T16:00:00Z",
+                head_branch: "develop", head_sha: "c".repeat(40),
+                event: "workflow_dispatch", conclusion: "success" };
+  const current = { ...old, id: 32, head_sha: SHA_BE };
+  const artifacts = [{ name: "hipocratiq-uat-aws-readonly-metadata",
+                       expired: false, size_in_bytes: 1024 }];
+  const fakeGet = async path => {
+    if (path.endsWith("/pulls/80")) return d.frontendPR;
+    if (path.endsWith("/pulls/90")) return d.backendPR;
+    if (path.endsWith("/branches/main")) return { protected: true };
+    if (path.endsWith("/branches/develop")) {
+      return { protected: true, commit: {
+        sha: path.startsWith("/repos/" + BACKEND) ? SHA_BE : SHA_FE,
+      } };
+    }
+    if (path.endsWith("/issues/92")) return d.issue;
+    if (path.includes("/actions/workflows/")) return { workflow_runs: [old, current] };
+    if (path.includes("/jobs?")) return {
+      jobs: [{ name: "Approved AWS UAT instance metadata ONLY", conclusion: "success" }],
+    };
+    if (path.includes("/artifacts?")) return { artifacts };
+    throw new Error("Unexpected mocked endpoint " + path);
+  };
+  const evidence = await collectEvidence("synthetic", fakeGet);
+  assert.equal(evidence.inventory.length, 2);
+  assert.equal(evidence.inventory[0].head_sha, old.head_sha);
+  assert.equal(evidence.inventory[1].head_sha, SHA_BE);
+  assert.deepEqual(evaluateRelease(evidence), []);
+});
+
 test("live inventory collection ignores skipped AWS despite a green offline job", async () => {
   const d = fixtures();
   const run = {
