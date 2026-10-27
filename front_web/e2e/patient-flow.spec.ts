@@ -31,6 +31,48 @@ test("patient dashboard follows the Figma navigation hierarchy and keeps clinica
   await expect(page.getByText("Beta", { exact: true })).toBeVisible();
 });
 
+test("patient sidebar collapses on desktop and route transitions show loading and completed states", async ({ page }) => {
+  await setPatientSession(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/patient/dashboard", { waitUntil: "networkidle" });
+
+  const shell = page.locator(".patient-shell");
+  const sidebar = page.locator(".patient-sidebar");
+  const content = page.locator(".patient-content");
+  const toggle = page.getByRole("button", { name: "Ocultar menú lateral" });
+
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(shell).toHaveClass(/patient-shell--sidebar-collapsed/);
+  await expect(page.getByRole("button", { name: "Mostrar menú lateral" })).toBeVisible();
+
+  // The sidebar and content animate independently: assert their settled
+  // layout rather than sampling a transitional subpixel width in one frame.
+  await expect.poll(
+    () => sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
+    { timeout: 3000 },
+  ).toBeLessThanOrEqual(80);
+  await expect.poll(async () => {
+    const [collapsedWidth, collapsedMargin] = await Promise.all([
+      sidebar.evaluate((element) => Number.parseFloat(getComputedStyle(element).width)),
+      content.evaluate((element) => Number.parseFloat(getComputedStyle(element).marginLeft)),
+    ]);
+    return Math.abs(collapsedMargin - collapsedWidth);
+  }, { timeout: 3000 }).toBeLessThanOrEqual(2);
+
+  await page.getByRole("button", { name: "Mostrar menú lateral" }).click();
+  await expect(shell).not.toHaveClass(/patient-shell--sidebar-collapsed/);
+
+  const citasLink = page.getByRole("navigation", { name: "Navegación del paciente" }).getByRole("link", { name: "Mis citas" });
+  await citasLink.click();
+
+  const transition = page.getByTestId("patient-route-transition");
+  await expect(transition).toBeVisible();
+  await expect(page).toHaveURL(/\/patient\/citas$/);
+  await expect(transition.getByText("Completado", { exact: true })).toBeVisible();
+  await expect(transition).toBeHidden({ timeout: 2500 });
+});
+
 test("patient triage saves a draft and submits the same coherent workflow", async ({ page }) => {
   await setPatientSession(page);
   await page.goto("/patient/triaje", { waitUntil: "networkidle" });
@@ -50,6 +92,45 @@ test("patient triage saves a draft and submits the same coherent workflow", asyn
   await expect(page.getByText(/Preconsulta enviada correctamente/)).toBeVisible();
   await expect(page.locator(".patient-triage-banner__status").getByText("Enviado", { exact: true })).toBeVisible();
   await expect(page.locator(".patient-priority-summary").getByText(/Nivel III/).first()).toBeVisible();
+});
+
+test("patient triage blocks improbable vital signs until corrected", async ({ page }) => {
+  await setPatientSession(page);
+  await page.goto("/patient/triaje", { waitUntil: "networkidle" });
+
+  await page.getByLabel(/Temperatura/).fill("26");
+  await page.getByLabel(/Presión sistólica/).fill("100");
+  await page.getByLabel(/Presión diastólica/).fill("100");
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78");
+  await page.getByLabel(/Frecuencia respiratoria/).fill("16");
+  await page.getByLabel(/Saturación de oxígeno/).fill("20");
+
+  const alert = page.locator(".patient-vitals-alert");
+  await expect(alert).toBeVisible();
+  await expect(alert.getByText(/30–45 °C/)).toBeVisible();
+  await expect(alert.getByText(/diastólica debe ser menor/i)).toBeVisible();
+  await expect(alert.getByText(/70–100%/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Guardar borrador" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeDisabled();
+
+  await page.getByLabel(/Temperatura/).fill("36.7");
+  await page.getByLabel(/Presión sistólica/).fill("118");
+  await page.getByLabel(/Presión diastólica/).fill("76");
+  await page.getByLabel(/Saturación de oxígeno/).fill("98");
+
+  // Laravel exige enteros en presión, pulso, frecuencia respiratoria y SpO2.
+  // Ningún valor decimal debe habilitar el envío antes de corregirse.
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78.5");
+  await page.getByLabel(/Presión sistólica/).fill("118.5");
+  await expect(alert.getByText(/ingresa un número entero/i)).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeDisabled();
+
+  await page.getByLabel(/Frecuencia cardiaca/).fill("78");
+  await page.getByLabel(/Presión sistólica/).fill("118");
+
+  await expect(alert).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Guardar borrador" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Enviar preconsulta" })).toBeEnabled();
 });
 
 test("patient membership renders real clinic coverage", async ({ page }) => {
@@ -96,6 +177,41 @@ test("all patient Flow 6 routes render without an application error", async ({ p
   }
 });
 
+
+test("patient dashboard typography is readable and appointment reminders are responsive", async ({ page }) => {
+  await setPatientSession(page);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/patient/dashboard", { waitUntil: "networkidle" });
+
+  const healthCopy = page.locator(".patient-health-status p");
+  await expect(healthCopy).toBeVisible();
+  const healthFontSize = await healthCopy.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(healthFontSize).toBeGreaterThanOrEqual(10);
+
+  await page.goto("/patient/citas", { waitUntil: "networkidle" });
+
+  const reminders = page.locator(".patient-reminders");
+  const reminderGrid = reminders.locator(".patient-reminders__grid");
+  await expect(reminders.getByRole("heading", { name: "Antes de tu cita" })).toBeVisible();
+
+  const desktopColumns = await reminderGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length);
+  expect(desktopColumns).toBe(2);
+
+  for (const reminder of await reminderGrid.locator(".patient-reminder").all()) {
+    const fits = await reminder.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
+    expect(fits).toBeTruthy();
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "networkidle" });
+
+  const mobileColumns = await reminderGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length);
+  expect(mobileColumns).toBe(1);
+
+  const remindersFitMobile = await reminders.evaluate((element) => element.scrollWidth <= element.clientWidth + 1);
+  expect(remindersFitMobile).toBeTruthy();
+});
 
 test("patient internal views expose the premium interaction hierarchy", async ({ page }) => {
   await setPatientSession(page);

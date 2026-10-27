@@ -1,0 +1,52 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Node regression tests (authentication and clinical consultation)
+        run: node --test tests/*.test.mjs
+      - name: ESLint
+        run: npm run lint
+      - name: Build Next.js
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        run: npm run build
+      - name: Validate deployment shell syntax and negative approval gate
+        working-directory: .
+        run: |
+          bash -n scripts/deploy-production.sh
+          bash -n scripts/test-deploy-preflight-failclosed.sh
+          bash scripts/test-deploy-preflight-failclosed.sh
+      - name: Validate Docker Compose syntax
+        run: docker compose -f compose.yaml config --quiet

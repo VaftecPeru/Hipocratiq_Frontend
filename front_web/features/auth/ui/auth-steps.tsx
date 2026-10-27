@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEventHandler, type RefObject } from "react";
-import { ArrowLeft, Building2, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone, UserRound, UsersRound } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, Smartphone } from "lucide-react";
 import { COUNTRY_OPTIONS } from "@/features/auth/lib/phone-number";
 import type { CountryCode, LoginActorContext, LoginIdentifierType, LoginRole } from "@/features/auth/model/auth.types";
 import { BrandLogo } from "@/shared/ui/brand-logo";
 import { CountrySelect } from "@/features/auth/ui/country-select";
 import { OtpCodeInput } from "@/features/auth/ui/otp-code-input";
+import { LoginRolePicker } from "@/features/auth/ui/login-role-picker";
 import { Spinner } from "@/shared/ui/spinner";
 import Link from "next/link";
 
@@ -59,7 +60,6 @@ type CredentialsStepProps = {
   phoneInput: RefObject<HTMLInputElement | null>;
   passwordInput: RefObject<HTMLInputElement | null>;
   onLoginRoleChange: (role: LoginRole) => void;
-  onBackToRoleSelection: () => void;
   onIdentifierTypeChange: (type: LoginIdentifierType) => void;
   onCountryChange: (country: CountryCode) => void;
   onEmailChange: (value: string) => void;
@@ -69,13 +69,6 @@ type CredentialsStepProps = {
   onPasswordBlur: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
 };
-
-const LOGIN_ROLE_OPTIONS = [
-  { value: "administrator", labelKey: "administrator", descriptionKey: "administratorDescription", icon: Building2 },
-  { value: "healthcare", labelKey: "healthcare", descriptionKey: "healthcareDescription", icon: UserRound },
-  { value: "receptionist", labelKey: "receptionist", descriptionKey: "receptionistDescription", icon: Building2 },
-  { value: "patient", labelKey: "patient", descriptionKey: "patientDescription", icon: UsersRound },
-] satisfies ReadonlyArray<{ value: LoginRole; labelKey: string; descriptionKey: string; icon: typeof UserRound }>;
 
 export function CredentialsStep({
   loginRole,
@@ -93,7 +86,6 @@ export function CredentialsStep({
   phoneInput,
   passwordInput,
   onLoginRoleChange,
-  onBackToRoleSelection,
   onIdentifierTypeChange,
   onCountryChange,
   onEmailChange,
@@ -108,14 +100,10 @@ export function CredentialsStep({
   const countryOption = COUNTRY_OPTIONS[country];
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isSupportLogin = loginRole === "support";
-  const administratorLabel = locale.startsWith("en") ? "Clinic administrator" : "Administrador de clínica";
-  const supportAccessLabel = locale.startsWith("en")
-    ? "Superadministrator access"
-    : "Acceso de Superadministrador";
 
   return (
-    <div className="w-full max-w-[38rem]">
-      <div className="mb-6 flex items-center gap-4">
+    <div className="w-full max-w-[49rem]">
+      <div className="mb-5 flex items-center gap-4">
         <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-accent shadow-[0_0.5rem_1rem_rgb(8_98_221/18%)]">
           <BrandLogo className="h-9 w-10 brightness-0 invert" />
         </span>
@@ -128,50 +116,17 @@ export function CredentialsStep({
        <p className="mt-2 text-sm leading-5 text-muted">{t("secureAccess")}</p>
 
       <div className="mt-6">
-        {isSupportLogin ? (
-          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <p className="text-sm font-semibold text-ink">{supportAccessLabel}</p>
-            <button
-              type="button"
-              className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border-0 bg-transparent px-0 text-2xs font-bold text-accent hover:underline ${FOCUS_RING_CLASSES}`}
-              onClick={onBackToRoleSelection}
-            >
-              <ArrowLeft className="size-3.5" strokeWidth={2} aria-hidden="true" />
-               {t("backToSignIn")}
-            </button>
-          </div>
-        ) : (
-          <>
-             <p className="mb-2 text-sm font-semibold text-ink">{t("signInAs")}</p>
-            <div className="login-role-grid-container min-w-0">
-               <div className="login-role-grid" role="group" aria-label={t("accountType")}>
-                {LOGIN_ROLE_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  const isSelected = loginRole === option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`group flex min-h-[8.5rem] min-w-0 flex-col items-center rounded-xl border p-2.5 text-center transition-[border-color,background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:border-accent/60 ${isSelected ? "border-accent bg-accent-soft/55 text-accent shadow-[0_0.45rem_1.2rem_rgb(8_98_221/10%)]" : "border-line bg-surface text-ink hover:bg-surface-subtle"} ${FOCUS_RING_CLASSES}`}
-                      onClick={() => onLoginRoleChange(option.value)}
-                      aria-pressed={isSelected}
-                    >
-                      <span className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors ${isSelected ? "bg-surface text-accent" : "bg-surface-subtle text-ink-secondary group-hover:text-accent"}`}>
-                        <Icon className="size-5" strokeWidth={1.7} aria-hidden="true" />
-                      </span>
-                       <span className="mt-2 text-xs font-semibold leading-4">{option.value === "administrator" ? administratorLabel : t(option.labelKey)}</span>
-                       <span className="mt-1 text-balance text-[0.66rem] leading-4 text-muted">{t(option.descriptionKey)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
+        <p className="mb-3 text-sm font-semibold text-ink">{t("signInAs")}</p>
+        <LoginRolePicker
+          selectedRole={loginRole}
+          onRoleChange={onLoginRoleChange}
+          disabled={isPending}
+          locale={locale}
+          groupLabel={t("accountType")}
+        />
       </div>
 
-      <div className="mt-7 flex items-center gap-3 text-xs text-muted">
+      <div className="mt-6 flex items-center gap-3 text-xs text-muted">
         <span className="h-px flex-1 bg-line" aria-hidden="true" />
          <span>{t("continueWith")}</span>
         <span className="h-px flex-1 bg-line" aria-hidden="true" />
@@ -186,7 +141,7 @@ export function CredentialsStep({
         </button>
       </div>
 
-      <form className="mt-5 grid gap-5" onSubmit={onSubmit} aria-busy={isPending} noValidate>
+      <form className="mt-5 grid gap-4" onSubmit={onSubmit} aria-busy={isPending} noValidate>
         {identifierType === "email" ? (
           <div className="grid gap-2">
              <label className="text-2xs font-bold text-ink" htmlFor="email">{t("emailLabel")}</label>

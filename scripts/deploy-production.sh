@@ -1,8 +1,28 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
+
+# Fail CLOSED before any repository, Docker, network or filesystem operation.
+# Approvals attest externally verified UAT/restore; env flags alone are NOT evidence.
+RELEASE_APPROVAL="${RELEASE_APPROVAL:-}"
+RELEASE_APPROVED_SHA="${RELEASE_APPROVED_SHA:-}"
+RELEASE_CHANGE_ID="${RELEASE_CHANGE_ID:-}"
+UAT_RESTORE_EVIDENCE="${UAT_RESTORE_EVIDENCE:-}"
+BACKUP_AT_REST_VERIFIED="${BACKUP_AT_REST_VERIFIED:-}"
+WEB_UAT_EVIDENCE="${WEB_UAT_EVIDENCE:-}"
+
+if [[ "$RELEASE_APPROVAL" != "APPROVED_FOR_PRODUCTION" ||
+      ! "$RELEASE_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ||
+      -z "$RELEASE_CHANGE_ID" ||
+      -z "$UAT_RESTORE_EVIDENCE" ||
+      "$BACKUP_AT_REST_VERIFIED" != "true" ||
+      -z "$WEB_UAT_EVIDENCE" ]]; then
+  echo "ERROR NO-GO: Frontend requires approved SHA, change ID, UAT restore evidence, backup encryption and Web UAT evidence." >&2
+  exit 1
+fi
 
 PRODUCTION_DIR="${PRODUCTION_DIR:-/srv/hipocratiq/frontend}"
-COMPOSE_PROJECT="${COMPOSE_PROJECT:-hipocratiq-front-web}"
+COMPOSE_PROJECT="${COMPOSE_PROJECT:-}"
 HEALTH_URL="${HEALTH_URL:-https://hipocratiq.com/}"
 LOCK_FILE="${LOCK_FILE:-/tmp/hipocratiq-frontend-deploy.lock}"
 TARGET_BRANCH="main"
@@ -33,11 +53,16 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+if [[ -z "$COMPOSE_PROJECT" ]]; then
+  COMPOSE_PROJECT="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' front-web-app 2>/dev/null || true)"
+  COMPOSE_PROJECT="${COMPOSE_PROJECT:-front_web}"
+fi
+
 OLD_SHA="$(git rev-parse HEAD)"
 UPDATED=0
 
 compose() {
-  docker compose -p "$COMPOSE_PROJECT" -f front_web/compose.yaml "$@"
+  docker compose -p "$COMPOSE_PROJECT" -f "$PRODUCTION_DIR/front_web/compose.yaml" "$@"
 }
 
 rollback_code() {
@@ -58,9 +83,15 @@ trap 'on_error "$LINENO"' ERR
 
 echo "== HIPOCRATIQ Frontend deploy =="
 echo "Origen: $OLD_SHA"
+echo "Proyecto Compose detectado: $COMPOSE_PROJECT"
 
 git fetch --prune origin "$TARGET_BRANCH"
 TARGET_SHA="$(git rev-parse "origin/$TARGET_BRANCH")"
+
+if [[ "$TARGET_SHA" != "$RELEASE_APPROVED_SHA" ]]; then
+  echo "ERROR NO-GO: origin/main SHA differs from approved release SHA." >&2
+  exit 1
+fi
 
 if ! git merge-base --is-ancestor "$OLD_SHA" "$TARGET_SHA"; then
   echo "ERROR: origin/main no es fast-forward respecto al estado productivo actual." >&2
@@ -96,6 +127,7 @@ done
 
 if [[ "$READY" -ne 1 ]]; then
   echo "ERROR: Frontend local no quedó disponible." >&2
+  compose logs --tail=120 frontend || true
   exit 1
 fi
 

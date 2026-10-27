@@ -1,0 +1,80 @@
+name: UAT HTTPS approved endpoints (manual, read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      uat_web_url:
+        description: "Approved public Web UAT HTTPS URL (never production)"
+        type: string
+        required: true
+      uat_api_url:
+        description: "Approved public Laravel API UAT HTTPS origin or /backend"
+        type: string
+        required: true
+      acknowledgement:
+        description: "Type READ_ONLY_UAT_NO_PRODUCTION"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hipocratiq-uat-https-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Approved-only HTTPS health and anonymous security gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: front_web
+    env:
+      UAT_WEB_URL: ${{ inputs.uat_web_url }}
+      UAT_API_URL: ${{ inputs.uat_api_url }}
+      APPROVED_UAT_WEB_URL: ${{ vars.HIPOCRATIQ_UAT_WEB_URL }}
+      APPROVED_UAT_API_URL: ${{ vars.HIPOCRATIQ_UAT_API_URL }}
+      APPROVED_UAT_ENABLED: ${{ vars.HIPOCRATIQ_UAT_READONLY_ENABLED }}
+      ACKNOWLEDGEMENT: ${{ inputs.acknowledgement }}
+
+    steps:
+      - name: Check out Web test code only
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run UAT target guard unit tests before networking
+        run: node --test tests/uat-https-guard.test.mjs tests/uat-approved-targets.test.mjs
+
+      - name: Enforce approved UAT hostnames and explicit read-only opt-in
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/develop" ]]; then
+            echo "::error::Run only from develop; no manual release/prod ref."
+            exit 1
+          fi
+          if [[ "$APPROVED_UAT_ENABLED" != "true" ]]; then
+            echo "::error::HIPOCRATIQ_UAT_READONLY_ENABLED must be configured true by the repository administrator."
+            exit 1
+          fi
+          if [[ "$ACKNOWLEDGEMENT" != "READ_ONLY_UAT_NO_PRODUCTION" ]]; then
+            echo "::error::Explicit read-only acknowledgement is required."
+            exit 1
+          fi
+          node scripts/verify-approved-uat-targets.mjs
+
+      - name: Execute HTTPS UAT read-only gate (GET/OPTIONS only)
+        run: node scripts/uat-https-readonly.mjs
+
+      - name: Declare non-production scope
+        if: success()
+        run: |
+          echo "UAT HTTPS read-only PASS: Web, Laravel readiness, anonymous access, CORS."
+          echo "NO login, NO OTP SMS, NO PHI, NO AWS API, NO DB migration, NO deployment."
+          echo "Clinical tenant tests, OTP Mexico and backup restore are separate release gates."
