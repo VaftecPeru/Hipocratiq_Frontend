@@ -1,0 +1,109 @@
+name: Web Browser E2E (synthetic)
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - front_web/**
+      - .github/workflows/e2e-web.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hipocratiq-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-e2e:
+    name: Playwright browser / fake API / no PHI
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.55.0-noble
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: front_web
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Check out approved Frontend repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install locked Next dependencies and pinned Playwright
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+
+      - name: Build isolated Next.js standalone
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        run: |
+          npm run build
+          mkdir -p .next/standalone/.next
+          cp -R .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -R public .next/standalone/public; fi
+
+      - name: Test browser roles and patient workflows
+        env:
+          BACKEND_URL: http://127.0.0.1:8000
+          APP_URL: http://127.0.0.1:3000
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node e2e/fake-backend.mjs >/tmp/hipocratiq-fake-backend.log 2>&1 &
+          BACK_PID=$!
+          (
+            cd .next/standalone
+            HOSTNAME=127.0.0.1 PORT=3000 node server.js
+          ) >/tmp/hipocratiq-next.log 2>&1 &
+          FRONT_PID=$!
+          cleanup() {
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              echo "::group::Synthetic backend log"
+              tail -n 100 /tmp/hipocratiq-fake-backend.log || true
+              echo "::endgroup::"
+              echo "::group::Next.js log"
+              tail -n 100 /tmp/hipocratiq-next.log || true
+              echo "::endgroup::"
+            fi
+            kill "$FRONT_PID" "$BACK_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in {1..90}; do
+            if node -e 'fetch("http://127.0.0.1:3000/").then(()=>process.exit(0)).catch(()=>process.exit(1))'; then
+              break
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              echo "::error::Next.js did not start in synthetic CI"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          npx playwright test --config=playwright.config.ts
+
+      - name: Upload failed E2E evidence (synthetic only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hipocratiq-web-playwright-synthetic-evidence
+          path: |
+            front_web/playwright-report/
+            front_web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Explicit scope and release gate
+        if: success()
+        run: |
+          echo "Browser E2E passed against a fake, local backend."
+          echo "Not a clinical HTTPS UAT, not Laravel integration, not a release approval."

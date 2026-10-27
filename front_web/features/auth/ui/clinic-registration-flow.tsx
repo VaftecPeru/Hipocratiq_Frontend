@@ -11,7 +11,7 @@ import {
   type ClinicPlan,
   type ClinicRegistrationDraft,
 } from "@/features/auth/api/clinic-registration";
-import { toE164PhoneNumber } from "@/features/auth/lib/phone-number";
+import { PRIMARY_COUNTRY_CODE, toE164PhoneNumber } from "@/features/auth/lib/phone-number";
 import type { CountryCode } from "@/features/auth/model/auth.types";
 import { ClinicRegistrationForm } from "@/features/auth/ui/clinic-registration-form";
 import { DoctorRegistrationFlow } from "@/features/auth/ui/doctor-registration-flow";
@@ -24,7 +24,7 @@ import { useAuthDocumentTitle } from "@/features/auth/ui/auth-document-title";
 const initialDraft: ClinicRegistrationDraft = {
   clinic_name: "",
   tax_id: "",
-  country_code: "PE",
+  country_code: PRIMARY_COUNTRY_CODE,
   contact_phone: "",
   address: "",
   admin_name: "",

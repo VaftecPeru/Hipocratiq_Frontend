@@ -26,6 +26,14 @@ function loadSource(path, dependencies = {}) {
 }
 
 const paths = loadSource("features/auth/lib/dashboard-path.ts");
+const phoneNumbers = loadSource("features/auth/lib/phone-number.ts");
+
+test("Mexico is the primary authentication country while PE remains supported", () => {
+  assert.equal(phoneNumbers.PRIMARY_COUNTRY_CODE, "MX");
+  assert.equal(phoneNumbers.toE164PhoneNumber("55 3456 7890", "MX"), "+525534567890");
+  assert.equal(phoneNumbers.toE164PhoneNumber("912 345 678", "PE"), "+51912345678");
+});
+
 function session(actor_context, clinic = { id: 10, name: "Clínica de prueba" }) {
   return { actor_context, client_type: "web", user: { id: 1, name: "Usuario", clinic, doctor: actor_context === "doctor" ? { practice_type: "independent" } : null } };
 }

@@ -1,5 +1,7 @@
 import type { CountryCode } from "@/features/auth/model/auth.types";
 
+export const PRIMARY_COUNTRY_CODE: CountryCode = "MX";
+
 export const COUNTRY_OPTIONS: Record<CountryCode, {
   dialCode: string;
   name: string;

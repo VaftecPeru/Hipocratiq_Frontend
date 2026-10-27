@@ -27,7 +27,7 @@ concurrency:
 jobs:
   ci:
     name: Frontend CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -68,8 +68,11 @@ jobs:
           APP_URL: http://127.0.0.1:3000
         run: npm run build
 
-      - name: Validate production deploy script
-        run: bash -n scripts/deploy-production.sh
+      - name: Validate deployment and refuse unsafe production approvals
+        run: |
+          bash -n scripts/deploy-production.sh
+          bash -n scripts/test-deploy-preflight-failclosed.sh
+          bash scripts/test-deploy-preflight-failclosed.sh
 
       - name: Build frontend Docker image
         run: docker build --file front_web/Dockerfile --tag hipocratiq-frontend:ci front_web
@@ -81,8 +84,9 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
-    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    # Playwright 1.55 supports Ubuntu 24.04, not ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Check out repository

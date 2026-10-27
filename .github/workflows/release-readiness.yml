@@ -1,0 +1,69 @@
+name: Frontend release NO-GO evidence (no AWS calls)
+
+on:
+  # No path filters: a main PR must never bypass this security check.
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  actions: read
+
+concurrency:
+  group: hipocratiq-frontend-main-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-release-regressions:
+    name: Frontend release fail-closed tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - name: Checkout candidate source only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify no-go for drafts, missing AWS, unprotected branches and forks
+        working-directory: front_web
+        run: node --test tests/release-readiness-check.test.mjs tests/web-only-release-gate.test.mjs
+
+      - name: Confirm no external reads were made during unit tests
+        run: |
+          echo "Synthetic GitHub evidence only; no AWS, OTP, Docker or patient data."
+
+  live-frontend-release:
+    name: Frontend main release / cross-repo NO-GO (read-only)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    needs: offline-release-regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Frontend release candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify Web-only PR #85, exact SHA, scoped files and protected main
+        working-directory: front_web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/web-only-release-gate.mjs
+
+      - name: A passing web-scope gate is NOT a clinical release
+        if: success()
+        run: |
+          echo "Scope verification only; review web CI, backend compatibility, clinical security"
+          echo "and operational recovery plus customer/PM approval before merge or AWS deploy."
