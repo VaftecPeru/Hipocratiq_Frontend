@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify no-go for drafts, missing AWS, unprotected branches and forks
         working-directory: front_web
-        run: node --test tests/release-readiness-check.test.mjs
+        run: node --test tests/release-readiness-check.test.mjs tests/web-only-release-gate.test.mjs
 
       - name: Confirm no external reads were made during unit tests
         run: |
@@ -56,14 +56,14 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify both repositories and real AWS inventory through GitHub GET only
+      - name: Verify Web-only PR #85, exact SHA, scoped files and protected main
         working-directory: front_web
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/release-readiness-check.mjs
+        run: node scripts/web-only-release-gate.mjs
 
-      - name: A passing Github gate is NOT a clinical release
+      - name: A passing web-scope gate is NOT a clinical release
         if: success()
         run: |
-          echo "Minimum GitHub controls only; require clinical UAT 36/36, rollback"
-          echo "and customer/PM production approval before main merge or AWS deploy."
+          echo "Scope verification only; review web CI, backend compatibility, clinical security"
+          echo "and operational recovery plus customer/PM approval before merge or AWS deploy."
