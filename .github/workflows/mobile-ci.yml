@@ -8,6 +8,15 @@ on:
         required: false
         default: false
         type: boolean
+      uat_backend_url:
+        description: "URL HTTPS del backend UAT (obligatoria para builds manuales; nunca producción)"
+        required: false
+        type: string
+        default: ""
+      uat_acknowledgement:
+        description: "Escribir APPROVED_MOBILE_UAT_NO_PRODUCTION"
+        required: true
+        type: string
   push:
     branches:
       - main
@@ -33,7 +42,7 @@ concurrency:
 jobs:
   android:
     name: Flutter Android CI
-    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -46,8 +55,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify preinstalled Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_home="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -d "$android_home"
+          test -d "$android_home/platform-tools"
+          echo "Using runner Android SDK at $android_home"
 
       - name: Set up Flutter 3.44.4
         uses: subosito/flutter-action@v2
@@ -83,28 +98,53 @@ jobs:
         working-directory: front_movil
         run: dart run flutter_launcher_icons
 
+      - name: Verify Mobile UAT backend policy offline
+        run: python3 -m unittest discover -s front_movil/tool -p 'test_resolve_backend.py' -v
+
+      - name: Resolve approved UAT backend without external requests
+        id: backend_target
+        env:
+          UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
+          UAT_ACKNOWLEDGEMENT: ${{ inputs.uat_acknowledgement || '' }}
+          APPROVED_UAT_BACKEND_URL: ${{ vars.HIPOCRATIQ_UAT_API_URL }}
+          UAT_MOBILE_BUILD_ENABLED: ${{ vars.HIPOCRATIQ_UAT_MOBILE_BUILD_ENABLED }}
+        run: python3 front_movil/tool/resolve_backend.py
+
       - name: Build Android APK
         working-directory: front_movil
         run: >-
           flutter build apk --debug
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Build Android AAB
         working-directory: front_movil
         run: >-
           flutter build appbundle --debug
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
+
+      - name: Calculate APK and AAB SHA-256
+        working-directory: front_movil
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          test -s build/app/outputs/bundle/debug/app-debug.aab
+          sha256sum \
+            build/app/outputs/flutter-apk/app-debug.apk \
+            build/app/outputs/bundle/debug/app-debug.aab \
+            | tee build/android-validation-sha256.txt
 
       - name: Upload Android validation builds
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-android-validation
+          name: hipocratiq-android-ci-build-not-uat
           if-no-files-found: error
           path: |
             front_movil/build/app/outputs/flutter-apk/app-debug.apk
             front_movil/build/app/outputs/bundle/debug/app-debug.aab
+            front_movil/build/android-validation-sha256.txt
 
   ios:
     name: Flutter iOS CI
@@ -126,20 +166,47 @@ jobs:
         working-directory: front_movil
         run: flutter pub get
 
+      - name: Read Xcode toolchain
+        run: xcodebuild -version
+
+      - name: Check Dart format (without modifying sources)
+        working-directory: front_movil
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Flutter analyze
+        working-directory: front_movil
+        run: flutter analyze
+
+      - name: Flutter unit/widget tests
+        working-directory: front_movil
+        run: flutter test
+
       - name: Generate HIPOCRATIQ launcher icons
         working-directory: front_movil
         run: dart run flutter_launcher_icons
+
+      - name: Verify Mobile UAT backend policy offline
+        run: python3 -m unittest discover -s front_movil/tool -p 'test_resolve_backend.py' -v
+
+      - name: Resolve approved UAT backend without external requests
+        id: backend_target
+        env:
+          UAT_BACKEND_URL: ${{ inputs.uat_backend_url || '' }}
+          UAT_ACKNOWLEDGEMENT: ${{ inputs.uat_acknowledgement || '' }}
+          APPROVED_UAT_BACKEND_URL: ${{ vars.HIPOCRATIQ_UAT_API_URL }}
+          UAT_MOBILE_BUILD_ENABLED: ${{ vars.HIPOCRATIQ_UAT_MOBILE_BUILD_ENABLED }}
+        run: python3 front_movil/tool/resolve_backend.py
 
       - name: Build iOS without code signing
         working-directory: front_movil
         run: >-
           flutter build ios --release --no-codesign
-          --dart-define=BACKEND_URL=https://hipocratiq.com/backend
+          --dart-define=BACKEND_URL=${{ steps.backend_target.outputs.backend_url }}
           --dart-define=SUPPORT_PORTAL_URL=https://hipocratiq.com
 
       - name: Upload iOS validation build
         uses: actions/upload-artifact@v4
         with:
-          name: hipocratiq-ios-validation
+          name: hipocratiq-ios-ci-build-not-uat
           if-no-files-found: error
           path: front_movil/build/ios/iphoneos/Runner.app

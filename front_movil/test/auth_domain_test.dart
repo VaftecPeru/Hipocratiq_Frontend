@@ -65,7 +65,36 @@ void main() {
     });
   });
 
+  group('primary market', () {
+    test(
+      'defaults authentication to Mexico without dropping secondary countries',
+      () {
+        expect(primaryCountry, CountryCode.mx);
+        expect(CountryCode.fromCode('unknown'), CountryCode.mx);
+        expect(
+          toE164PhoneNumber('55 3456 7890', CountryCode.mx),
+          '+525534567890',
+        );
+        expect(
+          toE164PhoneNumber('912 345 678', CountryCode.pe),
+          '+51912345678',
+        );
+      },
+    );
+  });
+
   group('phone numbers', () {
+    test('uses Mexico as the primary fallback country', () {
+      expect(CountryCode.fromCode('unknown'), CountryCode.mx);
+    });
+
+    test('normalizes a Mexican national number to E.164', () {
+      expect(
+        toE164PhoneNumber('55 3456 7890', CountryCode.mx),
+        '+525534567890',
+      );
+    });
+
     test('normalizes a Peruvian national number to E.164', () {
       expect(toE164PhoneNumber('912 345 678', CountryCode.pe), '+51912345678');
     });

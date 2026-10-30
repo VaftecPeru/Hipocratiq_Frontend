@@ -38,10 +38,12 @@ enum CountryCode {
   static CountryCode fromCode(String value) {
     return values.firstWhere(
       (country) => country.code == value.toUpperCase(),
-      orElse: () => CountryCode.pe,
+      orElse: () => primaryCountry,
     );
   }
 }
+
+const CountryCode primaryCountry = CountryCode.mx;
 
 enum AuthRole {
   healthcare(
