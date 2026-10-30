@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify no-go for drafts, missing AWS, unprotected branches and forks
         working-directory: front_web
-        run: node --test tests/release-readiness-check.test.mjs
+        run: node --test tests/release-readiness-check.test.mjs tests/web-only-release-gate.test.mjs
 
       - name: Confirm no external reads were made during unit tests
         run: |
