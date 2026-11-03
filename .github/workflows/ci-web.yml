@@ -27,6 +27,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: front_web/package-lock.json
+      - name: Validate proposed protected develop Ruleset contract (offline)
+        working-directory: .
+        run: |
+          python3 -m unittest discover -s tests/Scripts -p 'test_frontend_develop_ruleset_contract.py' -v
+
       - name: Block tracked credential files and high-confidence token formats
         shell: bash
         working-directory: .
