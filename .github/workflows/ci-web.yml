@@ -27,6 +27,14 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: front_web/package-lock.json
+      - name: Block tracked credential files and high-confidence token formats
+        shell: bash
+        working-directory: .
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/Scripts -p 'test_check_current_tracked_credentials.py' -v
+          python3 scripts/check_current_tracked_credentials.py --repository .
+
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Audit production dependencies
