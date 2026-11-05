@@ -1,0 +1,94 @@
+name: P0-102 Frontend security PR gates (redacted)
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-102-frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tracked-credentials:
+    name: Frontend current tracked secrets (no release clearance)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run fail-closed security regression fixtures
+        run: python3 -m unittest discover -s tests/Scripts -p 'test_check_current_tracked_credentials.py' -v
+      - name: Block tracked credential files and tokens
+        run: python3 scripts/check_current_tracked_credentials.py --repository .
+      - name: Confirm historic and artifact audits remain separate
+        run: |
+          echo 'Current tracked tree only. Historical diagnostics and metadata inventory run separately.'
+          echo 'P0 #102 requires private classification and security signoff.'
+
+  gitleaks-pr-delta:
+    name: Frontend Gitleaks PR changeset (redacted)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan PR commits without publishing secret candidates
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -Eeuo pipefail
+          if ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo 'GITLEAKS=FAIL_CLOSED_BASE_UNAVAILABLE'
+            exit 2
+          fi
+          merge_base="$(git merge-base "$BASE_SHA" HEAD)"
+          if [ -z "$merge_base" ]; then
+            echo 'GITLEAKS=FAIL_CLOSED_MERGE_BASE_UNAVAILABLE'
+            exit 2
+          fi
+          set +e
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory \
+            -e GIT_CONFIG_VALUE_0=/repo \
+            -v "$GITHUB_WORKSPACE:/repo:ro" -w /repo \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --redact --no-banner "--log-opts=${merge_base}..HEAD" . \
+            > "$RUNNER_TEMP/gitleaks-redacted-private.log" 2>&1
+          code=$?
+          set -e
+          rm -f "$RUNNER_TEMP/gitleaks-redacted-private.log"
+          if [ "$code" -ne 0 ]; then
+            echo 'GITLEAKS=BLOCKED_OR_SCANNER_ERROR; private triage required'
+            exit 1
+          fi
+          echo 'GITLEAKS=NO_CHANGESET_SIGNAL_NOT_SECURITY_CLEARANCE'
+
+  production-npm-advisories:
+    name: npm audit production dependencies (no ignores)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Audit locked production dependencies
+        working-directory: front_web
+        run: npm audit --omit=dev --audit-level=high
+      - name: Maintain clinical release restrictions
+        run: |
+          echo 'Passing npm audit does not authorize clinical UAT, security signoff or AWS deployment.'
