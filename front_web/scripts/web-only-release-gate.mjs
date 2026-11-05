@@ -32,7 +32,9 @@ export function evaluateWebRelease({pr,main,files,expectedHead,eventNumber}){
      segment===".git" || segment===".env" || segment.startsWith(".env.") ||
      ["secret","secrets","credential","credentials","private","backup","backups"].includes(segment));
    const sensitiveExtension=/\.(?:pem|key|p12|pfx|jks|keystore|sql|sqlite|sqlite3|dump|bak|backup)$/i.test(path);
-   if(sensitiveSegment || sensitiveExtension)
+   const basename=segments.at(-1);
+   const sensitiveFile=/^(?:credentials?|service[-_]account(?:[-_].*)?|id_(?:rsa|dsa|ecdsa|ed25519)|\.npmrc|\.pypirc|\.netrc|\.aws|\.dockerconfigjson)(?:\.(?:json|ya?ml|txt|config))?$/i.test(basename);
+   if(sensitiveSegment || sensitiveExtension || sensitiveFile)
      errors.push("Sensitive or backup file cannot be part of a web-only release: "+path);
    if(f?.status==="removed") errors.push("Unexpected deleted file: "+path);
  }
