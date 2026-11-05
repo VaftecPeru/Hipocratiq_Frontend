@@ -15,6 +15,13 @@ test("fails closed on sensitive files even under an allowed web directory",()=>{
   assert.ok(evaluateWebRelease(x).some(e=>e.includes("Sensitive or backup file")),path);
  }
 });
+test("blocks sensitive credential basenames, not only secret directories",()=>{
+ for(const path of ["front_web/config/credentials.json","front_web/config/service-account.json","front_web/config/service_account_key.json","front_web/.npmrc","front_web/keys/id_rsa","front_web/config/.netrc"]){
+  const x=valid();x.files=[{filename:path,status:"added"}];
+  assert.ok(evaluateWebRelease(x).some(e=>e.includes("Sensitive or backup file")),path);
+ }
+});
+
 test("retains ordinary web files while blocking removal",()=>{
  const x=valid();x.files=[{filename:"front_web/components/PatientCard.tsx",status:"modified"}];
  assert.deepEqual(evaluateWebRelease(x),[]);
