@@ -26,6 +26,11 @@ export function evaluateWebRelease({pr,main,files,expectedHead,eventNumber}){
    const path=f?.filename??"";
    if(!(/^(front_web\/|\.github\/workflows\/(ci-web|e2e-web|frontend-ci-cd|release-readiness|uat-https-readonly-manual)\.yml$|scripts\/(deploy-production|test-deploy-preflight-failclosed)\.sh$)/.test(path)))
       errors.push("Unexpected file outside web-only allowlist: "+path);
+   // Scope allowlisting alone must never authorize confidential/configuration artifacts.
+   // Reject these even if located under the broad front_web/ prefix.
+   if (/(^|\\/)(?:\\.env(?:\\..*)?|\\.git|secrets?|credentials?|private)(?:\\/|$)/i.test(path) ||
+       /(?:\\.(?:pem|key|p12|pfx|jks|keystore|sql|sqlite|sqlite3|dump|bak|backup)|\\.env(?:\\..*)?)$/i.test(path))
+     errors.push("Sensitive or backup file cannot be part of a web-only release: "+path);
    if(f?.status==="removed") errors.push("Unexpected deleted file: "+path);
  }
  return errors;
