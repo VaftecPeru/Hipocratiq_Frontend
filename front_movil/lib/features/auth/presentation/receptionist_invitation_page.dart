@@ -27,7 +27,7 @@ class _ReceptionistInvitationPageState
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  CountryCode _country = CountryCode.pe;
+  CountryCode _country = CountryCode.mx;
   bool _isSubmitting = false;
   String? _error;
   ReceptionistInvitation? _invitation;

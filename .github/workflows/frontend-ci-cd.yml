@@ -6,16 +6,10 @@ on:
     branches:
       - main
       - develop
-    paths:
-      - front_web/**
-      - .github/workflows/frontend-ci-cd.yml
   pull_request:
     branches:
       - main
       - develop
-    paths:
-      - front_web/**
-      - .github/workflows/frontend-ci-cd.yml
 
 permissions:
   contents: read
@@ -27,7 +21,7 @@ concurrency:
 jobs:
   ci:
     name: Frontend CI
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,6 +34,18 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: front_web/package-lock.json
+
+      - name: Validate proposed protected develop Ruleset contract (offline)
+        working-directory: .
+        run: |
+          python3 -m unittest discover -s tests/Scripts -p 'test_frontend_develop_ruleset_contract.py' -v
+
+      - name: Block tracked credential files and high-confidence token formats
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/Scripts -p 'test_check_current_tracked_credentials.py' -v
+          python3 scripts/check_current_tracked_credentials.py --repository .
 
       - name: Install frontend dependencies
         working-directory: front_web
@@ -84,7 +90,7 @@ jobs:
 
   e2e:
     name: Frontend E2E role routing
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || vars.ENABLE_GITHUB_HOSTED_CI == 'true'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     # Playwright 1.55 supports Ubuntu 24.04, not ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
     timeout-minutes: 25

@@ -161,12 +161,15 @@ class _MobileBrand extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          'assets/branding/hipocratiq-mark.webp',
-          width: 30,
-          height: 30,
-          filterQuality: FilterQuality.high,
-          semanticLabel: 'HIPOCRATIQ',
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            'assets/branding/app-icon.png',
+            width: 30,
+            height: 30,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'HIPOCRATIQ',
+          ),
         ),
         const SizedBox(width: 9),
         const Text(
