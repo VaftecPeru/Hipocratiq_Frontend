@@ -1,0 +1,59 @@
+name: Frontend workflow YAML syntax gate (offline)
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - '.github/workflows/**'
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  yaml-parse:
+    name: Validate all Frontend GitHub Actions YAML
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse all GitHub Actions workflow files
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ruby -r yaml <<'RUBY'
+          files = Dir.glob('.github/workflows/*.{yml,yaml}').sort
+          abort('WORKFLOW_YAML=FAIL_MISSING') if files.empty?
+          failures = 0
+          files.each do |path|
+            begin
+              YAML.parse_file(path)
+            rescue Psych::SyntaxError => e
+              warn "WORKFLOW_YAML=INVALID path=#{path} line=#{e.line} column=#{e.column}"
+              failures += 1
+            end
+          end
+          abort("WORKFLOW_YAML=FAIL count=#{failures}") unless failures.zero?
+          puts "WORKFLOW_YAML=PASS count=#{files.length}; NO_AWS_CALLS"
+          RUBY
+      - name: Regression case for unquoted colon
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ruby -r yaml <<'RUBY'
+          invalid = ["jobs:", "  deploy:", "    name: Production release: Backend then Frontend"].join(10.chr)
+          valid = ["jobs:", "  deploy:", "    name: 'Production release: Backend then Frontend'"].join(10.chr)
+          begin
+            YAML.parse(invalid)
+            abort('REGRESSION=FAIL expected parser rejection')
+          rescue Psych::SyntaxError
+          end
+          YAML.parse(valid)
+          puts 'REGRESSION=PASS'
+          RUBY
