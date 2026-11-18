@@ -30,10 +30,25 @@ jobs:
           set -euo pipefail
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund next@16.4.6 eslint-config-next@16.4.6
           npm update --package-lock-only --ignore-scripts --no-audit --no-fund @parcel/watcher picomatch
-          npm audit fix --package-lock-only --ignore-scripts --no-fund
+          # npm audit fix can exit nonzero when a safe fix is unavailable.
+          # Continue diagnostic checks but preserve fail-closed status.
+          fix_failed=0
+          if ! npm audit fix --package-lock-only --ignore-scripts --no-fund; then
+            fix_failed=1
+          fi
           npm ci --ignore-scripts --no-fund
           npm ls picomatch @parcel/watcher next || true
-          npm audit --omit=dev --audit-level=high
+          audit_failed=0
+          if ! npm audit --audit-level=high; then
+            audit_failed=1
+          fi
+          if ! npm audit --omit=dev --audit-level=high; then
+            audit_failed=1
+          fi
+          if (( fix_failed || audit_failed )); then
+            echo "::error::Dependency audit remains NO-GO; review lockfile artifact and advisories."
+            exit 1
+          fi
       - name: Upload candidate manifest and lockfile for review (never secrets)
         if: always()
         uses: actions/upload-artifact@v4
