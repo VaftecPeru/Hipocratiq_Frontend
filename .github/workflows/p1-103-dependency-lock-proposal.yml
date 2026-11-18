@@ -36,7 +36,10 @@ jobs:
           if ! npm audit fix --package-lock-only --ignore-scripts --no-fund; then
             fix_failed=1
           fi
+          # Verify the candidate lockfile can be installed reproducibly.
           npm ci --ignore-scripts --no-fund
+          # Record a non-sensitive checksum for SHA-bound artifact traceability.
+          sha256sum package.json package-lock.json
           npm ls picomatch @parcel/watcher next || true
           audit_failed=0
           if ! npm audit --audit-level=high; then
