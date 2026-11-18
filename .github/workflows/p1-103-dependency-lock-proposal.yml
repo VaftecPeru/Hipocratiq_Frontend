@@ -59,7 +59,9 @@ jobs:
             quality_failed=1
             echo "::error::ESLint failed on proposed dependency lock."
           fi
-          if ! npm run build; then
+          # Synthetic loopback backend URL: no clinical data, network calls or AWS access.
+          # Required by server-env.ts during Next.js production build evaluation.
+          if ! BACKEND_URL=http://127.0.0.1:8000 npm run build; then
             quality_failed=1
             echo "::error::Next.js build failed on proposed dependency lock."
           fi
