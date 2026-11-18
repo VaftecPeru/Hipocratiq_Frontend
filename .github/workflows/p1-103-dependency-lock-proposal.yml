@@ -1,0 +1,38 @@
+name: P1-103 dependency lock proposal (synthetic, no deploy)
+on:
+  push:
+    branches:
+      - fix/p1-103-audit-lock-proposal-20261117
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  propose-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: front_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Propose compatible dependency patch without modifying repository
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund next@16.4.6 eslint-config-next@16.4.6
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-exact picomatch@4.0.8
+          npm ci --ignore-scripts --no-fund
+          npm audit --omit=dev --audit-level=high
+      - name: Upload candidate manifest and lockfile for review (never secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-103-proposed-manifests
+          path: |
+            front_web/package.json
+            front_web/package-lock.json
+          retention-days: 3
