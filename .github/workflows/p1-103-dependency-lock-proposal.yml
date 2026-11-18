@@ -48,8 +48,23 @@ jobs:
           if ! npm audit --omit=dev --audit-level=high; then
             audit_failed=1
           fi
-          if (( fix_failed || audit_failed )); then
-            echo "::error::Dependency audit remains NO-GO; review lockfile artifact and advisories."
+          # A known upstream advisory must not hide independent TypeScript/lint/build defects.
+          # Keep this workflow FAIL-CLOSED even when these checks succeed.
+          quality_failed=0
+          if ! npm run typecheck; then
+            quality_failed=1
+            echo "::error::TypeScript check failed on proposed dependency lock."
+          fi
+          if ! npm run lint; then
+            quality_failed=1
+            echo "::error::ESLint failed on proposed dependency lock."
+          fi
+          if ! npm run build; then
+            quality_failed=1
+            echo "::error::Next.js build failed on proposed dependency lock."
+          fi
+          if (( fix_failed || audit_failed || quality_failed )); then
+            echo "::error::Dependency candidate remains NO-GO; review audit, quality checks and lockfile artifact."
             exit 1
           fi
       - name: Upload candidate manifest and lockfile for review (never secrets)
