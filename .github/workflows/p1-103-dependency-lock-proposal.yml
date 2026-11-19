@@ -40,7 +40,11 @@ jobs:
           npm ci --ignore-scripts --no-fund
           # Record a non-sensitive checksum for SHA-bound artifact traceability.
           sha256sum package.json package-lock.json
-          npm ls picomatch @parcel/watcher next || true
+          npm ls picomatch @parcel/watcher next next-intl || true
+          # Trace the upstream dependency chain without altering the lockfile or bypassing audit.
+          npm explain picomatch || true
+          npm explain @parcel/watcher || true
+          npm explain next-intl || true
           audit_failed=0
           if ! npm audit --audit-level=high; then
             audit_failed=1
