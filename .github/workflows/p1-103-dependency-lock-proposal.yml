@@ -76,7 +76,12 @@ jobs:
             echo "::error::Dependency candidate remains NO-GO; review audit, quality checks and lockfile artifact."
             exit 1
           fi
-      - name: Export reviewable dependency diff (no secrets)\n        if: always()\n        run: |\n          git diff --binary -- front_web/package.json front_web/package-lock.json > front_web/dependency-candidate.patch\n          git diff --check -- front_web/package.json front_web/package-lock.json\n      - name: Upload candidate manifest and lockfile for review (never secrets)
+      - name: Export reviewable dependency diff (no secrets)
+        if: always()
+        run: |
+          git diff --binary -- package.json package-lock.json > dependency-candidate.patch
+          git diff --check -- package.json package-lock.json
+      - name: Upload candidate manifest and lockfile for review (never secrets)
         if: always()
         uses: actions/upload-artifact@v4
         with:
