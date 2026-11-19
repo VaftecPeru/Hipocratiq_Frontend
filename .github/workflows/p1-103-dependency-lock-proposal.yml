@@ -9,9 +9,35 @@ on:
       - develop
     paths:
       - '.github/workflows/p1-103-dependency-lock-proposal.yml'
+      - 'front_web/package.json'
+      - 'front_web/package-lock.json'
 permissions:
   contents: read
 jobs:
+  verify-committed-lock:
+    name: Verify committed npm lock (fail closed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: front_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Validate committed manifest and lockfile, not generated candidate
+        run: |
+          set -euo pipefail
+          npm ci --no-fund
+          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
+          npm run typecheck
+          npm run lint
+          APP_URL=http://127.0.0.1:3000 BACKEND_URL=http://127.0.0.1:8000 npm run build
+          git diff --exit-code -- package.json package-lock.json
   propose-lock:
     runs-on: ubuntu-latest
     timeout-minutes: 20
