@@ -3,7 +3,6 @@
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
