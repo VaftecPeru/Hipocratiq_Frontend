@@ -1,0 +1,136 @@
+name: P1-103 dependency lock proposal (synthetic, no deploy)
+on:
+  push:
+    branches:
+      - fix/p1-103-audit-lock-proposal-20261117
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - '.github/workflows/p1-103-dependency-lock-proposal.yml'
+      - 'front_web/package.json'
+      - 'front_web/package-lock.json'
+permissions:
+  contents: read
+jobs:
+  verify-committed-lock:
+    name: Verify committed npm lock (fail closed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: front_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Validate committed manifest and lockfile, not generated candidate
+        run: |
+          set -euo pipefail
+          npm ci --no-fund
+          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
+          npm run typecheck
+          npm run lint
+          APP_URL=http://127.0.0.1:3000 BACKEND_URL=http://127.0.0.1:8000 npm run build
+          git diff --exit-code -- package.json package-lock.json
+  propose-lock:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: front_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front_web/package-lock.json
+      - name: Propose compatible dependency patch without modifying repository
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund next@16.4.6 eslint-config-next@16.4.6
+          npm update --package-lock-only --ignore-scripts --no-audit --no-fund @parcel/watcher picomatch
+          # npm audit fix can exit nonzero when a safe fix is unavailable.
+          # Continue diagnostic checks but preserve fail-closed status.
+          fix_failed=0
+          if ! npm audit fix --package-lock-only --ignore-scripts --no-fund; then
+            fix_failed=1
+          fi
+          # Verify the candidate lockfile can be installed reproducibly.
+          npm ci --no-fund
+          npm ls --depth=0
+          git diff --check -- package.json package-lock.json
+          # Record a non-sensitive checksum for SHA-bound artifact traceability.
+          sha256sum package.json package-lock.json
+          npm ls picomatch @parcel/watcher next next-intl || true
+          # Trace the upstream dependency chain without altering the lockfile or bypassing audit.
+          npm explain picomatch || true
+          npm explain @parcel/watcher || true
+          npm explain next-intl || true
+          audit_failed=0
+          if ! npm audit --audit-level=high; then
+            audit_failed=1
+          fi
+          if ! npm audit --omit=dev --audit-level=high; then
+            audit_failed=1
+          fi
+          # A known upstream advisory must not hide independent TypeScript/lint/build defects.
+          # Keep this workflow FAIL-CLOSED even when these checks succeed.
+          quality_failed=0
+          if ! npm run typecheck; then
+            quality_failed=1
+            echo "::error::TypeScript check failed on proposed dependency lock."
+          fi
+          if ! npm run lint; then
+            quality_failed=1
+            echo "::error::ESLint failed on proposed dependency lock."
+          fi
+          # Synthetic loopback backend URL: no clinical data, network calls or AWS access.
+          # Required by server-env.ts during Next.js production build evaluation.
+          # APP_URL is likewise a synthetic loopback URL, never a live deployment target.
+          if ! APP_URL=http://127.0.0.1:3000 BACKEND_URL=http://127.0.0.1:8000 npm run build; then
+            quality_failed=1
+            echo "::error::Next.js build failed on proposed dependency lock."
+          fi
+          if (( fix_failed || audit_failed || quality_failed )); then
+            echo "::error::Dependency candidate remains NO-GO; review audit, quality checks and lockfile artifact."
+            exit 1
+          fi
+      - name: Commit validated manifests to existing PR branch (no merge)
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/fix/p1-103-audit-lock-proposal-20261117'
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package.json package-lock.json; then
+            echo 'Candidate already committed; no changes.'
+            exit 0
+          fi
+          git diff --check -- package.json package-lock.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package.json package-lock.json
+          git commit -m 'fix(deps): commit audited npm lock candidate'
+          git push origin HEAD:fix/p1-103-audit-lock-proposal-20261117
+          echo 'Committed manifests to PR branch; new SHA requires independent CI validation.'
+      - name: Export reviewable dependency diff (no secrets)
+        if: always()
+        run: |
+          git diff --binary -- package.json package-lock.json > dependency-candidate.patch
+          git diff --check -- package.json package-lock.json
+      - name: Upload candidate manifest and lockfile for review (never secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-103-proposed-manifests
+          path: |
+            front_web/package.json
+            front_web/package-lock.json
+            front_web/dependency-candidate.patch
+          retention-days: 3
