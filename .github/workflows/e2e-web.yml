@@ -94,7 +94,7 @@ jobs:
             sleep 1
           done
 
-          npx playwright test --config=playwright.config.ts
+          node /tmp/hipocratiq-playwright/node_modules/@playwright/test/cli.js test --config=playwright.config.ts
 
       - name: Upload failed E2E evidence (synthetic only)
         if: failure()
