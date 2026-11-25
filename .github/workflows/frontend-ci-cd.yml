@@ -111,11 +111,15 @@ jobs:
 
       - name: Install Playwright runner
         working-directory: front_web
-        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+        run: |
+          npm install --prefix /tmp/hipocratiq-playwright --no-save --no-audit --no-fund @playwright/test@1.55.0
+          ln -s /tmp/hipocratiq-playwright/node_modules/@playwright node_modules/@playwright
+          ln -s /tmp/hipocratiq-playwright/node_modules/playwright node_modules/playwright
+          ln -s /tmp/hipocratiq-playwright/node_modules/playwright-core node_modules/playwright-core
 
       - name: Install Chromium
         working-directory: front_web
-        run: npx playwright install --with-deps chromium
+        run: node /tmp/hipocratiq-playwright/node_modules/@playwright/test/cli.js install --with-deps chromium
 
       - name: Build frontend
         working-directory: front_web
@@ -149,7 +153,7 @@ jobs:
 
       - name: Run Playwright E2E
         working-directory: front_web
-        run: npx playwright test
+        run: node /tmp/hipocratiq-playwright/node_modules/@playwright/test/cli.js test
 
       - name: Stop E2E services
         if: always()
