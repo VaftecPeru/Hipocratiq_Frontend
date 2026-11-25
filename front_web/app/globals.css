@@ -204,16 +204,15 @@ body {
   }
 }
 
-/* Seis roles en una sola línea cuando el panel dispone de ancho real.
-   En tablet/móvil pasan a 3 o 2 columnas, sin scroll horizontal. */
+/* Cuatro roles principales según la referencia; en tablet y móvil se adaptan. */
 @container (min-width: 34rem) {
   .login-role-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 .login-role-card {
-  min-height: 7.35rem;
+  min-height: 9.1rem;
   background: var(--surface);
   box-shadow: 0 0.25rem 0.8rem rgb(25 63 120 / 4%);
   transition: border-color 180ms ease, box-shadow 180ms ease;

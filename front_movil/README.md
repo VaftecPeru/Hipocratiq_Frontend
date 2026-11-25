@@ -14,7 +14,7 @@ Aplicación Flutter de HIPOCRATIQ para Android e iOS. La versión móvil prioriz
 - Navegación móvil Inicio / Actividad / Cuenta.
 - Cierre de sesión por dispositivo o global.
 - Autenticación Mobile usa exactamente el mismo wordmark del login Web: `assets/branding/logo-login-web.png`.
-- Launcher Android/iOS usa el isotipo Web oficial, sin deformar el wordmark horizontal: `assets/branding/logo-app-web.webp`.
+- Launcher Android/iOS usa el isotipo HIPOCRATIQ blanco sobre fondo azul corporativo, alineado con la identidad del dashboard: `assets/branding/app-icon.png`. Android Adaptive Icon usa `app-icon-foreground.png` sobre `#0B64DD`.
 - Identificadores:
   - Android: `com.vaftec.hipocratiq`
   - iOS: `com.vaftec.hipocratiq`

@@ -157,7 +157,8 @@ test("collector does not stop at a valid artifact for an obsolete Backend SHA", 
   assert.equal(evidence.inventory.length, 2);
   assert.equal(evidence.inventory[0].head_sha, old.head_sha);
   assert.equal(evidence.inventory[1].head_sha, SHA_BE);
-  assert.deepEqual(evaluateRelease(evidence), []);
+  // Evaluate against the fixture clock; release evidence is valid for only 7 days.
+  assert.deepEqual(evaluateRelease({ ...evidence, now: NOW }), []);
 });
 
 test("live inventory collection ignores skipped AWS despite a green offline job", async () => {

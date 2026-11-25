@@ -38,7 +38,12 @@ jobs:
       - name: Install locked Next dependencies and pinned Playwright
         run: |
           npm ci --no-audit --no-fund
-          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          # Install Playwright outside the application dependency tree to preserve
+          # the locked Next.js dependencies and avoid npm peer re-resolution.
+          npm install --prefix /tmp/hipocratiq-playwright --no-save --no-audit --no-fund @playwright/test@1.55.0
+          ln -s /tmp/hipocratiq-playwright/node_modules/@playwright node_modules/@playwright
+          ln -s /tmp/hipocratiq-playwright/node_modules/playwright node_modules/playwright
+          ln -s /tmp/hipocratiq-playwright/node_modules/playwright-core node_modules/playwright-core
 
       - name: Build isolated Next.js standalone
         env:
@@ -89,7 +94,7 @@ jobs:
             sleep 1
           done
 
-          npx playwright test --config=playwright.config.ts
+          node /tmp/hipocratiq-playwright/node_modules/@playwright/test/cli.js test --config=playwright.config.ts
 
       - name: Upload failed E2E evidence (synthetic only)
         if: failure()

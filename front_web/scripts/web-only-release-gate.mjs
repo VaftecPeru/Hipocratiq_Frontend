@@ -26,6 +26,16 @@ export function evaluateWebRelease({pr,main,files,expectedHead,eventNumber}){
    const path=f?.filename??"";
    if(!(/^(front_web\/|\.github\/workflows\/(ci-web|e2e-web|frontend-ci-cd|release-readiness|uat-https-readonly-manual)\.yml$|scripts\/(deploy-production|test-deploy-preflight-failclosed)\.sh$)/.test(path)))
       errors.push("Unexpected file outside web-only allowlist: "+path);
+   // Scope allowlisting alone must never authorize confidential/configuration artifacts.
+   const segments=path.toLowerCase().split("/");
+   const sensitiveSegment=segments.some(segment =>
+     segment===".git" || segment===".env" || segment.startsWith(".env.") ||
+     ["secret","secrets","credential","credentials","private","backup","backups"].includes(segment));
+   const sensitiveExtension=/\.(?:pem|key|p12|pfx|jks|keystore|sql|sqlite|sqlite3|dump|bak|backup)$/i.test(path);
+   const basename=segments.at(-1);
+   const sensitiveFile=/^(?:credentials?|service[-_]account(?:[-_].*)?|id_(?:rsa|dsa|ecdsa|ed25519)|\.npmrc|\.pypirc|\.netrc|\.aws|\.dockerconfigjson)(?:\.(?:json|ya?ml|txt|config))?$/i.test(basename);
+   if(sensitiveSegment || sensitiveExtension || sensitiveFile)
+     errors.push("Sensitive or backup file cannot be part of a web-only release: "+path);
    if(f?.status==="removed") errors.push("Unexpected deleted file: "+path);
  }
  return errors;
