@@ -46,9 +46,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout Frontend release candidate
+      - name: Checkout protected base policy (not candidate)
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Install Node 22
@@ -56,7 +57,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify Web-only PR #85, exact SHA, scoped files and protected main
+      - name: Verify approved web-only release, exact SHA, scoped files and protected main
         working-directory: front_web
         env:
           GITHUB_TOKEN: ${{ github.token }}
