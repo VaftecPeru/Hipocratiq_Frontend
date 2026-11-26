@@ -74,12 +74,18 @@ rollback_code() {
   fi
 }
 
-on_error() {
-  local line="$1"
-  echo "ERROR: despliegue Frontend falló cerca de la línea $line." >&2
-  rollback_code
+on_exit() {
+  local rc="$1"
+  trap - EXIT
+  if [[ "$rc" -ne 0 ]]; then
+    echo "ERROR: despliegue Frontend falló (código $rc)." >&2
+    rollback_code
+  fi
+  exit "$rc"
 }
-trap 'on_error "$LINENO"' ERR
+# EXIT also catches explicit exit 1 after a failed health check.
+# The original failure status must survive best-effort rollback.
+trap 'on_exit "$?"' EXIT
 
 echo "== HIPOCRATIQ Frontend deploy =="
 echo "Origen: $OLD_SHA"
@@ -101,7 +107,7 @@ fi
 echo "Destino: $TARGET_SHA"
 
 if [[ "$OLD_SHA" != "$TARGET_SHA" ]]; then
-  git merge --ff-only "origin/$TARGET_BRANCH"
+  git merge --ff-only "$TARGET_SHA"
   UPDATED=1
 fi
 
@@ -135,6 +141,6 @@ if [[ -n "$HEALTH_URL" ]]; then
   curl --fail --silent --show-error "$HEALTH_URL" >/dev/null
 fi
 
-trap - ERR
+trap - EXIT
 echo "DEPLOY FRONTEND OK"
 echo "SHA: $(git rev-parse HEAD)"
