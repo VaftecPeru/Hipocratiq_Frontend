@@ -1,4 +1,5 @@
 import { createSign } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { POLICY, collect, verify } from './verify-policy-transition-109.mjs';
@@ -42,9 +43,48 @@ async function api(path, token, method = 'GET', body) {
   return r.json();
 }
 
+// GitHub omits bypass_actors for callers without ruleset write access.
+// Do not infer an empty list. Use a separate, authenticated administrative GET,
+// and require both sources to agree on the visible policy.
+const ruleShape = r => ({id:r?.id, name:r?.name, enforcement:r?.enforcement,
+  target:r?.target, source_type:r?.source_type, source:r?.source,
+  conditions:r?.conditions, rules:r?.rules});
+export function reconcileRuleset(appRules, before, after) {
+  const all = [appRules, before, after];
+  for (const r of all) {
+    if (r?.id !== POLICY.ruleset || r.enforcement !== 'active' ||
+        r.target !== 'branch' || r.source_type !== 'Repository' ||
+        r.source !== POLICY.repo || !isDeepStrictEqual(r.conditions?.ref_name,
+          {include:['refs/heads/main'],exclude:[]}) ||
+        !Array.isArray(r.rules)) throw Error('Unexpected ruleset scope');
+  }
+  for (const r of [before, after]) {
+    if (!Array.isArray(r.bypass_actors) || r.bypass_actors.length !== 0)
+      throw Error('Administrative bypass evidence unavailable or nonempty');
+  }
+  if (Object.hasOwn(appRules,'bypass_actors') &&
+      (!Array.isArray(appRules.bypass_actors) || appRules.bypass_actors.length !== 0))
+    throw Error('App reports unexpected bypass evidence');
+  if (!isDeepStrictEqual(ruleShape(appRules),ruleShape(before)) ||
+      !isDeepStrictEqual(ruleShape(before),ruleShape(after)))
+    throw Error('Ruleset sources disagree or policy changed');
+  return after; // Actual administrative response, never a fabricated field.
+}
+export async function readAdminRuleset(token, get = api) {
+  if (!token) throw Error('Separate administrative read session required');
+  const user = await get('/user',token);
+  const repo = await get('/repos/'+POLICY.repo,token);
+  if (user?.login !== OWNER || repo?.id !== POLICY.repoId ||
+      repo?.full_name !== POLICY.repo || repo?.permissions?.admin !== true)
+    throw Error('Administrative read identity not verified');
+  return get('/repos/'+POLICY.repo+'/rulesets/'+POLICY.ruleset,token);
+}
+
 async function main() {
   const mode = process.argv[2];
   if (!['--verify-only','--publish'].includes(mode) || process.argv.length !== 3) throw Error('Select --verify-only or --publish explicitly');
+  const adminReadToken = process.env.HIPOCRATIQ_RULESET_READ_TOKEN;
+  if (!adminReadToken) throw Error('Separate administrative read session required');
   const appId = Number(process.env.HIPOCRATIQ_APP_ID);
   const keyPath = process.env.HIPOCRATIQ_APP_KEY_FILE;
   if (!Number.isSafeInteger(appId) || appId <= 0 || !keyPath) throw Error('App ID and protected key path required');
@@ -67,7 +107,10 @@ async function main() {
   try {
     const repositories = await api('/installation/repositories?per_page=100',token);
     assertApp(app,installation,repositories,appId);
-    const errors = verify(await collect(token));
+    const before = await readAdminRuleset(adminReadToken);
+    const evidence = await collect(token);
+    const after = await readAdminRuleset(adminReadToken);
+    const errors = verify({...evidence, rules:reconcileRuleset(evidence.rules,before,after)});
     const check = buildCheck(errors);
     if (mode === '--verify-only') { console.log('EVIDENCE_MATCH_ONLY — NO CHECK PUBLISHED'); return; }
     // Never run from a PR-controlled checkout or CI. Operator must use the independently reviewed immutable revision.

@@ -5,6 +5,8 @@ on:
     paths:
       - 'front_web/scripts/verify-policy-transition-109.mjs'
       - 'front_web/tests/verify-policy-transition-109.test.mjs'
+      - 'front_web/scripts/publish-policy-transition-109.mjs'
+      - 'front_web/tests/publish-policy-transition-109.test.mjs'
       - '.github/workflows/transition-verifier-prototype.yml'
 permissions:
   contents: read
@@ -20,4 +22,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test front_web/tests/verify-policy-transition-109.test.mjs
+      - run: node --test front_web/tests/verify-policy-transition-109.test.mjs front_web/tests/publish-policy-transition-109.test.mjs
