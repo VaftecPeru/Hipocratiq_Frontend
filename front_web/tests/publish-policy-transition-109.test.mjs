@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { POLICY } from '../scripts/verify-policy-transition-109.mjs';
-import { assertApp, buildCheck } from '../scripts/publish-policy-transition-109.mjs';
+import { assertApp, buildCheck, reconcileRuleset, readAdminRuleset } from '../scripts/publish-policy-transition-109.mjs';
 const fixture = () => ({
   app: {id:42,slug:'hipocratiq-release-guard-vaftec',owner:{login:'VaftecPeru'}},
   installation: {app_id:42,account:{login:'VaftecPeru'},repository_selection:'selected',
@@ -25,4 +25,35 @@ test('success payload fixed to exact transition candidate',()=>{
 });
 test('negative or invalid evidence cannot produce success payload',()=>{
   for(const v of [['stale approval'],['wrong SHA'],null,undefined,{},false]) assert.throws(()=>buildCheck(v));
+});
+
+const ruleFixture=()=>({id:POLICY.ruleset,name:'HIPOCRATIQ-Frontend-Protect-Main',target:'branch',
+  source_type:'Repository',source:POLICY.repo,enforcement:'active',
+  conditions:{ref_name:{include:['refs/heads/main'],exclude:[]}},
+  rules:[{type:'deletion'},{type:'non_fast_forward'}],bypass_actors:[]});
+test('uses actual administrative empty bypass list when App cannot see it',()=>{
+  const a=ruleFixture(), b=ruleFixture(), c=ruleFixture();delete a.bypass_actors;
+  assert.equal(reconcileRuleset(a,b,c),c);
+});
+for(const [name,mutate] of [
+ ['missing admin bypass',x=>delete x[1].bypass_actors],
+ ['nonempty admin bypass',x=>x[2].bypass_actors.push({actor_id:1})],
+ ['nonempty App bypass',x=>x[0].bypass_actors.push({actor_id:1})],
+ ['changed policy',x=>x[2].rules.pop()],
+ ['different App policy',x=>x[0].rules.pop()],
+ ['wrong scope',x=>x[0].conditions.ref_name.include=['refs/heads/develop']],
+ ['inactive ruleset',x=>x[1].enforcement='disabled'],
+ ['wrong repository',x=>x[0].source='other/repo']
+]) test('reject '+name,()=>{const x=[ruleFixture(),ruleFixture(),ruleFixture()];mutate(x);assert.throws(()=>reconcileRuleset(...x));});
+test('administrative read uses only fixed GET endpoints',async()=>{
+ const paths=[];const result=await readAdminRuleset('fixture',async(...args)=>{
+  assert.equal(args.length,2); const [path,token]=args; assert.equal(token,'fixture');paths.push(path);
+  if(path==='/user')return {login:'VaftecPeru'};
+  if(path==='/repos/'+POLICY.repo)return {id:POLICY.repoId,full_name:POLICY.repo,permissions:{admin:true}};
+  return ruleFixture();
+ }); assert.deepEqual(paths,['/user','/repos/'+POLICY.repo,'/repos/'+POLICY.repo+'/rulesets/'+POLICY.ruleset]);assert.deepEqual(result,ruleFixture());
+});
+test('reject missing or nonadmin identity',async()=>{
+ await assert.rejects(readAdminRuleset('',()=>assert.fail('unexpected network')));
+ await assert.rejects(readAdminRuleset('fixture',async p=>p==='/user'?{login:'VaftecPeru'}:{id:POLICY.repoId,full_name:POLICY.repo,permissions:{admin:false}}));
 });
