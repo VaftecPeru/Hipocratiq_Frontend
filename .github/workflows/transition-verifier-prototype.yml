@@ -1,0 +1,23 @@
+name: Transition verifier prototype tests (not release authorization)
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'front_web/scripts/verify-policy-transition-109.mjs'
+      - 'front_web/tests/verify-policy-transition-109.test.mjs'
+      - '.github/workflows/transition-verifier-prototype.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-transition-verifier:
+    name: Transition verifier synthetic tests (not authorization)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test front_web/tests/verify-policy-transition-109.test.mjs
