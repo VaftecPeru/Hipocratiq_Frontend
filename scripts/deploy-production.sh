@@ -141,6 +141,12 @@ if [[ -n "$HEALTH_URL" ]]; then
   curl --fail --silent --show-error "$HEALTH_URL" >/dev/null
 fi
 
+FINAL_SHA="$(git rev-parse HEAD)"
+if [[ "$FINAL_SHA" != "$TARGET_SHA" ]]; then
+  echo "ERROR: el SHA final no coincide con el SHA aprobado." >&2
+  exit 1
+fi
+
 trap - EXIT
 echo "DEPLOY FRONTEND OK"
-echo "SHA: $(git rev-parse HEAD)"
+echo "SHA: $FINAL_SHA"
